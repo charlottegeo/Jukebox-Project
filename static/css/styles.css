@@ -14,8 +14,13 @@ p {
     width: 33%;
     height: 100%;
     margin: center;
+    text-align: center;
 }
-
+.leftSection img {
+    display: block;
+    margin: 0 auto;
+    padding-bottom: 10px;
+}
 .middleSection { 
     width: 33%;
     height: 100%;

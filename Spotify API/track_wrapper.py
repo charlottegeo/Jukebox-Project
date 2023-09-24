@@ -73,3 +73,8 @@ class TrackWrapper:
     def getTrackID(self) -> str:
         """returns the spotify ID for the song."""
         return self.TrackObject['id']
+    
+
+    def getURI(self) -> str:
+        """returns the URI for a media playing i think?"""
+        return self.TrackObject['uri']
