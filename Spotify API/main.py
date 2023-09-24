@@ -27,6 +27,10 @@ try:
 except:
     search_len = 3  # default search length
 
+SONG_QUEUE = []
+
+
+
 
 
 def get_token():

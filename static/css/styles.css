@@ -1,11 +1,15 @@
 html {
     font-family: 'Akshar Unicode', sans-serif;
 }
-
 body { 
-    background-color: #40000E;
+    background-color: #232323;
 }
-
+b {
+    color: #EEEEEE;
+}
+p {
+    color: #BBBBBB;
+}
 .leftSection {
     width: 33%;
     height: 100%;
@@ -22,4 +26,12 @@ body {
     width: 33%;
     height: 100%;
     margin: center;
+}
+
+#songName { 
+    color: #FFCFDC;
+}
+
+#artistName { 
+    color: #FF8FAD;
 }
