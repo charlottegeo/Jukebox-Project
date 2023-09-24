@@ -1,3 +1,6 @@
+html * {
+    font-family: 'Akshar';
+}
 body { 
     background-color: #40000E;
 }
