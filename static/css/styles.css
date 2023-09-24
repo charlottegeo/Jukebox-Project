@@ -16,7 +16,8 @@ html {
 
     
 body { 
-    background-image: url('../../templates/pusayBG.png');
+   /* /*background-image: url('../../templates/pusayBG.png'); */
+    background-color: #1e1e1e;
     height: 100%;
     margin: 0;
 }

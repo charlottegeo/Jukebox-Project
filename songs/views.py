@@ -11,7 +11,6 @@ from SpotifyAPI.track_wrapper import TrackWrapper
 
 
 def get_array(request):
-    print(get_song_queue)
     return JsonResponse(get_song_queue())
 
 def songs(request):
