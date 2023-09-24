@@ -1,0 +1,3 @@
+Virtual environment name: jukebox
+
+To activate environment: .\jukebox\Scripts\activate
