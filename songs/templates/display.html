@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <!--https://www.w3schools.com/html/default.asp-->
 <!--https://www.w3schools.com/css/default.asp-->
+{% load static %}
 <html>
-<head>
-    <title>Jukebox</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-<!--For aesthetic purposes we should hide the iframe-->
-<div class = "songdisplay">
-    <!--Replace the following values with the values from the current song-->
-    <img src="https://bostonuniqueindoorcomfort.com/wp-content/uploads/2014/04/blank-square-300x300.png" alt="Placeholder" width="300" height="300">
-    <h1>SONG TITLE</h1>
-    <p>ARTIST NAME</p>
-</div>
-</body>
+    <head>
+        <title>Jukebox</title>
+        <link rel="stylesheet" href="{% static 'styles.css' %}">
+    </head>
+    <body>
+        <!--For aesthetic purposes we should hide the iframe-->
+        <div class = "songdisplay">
+            <!--Replace the following values with the values from the current song-->
+            <img src="https://bostonuniqueindoorcomfort.com/wp-content/uploads/2014/04/blank-square-300x300.png" alt="Placeholder" width="300" height="300">
+            <h1>SONG TITLE</h1>
+            <p>ARTIST NAME</p>
+        </div>
+    </body>
 </html>
