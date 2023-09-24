@@ -9,6 +9,9 @@
         <link rel = "stylesheet" href = "{% static 'css/styles.css' %}">
     </head>
     <body> 
+        <div class="header">
+            <h1>CSH Jukebox</h1>
+        </div>
         <!--For aesthetic purposes we should hide the iframe-->
         <div class = "leftSection">
             <!--Replace the following values with the values from the current song-->
@@ -17,13 +20,15 @@
             <p>ARTIST NAME</p>
         </div>
 
-        <div class = "middlePanel">
+        <div class = "middleSection">
             <!--contains pusay-->
-            <!--<img src = "pusayjukebox.jpg">-->
+            <!--<img src = "pusayjukebox.jpg">-->''
         </div>
 
-        <div class = "rightPanel">
-            <!--contains queue-->
+        <div class = "rightSection" hx-trigger="every 1s">
+            <h2>Upcoming Songs</h2>
+            <!--Dynamically update list with names of songs from array and show those changes in HTML-->
+            
         </div>
     </body>
 </html>

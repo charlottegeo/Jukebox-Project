@@ -37,7 +37,8 @@ def add_song(song: TrackWrapper):
 
 
 def remove_song(queue_pos=0):
-    SONG_QUEUE.remove()
+    """removes the song at 'queue_pos' in the queue, the playing song is index 0"""
+    SONG_QUEUE.pop(queue_pos)
 
 
 def get_token():

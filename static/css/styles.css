@@ -1,8 +1,21 @@
 html {
     font-family: 'Akshar Unicode', sans-serif;
+    font-weight: bold;
+}
+.header {
+    height: 5%;
+    ;
+    text-align: center;
+    background: #B0197E;
+    font-size: 30px;
+  }
+.header h1{
+    text-align: left;
+    padding-left: 5%;
 }
 body { 
     background-color: #232323;
+    /*background-image: lotsofpusays.jpg;*/
 }
 b {
     color: #EEEEEE;
@@ -15,11 +28,15 @@ p {
     height: 100%;
     margin: center;
     text-align: center;
+    display: flex;
+    align-items: center;
 }
 .leftSection img {
     display: block;
     margin: 0 auto;
     padding-bottom: 2.5%;
+    display: flex;
+    align-items: center;
 }
 .middleSection { 
     width: 33%;

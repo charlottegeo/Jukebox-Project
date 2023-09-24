@@ -17,29 +17,10 @@ Interface will take one of 2 forms
 
 
 Demo to-do (Priority stuff):
-- Set up host website (HTML)
-
-- Access Spotify API and get songs
----Also get info about songs
----Embed player in HTML to play songs
+---Embed player in HTML to play songs **** 
 -Make code for queue (adding to queue and displaying it, editing queue) 
-    --are these two different sites? Answer: Nope, the "host" site displays the queue, edits the queue, and plays all songs
     --the user site will be able to see the queue (maybe not the whole queue, just the next 3 or 4 or something)
     --user site will be able to add songs to queue
 -Use Django to make the website using Python
 --After we make the initial site we will look into server stuff
 ---Meaning, after we make the host site we can make the user site and make server code to let the two sites communicate
-
-
-
-
-
-
-
-
-Extra to-do (not priority)
-- Add a cat somehow   
---- project needs a mascot
-
-
-
