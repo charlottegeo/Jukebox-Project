@@ -30,6 +30,8 @@ p {
     text-align: center;
     display: flex;
     align-items: center;
+    padding-top: 33%;
+    padding-bottom: 33%
 }
 .leftSection img {
     display: block;
@@ -42,6 +44,8 @@ p {
     width: 33%;
     height: 100%;
     margin: center;
+    padding-top: 33%;
+    padding-bottom: 33%
 }
 
 .rightSection {
@@ -50,6 +54,8 @@ p {
     margin: center;
     display: flex;
     align-items: center;
+    padding-top: 33%;
+    padding-bottom: 33%
 }
 
 #songName { 
