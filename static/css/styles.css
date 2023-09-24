@@ -5,12 +5,16 @@ html {
 .header {
     height: 5%;
     text-align: center;
-    background: #B0197E;
+    background: #dc74b9;
     font-size: 30px;
   }
 .header h1{
-    text-align: left;
+    text-align: center;
     padding-left: 5%;
+}
+
+.background-image {
+    
 }
 body { 
     background-image: url("pusayBG.png");
@@ -20,12 +24,11 @@ body {
 }
 
 .container {
-    width: 33%;
+
     height: 100%;
 }
 
 .section {
-    border: 1px solid #ccc;
     padding: 20px;
 }
 

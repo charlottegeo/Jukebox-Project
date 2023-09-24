@@ -10,33 +10,45 @@
         <link rel="icon" href="pusayPinkFace.png">
     </head>
     <body> 
-        <div class="header">
-            <h1>CSH Jukebox</h1>
-        </div>
-
-        <div class="container">
-            <div class="section">
-                <!--Replace the following values with the values from the current song-->
-                <img src="https://via.placeholder.com/300x300.png?text=Placeholder" alt="Placeholder" width="300" height="300">
-                <b>SONG TITLE</b>
-                <p>ARTIST NAME</p>
+        <div class="background-image">
+            <div class="header">
+                <h1>CSH Jukebox</h1>
             </div>
 
-            <div class="section">
-                <!--contains pusay-->
-                <!--<img src = "pusayjukebox.jpg">-->
-                <img src="https://via.placeholder.com/300x300.png?text=Placeholder" alt="Placeholder" width="300" height="300">
-                <!--placeholder for pusay-->
-            </div>
+            <div class="container">
+                <div class="section">
+                    <script src="https://open.spotify.com/embed-podcast/iframe-api/v1" async></script>
+                    <iframe 
+                        style="border-radius:12px"
+                        src="https://open.spotify.com/embed/track/2MSgFefjK0T7Iwjvr3OKqV?utm_source=generator"
+                        width="100%"
+                        height="352"
+                        frameBorder="0"
+                        allowfullscreen=""
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy">
+                    </iframe>
+                    <!--Replace the following values with the values from the current song-->
+                    <img src="https://via.placeholder.com/300x300.png?text=Placeholder" alt="Placeholder" width="300" height="300">
+                    <b>SONG TITLE</b>
+                    <p>ARTIST NAME</p>
+                </div>
 
-            <div class="section">
-                <h2>Upcoming Songs</h2>
-                <!--Dynamically update list with names of songs from array and show those changes in HTML-->
-                <ul id="song-list">
-                {% for song in song_queue %}
-                  <li>{{ song }}</li>
-                {% endfor %}
-                </ul>
+                <div class="section">
+                    <!--contains pusay-->
+                    <img src = "pusayWholePink.png">
+                </div>
+
+                <div class="section">
+                    <h2>Upcoming Songs</h2>
+                    <!--Dynamically update list with names of songs from array and show those changes in HTML-->
+                    <ul id="song-list">
+                    {% for song in song_queue %}
+                    <li>{{ song }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            
             </div>
         </div>
     </body>
