@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from requests import post, get
 import json
 import typing
-from track_wrapper import TrackWrapper
+from SpotifyAPI.track_wrapper import TrackWrapper
 
 load_dotenv()  # this should bring the environment variable 
 
@@ -39,6 +39,8 @@ def remove_song(queue_pos=0):
     """removes the song at 'queue_pos' in the queue, the playing song is index 0"""
     SONG_QUEUE.pop(queue_pos)
 
+def get_song_queue():
+    return SONG_QUEUE
 
 def get_token():
         
@@ -101,10 +103,4 @@ token = get_token()
 result = search_for_tracks(token, search_var, search_len)
 
 for i, value in enumerate(result):
-    print(f"------RESULT BREAK: printing result {i + 1}------")
-    print(
-     f"track name: {value.getTrackName()}\nartist name: {value.getArtistNames()}\nalbum cover: {value.getAlbumCoverURL()}"
-    )
-
-    print("Track length: " + value.getFormattedTrackLength())
-    print("track id: " + value.getTrackID())
+    add_song(value)

@@ -13,15 +13,14 @@ html {
     padding-left: 5%;
 }
 
-.background-container {
+
     
 body { 
-    background-image: url('https://imgur.com/a/PyO7nk6');
-    background-color: #232323;
+    background-image: url('../../templates/pusayBG.png');
     height: 100%;
     margin: 0;
 }
-}
+
 
 .container {
 

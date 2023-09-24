@@ -8,8 +8,44 @@
         <title>Jukebox</title>
         <link rel = "stylesheet" href = "{% static 'css/styles.css' %}">
         <link rel="icon" href="https://imgur.com/a/doEJ4lE">
+        <div id="app">
+            <ul>
+              <li v-for="item in array">{{ item }}</li>
+            </ul>
+          </div>
+          
+          <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+          <script>
+            var app = new Vue({
+              el: '#app',
+              data: {
+                array: [],
+              },
+              mounted() {
+                this.fetchArray();
+                this.timer = setInterval(this.fetchArray, 2000); // Poll every 2 seconds
+              },
+              methods: {
+                async fetchArray() {
+                  try {
+                    const response = await fetch('/api/get_array/');
+                    if (!response.ok) {
+                      throw new Error('Network response was not ok');
+                    }
+                    this.array = await response.json();
+                  } catch (error) {
+                    console.error('There has been a problem with your fetch operation:', error);
+                  }
+                },
+              },
+              beforeDestroy() {
+                clearInterval(this.timer);
+              },
+            });
+          </script>
+          
     </head>
-    <body> 
+    <body>
         <div class="background-container">
             <div class="header">
                 <h1>CSH Jukebox</h1>
@@ -27,11 +63,7 @@
                         allowfullscreen=""
                         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                         loading="lazy">
-                    </iframe>
-                    <!--Replace the following values with the values from the current song-->
-                    <img src="https://via.placeholder.com/300x300.png?text=Placeholder" alt="Placeholder" width="300" height="300">
-                    <b>SONG TITLE</b>
-                    <p>ARTIST NAME</p>
+                </iframe>
                 </div>
 
                 <div class="section">
