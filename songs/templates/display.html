@@ -14,35 +14,29 @@
         </div>
 
         <div class="container">
-            <div class="section">Section 1</div>
-            <div class="section">Section 2</div>
-            <div class="section">Section 3</div>
-        </div>
+            <div class="section">
+                <!--Replace the following values with the values from the current song-->
+                <img src="https://via.placeholder.com/300x300.png?text=Placeholder" alt="Placeholder" width="300" height="300">
+                <b>SONG TITLE</b>
+                <p>ARTIST NAME</p>
+            </div>
 
-        <!--For aesthetic purposes we should hide the iframe-->
-        <div class = "leftSection">
-            <!--Replace the following values with the values from the current song-->
-            <img src="https://via.placeholder.com/300x300.png?text=Placeholder" alt="Placeholder" width="300" height="300">
-            <b>SONG TITLE</b>
-            <p>ARTIST NAME</p>
-        </div>
+            <div class="section">
+                <!--contains pusay-->
+                <!--<img src = "pusayjukebox.jpg">-->
+                <img src="https://via.placeholder.com/300x300.png?text=Placeholder" alt="Placeholder" width="300" height="300">
+                <!--placeholder for pusay-->
+            </div>
 
-        <div class = "middleSection">
-            <!--contains pusay-->
-            <!--<img src = "pusayjukebox.jpg">-->
-            <img src="https://via.placeholder.com/300x300.png?text=Placeholder" alt="Placeholder" width="300" height="300">
-            <!--placeholder for pusay-->
-        </div>
-
-        <div class = "rightSection">
-            <h2>Upcoming Songs</h2>
-            <!--Dynamically update list with names of songs from array and show those changes in HTML-->
-            <ul id="song-list">
+            <div class="section">
+                <h2>Upcoming Songs</h2>
+                <!--Dynamically update list with names of songs from array and show those changes in HTML-->
+                <ul id="song-list">
                 {% for song in song_queue %}
                   <li>{{ song }}</li>
                 {% endfor %}
-              </ul>
-
+                </ul>
+            </div>
         </div>
     </body>
 </html>

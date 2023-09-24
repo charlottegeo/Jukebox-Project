@@ -13,7 +13,7 @@ html {
     padding-left: 5%;
 }
 body { 
-    background-image: "pusayBG.png";
+    background-image: url("pusayBG.png");
     background-color: #232323;
     height: 100%;
     margin: 0
@@ -25,30 +25,18 @@ body {
 }
 
 .section {
-    flex: 1;
     border: 1px solid #ccc;
     padding: 20px;
 }
-  
-
-.container {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr; /* Three equal-width columns */
-    height: 100%;
-}
-
-.section {
-    border: 1px solid #ccc;
-    padding: 20px;
-}
-
 
 b {
     color: #EEEEEE;
 }
+
 p {
     color: #BBBBBB;
 }
+
 .leftSection {
     width: 33%;
     height: 100%;
