@@ -27,10 +27,17 @@ try:
 except:
     search_len = 3  # default search length
 
+
 SONG_QUEUE = []
 
 
+def add_song(song: TrackWrapper):
+    """adds a song to queue"""
+    SONG_QUEUE.append(song)
 
+
+def remove_song(queue_pos=0):
+    SONG_QUEUE.remove()
 
 
 def get_token():
