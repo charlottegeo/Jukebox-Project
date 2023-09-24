@@ -95,5 +95,3 @@ for i, value in enumerate(result):
     print(
      f"track name: {value.getTrackName()}\nartist name: {value.getArtistNames()}\nalbum cover: {value.getAlbumCoverURL()}"
     )
-
-    print("Track len: " + str(value.getTrackLength()) + " seconds")

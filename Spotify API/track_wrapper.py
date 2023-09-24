@@ -48,3 +48,8 @@ class TrackWrapper:
     def getTrackLength(self) -> float:
         """returns the amount of seconds in the song"""
         return self.TrackObject['duration_ms'] / 1000
+    
+
+    def getTrackID(self) -> str:
+        """returns the spotify ID for the song."""
+        return self.TrackObject['id']
