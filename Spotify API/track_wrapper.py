@@ -43,3 +43,8 @@ class TrackWrapper:
         return the URL of the first album cover image
         """
         return self.TrackObject['album']['images'][0]['url'] # the first image url
+    
+
+    def getTrackLength(self) -> float:
+        """returns the amount of seconds in the song"""
+        return self.TrackObject['duration_ms'] / 1000

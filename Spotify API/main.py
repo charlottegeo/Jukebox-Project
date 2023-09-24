@@ -20,7 +20,7 @@ search_len: int
 try:
     search_var = sys.argv[1]
 except:
-    search_var = "justin bieber" # default search
+    search_var = "bts" # default search
 
 try:
     search_len = int(sys.argv[2])
@@ -95,3 +95,5 @@ for i, value in enumerate(result):
     print(
      f"track name: {value.getTrackName()}\nartist name: {value.getArtistNames()}\nalbum cover: {value.getAlbumCoverURL()}"
     )
+
+    print("Track len: " + str(value.getTrackLength()) + " seconds")
