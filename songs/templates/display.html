@@ -2,19 +2,27 @@
 <!--https://www.w3schools.com/html/default.asp-->
 <!--https://www.w3schools.com/css/default.asp-->
 {% load static %}
-<link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+<link href = "../static/css/styles.css">
 
 <html>
     <head>
         <title>Jukebox</title>
     </head>
-    <body>
+    <body> 
         <!--For aesthetic purposes we should hide the iframe-->
-        <div class = "songdisplay">
+        <div class = "leftPanel">
             <!--Replace the following values with the values from the current song-->
             <img src="https://bostonuniqueindoorcomfort.com/wp-content/uploads/2014/04/blank-square-300x300.png" alt="Placeholder" width="300" height="300">
             <h1>SONG TITLE</h1>
             <p>ARTIST NAME</p>
+        </div>
+
+        <div class = "middlePanel">
+            <!--contains pusay-->
+        </div>
+
+        <div class = "rightPanel">
+            <!--contains queue-->
         </div>
     </body>
 </html>

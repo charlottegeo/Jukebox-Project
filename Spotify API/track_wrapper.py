@@ -1,4 +1,16 @@
+import math
 
+def formatTime(time_seconds: int) -> str:
+    """returns the time in seconds in the format minutes:seconds"""
+    timeString = ""
+    minutes = str(math.floor(time_seconds / 60))
+    seconds = str(time_seconds % 60)
+    if len(minutes) < 2:
+        minutes = "0" + minutes
+    if len(seconds) < 2:
+        seconds = "0" + seconds
+    return f"{minutes}:{seconds}"
+        
 
 
 
@@ -51,6 +63,11 @@ class TrackWrapper:
     def getTrackLength(self) -> float:
         """returns the amount of seconds in the song"""
         return self.TrackObject['duration_ms'] / 1000
+    
+    
+    def getFormattedTrackLength(self) -> str:
+        """returns the length of the track as a string in the form minutes:seconds"""
+        return formatTime(self
     
 
     def getTrackID(self) -> str:

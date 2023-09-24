@@ -1,6 +1,22 @@
-* {
+html {
     font-family: 'Akshar';
 }
+
 body { 
     background-color: #40000E;
+}
+
+.leftSection {
+    width: 33%;
+    height: 100%;
+}
+
+.middleSection { 
+    width: 33%;
+    height: 100%;
+}
+
+.rightSection {
+    width: 33%;
+    height: 100%;
 }
