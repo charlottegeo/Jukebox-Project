@@ -9,14 +9,17 @@ body {
 .leftSection {
     width: 33%;
     height: 100%;
+    margin: center;
 }
 
 .middleSection { 
     width: 33%;
     height: 100%;
+    margin: center;
 }
 
 .rightSection {
     width: 33%;
     height: 100%;
+    margin: center;
 }

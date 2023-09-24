@@ -5,4 +5,5 @@ from . import views
 
 urlpatterns = [
     path('', views.songs, name='songs'),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    path('static/css/styles.css', views.styles, name='styles'),
+]

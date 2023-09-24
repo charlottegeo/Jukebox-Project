@@ -52,7 +52,7 @@ def get_token():
 def get_auth_header(token):
     return {"Authorization": "Bearer " + token}
 
- 
+
 def search_for_tracks(
         token: str,
         track_name: str,
@@ -96,3 +96,4 @@ for i, value in enumerate(result):
     )
 
     print("Track length: " + value.getFormattedTrackLength())
+    print("track id: " + value.getTrackID())
