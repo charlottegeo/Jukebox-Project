@@ -7,3 +7,4 @@ urlpatterns = [
     path('', views.songs, name='songs'),
     path('static/css/styles.css', views.styles, name='styles'),
 ]
+

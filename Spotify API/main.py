@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from requests import post, get
 import json
 import typing
-
 from track_wrapper import TrackWrapper
 
 load_dotenv()  # this should bring the environment variable 
@@ -42,9 +41,7 @@ def remove_song(queue_pos=0):
 
 
 def get_token():
-    
-    # returns a temporary access token we can give to api calls
-    
+        
     auth_string = cli_id + ":" + cli_secret
     auth_bytes = auth_string.encode("utf-8")
     auth_base64 = str(base64.b64encode(auth_bytes), "utf-8")
@@ -58,6 +55,8 @@ def get_token():
     result = post(url, headers=headers, data=data)
     json_result = json.loads(result.content)
     token = json_result["access_token"]
+
+    #pusay made an appearance here. pusay is graciously giving you a token. say thank you.
     return token
 
 

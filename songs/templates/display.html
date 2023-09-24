@@ -2,8 +2,8 @@
 <!--https://www.w3schools.com/html/default.asp-->
 <!--https://www.w3schools.com/css/default.asp-->
 {% load static %}
-
 <html>
+
     <head>
         <title>Jukebox</title>
         <link rel = "stylesheet" href = "{% static 'css/styles.css' %}">
@@ -12,6 +12,13 @@
         <div class="header">
             <h1>CSH Jukebox</h1>
         </div>
+
+        <div class="container">
+            <div class="section">Section 1</div>
+            <div class="section">Section 2</div>
+            <div class="section">Section 3</div>
+        </div>
+
         <!--For aesthetic purposes we should hide the iframe-->
         <div class = "leftSection">
             <!--Replace the following values with the values from the current song-->
@@ -27,10 +34,30 @@
             <!--placeholder for pusay-->
         </div>
 
-        <div class = "rightSection" hx-trigger="every 1s">
+        <div class = "rightSection">
+            <script>
+                function updateSongList() {
+                  $.ajax({
+                    url: '/get_song_queue/',
+                    success: function(data) {
+                      $('#song-list').empty();
+                      $.each(data, function(index, song) {
+                        $('#song-list').append('<li>' + song + '</li>');
+                      });
+                    }
+                  });
+                }
+              
+                setInterval(updateSongList, 5000);
+              </script>
             <h2>Upcoming Songs</h2>
             <!--Dynamically update list with names of songs from array and show those changes in HTML-->
-            
+            <ul id="song-list">
+                {% for song in song_queue %}
+                  <li>{{ song }}</li>
+                {% endfor %}
+              </ul>
+
         </div>
     </body>
 </html>
