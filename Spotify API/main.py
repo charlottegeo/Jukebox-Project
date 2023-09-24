@@ -81,7 +81,6 @@ def search_for_tracks(
     for TrackObject in json_result:
         array.append(TrackWrapper(TrackObject))
    
-    # return json_result
     return array
 
 
