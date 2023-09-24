@@ -35,21 +35,6 @@
         </div>
 
         <div class = "rightSection">
-            <script>
-                function updateSongList() {
-                  $.ajax({
-                    url: '/get_song_queue/',
-                    success: function(data) {
-                      $('#song-list').empty();
-                      $.each(data, function(index, song) {
-                        $('#song-list').append('<li>' + song + '</li>');
-                      });
-                    }
-                  });
-                }
-              
-                setInterval(updateSongList, 5000);
-              </script>
             <h2>Upcoming Songs</h2>
             <!--Dynamically update list with names of songs from array and show those changes in HTML-->
             <ul id="song-list">
