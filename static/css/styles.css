@@ -13,8 +13,8 @@ html {
     padding-left: 5%;
 }
 body { 
-    background-color: #232323;
     background-image: "pusayBG.png";
+    background-color: #232323;
     height: 100%;
     margin: 0
 }
