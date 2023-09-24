@@ -48,6 +48,8 @@ p {
     width: 33%;
     height: 100%;
     margin: center;
+    display: flex;
+    align-items: center;
 }
 
 #songName { 
