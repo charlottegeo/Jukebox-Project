@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from requests import post, get
 import json
 import typing
-from track_wrapper import TrackWrapper
+from SpotifyAPI.track_wrapper import TrackWrapper
 
 load_dotenv()  # this should bring the environment variable 
 
