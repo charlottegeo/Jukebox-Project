@@ -14,7 +14,7 @@ def get_array(request):
     return JsonResponse(get_song_queue())
 
 def songs(request):
-    template = loader.get_template('display.html')
+    template = loader.get_template('search.html')
     return HttpResponse(template.render())
 
 
