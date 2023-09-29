@@ -1,3 +1,2 @@
-Virtual environment name: jukebox
-
-To activate environment: .\jukebox\Scripts\activate
+Virtual environment name: venv
+To activate environment: .\venv\Scripts\activate

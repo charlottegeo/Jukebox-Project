@@ -4,12 +4,8 @@ html {
 }
 .header {
     height: 5%;
-    text-align: center;
-    background: #dc74b9;
+    text-align: left;
     font-size: 30px;
-  }
-.header h1{
-    text-align: center;
     padding-left: 5%;
 }
 
@@ -40,6 +36,9 @@ p {
     color: #BBBBBB;
 }
 
+h1 {
+    color: #BBBBBB;
+}
 .leftSection {
     width: 33%;
     height: 100%;
@@ -69,6 +68,22 @@ p {
     align-items: center;
 }
 
+.search {
+    margin: auto;
+    width: 50%;
+    padding: 10px;
+    text-align: center;
+}
+
+input {
+    width: 100%;
+    height: 30px;
+    padding: 10px;
+    margin: 5px 0 22px 0;
+    border: none;
+    border-radius: 25px;
+    font-weight: bold;
+}
 #songName { 
     color: #FFCFDC;
 }
