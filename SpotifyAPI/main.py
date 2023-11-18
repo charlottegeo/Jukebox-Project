@@ -27,21 +27,30 @@ except:
     search_len = 3  # default search length
 
 
-SONG_QUEUE = []
+class SongQueue:
+    queue = []
+
+    def __new__(cls, *args, **kwargs):
+        return super().__new__(cls)
+    
+    
+    def __init__(self, queue: list):
+        self.queue = queue
 
 
-def add_song(song: TrackWrapper):
-    """adds a song to queue"""
-    SONG_QUEUE.append(song)
+    def add_song(self, song: TrackWrapper):
+        """
+        Adds a song to self.queue
+        Song - a TrackWrapper object containing song info 
+        """
+        self.queue.append(song)
+    
 
-
-def remove_song(queue_pos=0):
-    """removes the song at 'queue_pos' in the queue, the playing song is index 0"""
-    SONG_QUEUE.pop(queue_pos)
-
-
-def get_song_queue():
-    return SONG_QUEUE
+    def remove_song(self, index = 0):
+        """
+        Removes the song at index in the queue; The playing song is index 0
+        """
+        self.queue.pop(index)
 
 
 def get_token():
@@ -107,14 +116,18 @@ def main():
     Function to be run when this file is ran as a program. Makes a call to the Spotify API
     and prints out the results, adding the top results to SONG_QUEUE
     """
+    QUEUE = SongQueue([])
+
     # get a token for api calls
     token = get_token()
 
     result = search_for_tracks(token, search_var, search_len)
 
     for i, _TrackWrapper in enumerate(result):
-        add_song(_TrackWrapper)
+        QUEUE.add_song(_TrackWrapper)
         print(_TrackWrapper.getTrackName())
+
+    print(QUEUE.queue)
 
 
 if __name__ == "__main__":
