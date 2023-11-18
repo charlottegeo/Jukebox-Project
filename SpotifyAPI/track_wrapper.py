@@ -1,3 +1,7 @@
+"""
+author: matt marafino(?)
+"""
+
 import math
 
 def formatTime(time_seconds: int) -> str:
