@@ -5,7 +5,7 @@ from django.conf import settings
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.core import serializers
-from SpotifyAPI.main import get_song_queue, add_song, remove_song
+from SpotifyAPI.main import get_song_queue, SongQueue
 from SpotifyAPI.track_wrapper import TrackWrapper
 
 

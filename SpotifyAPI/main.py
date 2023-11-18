@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from requests import post, get
 import json
 import typing
-from track_wrapper import *
+from SpotifyAPI.track_wrapper import *
 
 load_dotenv()  # this should bring the environment variable 
 
@@ -110,7 +110,11 @@ def search_for_tracks(
    
     return array
 
-
+def get_song_queue(queue: SongQueue):
+    """
+    Returns the song queue
+    """
+    return queue.queue
 def main():
     """
     Function to be run when this file is ran as a program. Makes a call to the Spotify API
