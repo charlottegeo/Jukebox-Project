@@ -39,10 +39,15 @@ def remove_song(queue_pos=0):
     """removes the song at 'queue_pos' in the queue, the playing song is index 0"""
     SONG_QUEUE.pop(queue_pos)
 
+
 def get_song_queue():
     return SONG_QUEUE
 
+
 def get_token():
+    """
+    Gets the API token for a spotify account(Currently uses Charlotte's account)
+    """
         
     auth_string = cli_id + ":" + cli_secret
     auth_bytes = auth_string.encode("utf-8")
@@ -72,7 +77,7 @@ def search_for_tracks(
         search_limit=3
         ) -> typing.Collection:
     """
-    returns an array of length 'search_limit' of track objects wrapped in Track
+    Returns an array of length 'search_limit' of track objects wrapped in TrackWrapper
     """
 
     print(f"Searching for {track_name}")
@@ -97,10 +102,20 @@ def search_for_tracks(
     return array
 
 
-# get a token for api calls
-token = get_token()
+def main():
+    """
+    Function to be run when this file is ran as a program. Makes a call to the Spotify API
+    and prints out the results, adding the top results to SONG_QUEUE
+    """
+    # get a token for api calls
+    token = get_token()
 
-result = search_for_tracks(token, search_var, search_len)
+    result = search_for_tracks(token, search_var, search_len)
 
-for i, value in enumerate(result):
-    add_song(value)
+    for i, _TrackWrapper in enumerate(result):
+        add_song(_TrackWrapper)
+        print(_TrackWrapper.getTrackName())
+
+
+if __name__ == "__main__":
+    main()

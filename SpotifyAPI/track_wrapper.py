@@ -16,8 +16,6 @@ def formatTime(time_seconds: int) -> str:
     return f"{minutes}:{seconds}"
         
 
-
-
 class TrackWrapper:
     """
     wrapper class for getting important stuff from the TrackObject jargain; ~~might not be necessary?
