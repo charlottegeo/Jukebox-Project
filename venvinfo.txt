@@ -1,2 +1,2 @@
 Virtual environment name: venv
-To activate environment: .\venv\Scripts\activate
+To activate environment: .\venv\Scripts\activate OR source venv/bin/activate
