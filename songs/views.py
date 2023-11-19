@@ -11,8 +11,8 @@ from SpotifyAPI.track_wrapper import TrackWrapper
 from .models import Song
 from .models import Queue
 import json
-from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.csrf import csrf_exempt
+import os
 def get_array(request):
     return JsonResponse(get_song_queue())
 
@@ -52,25 +52,53 @@ def add_to_queue(request):
         queue = Queue(song=song)
         queue.save()
         return JsonResponse({'result': 'success'})
-def remove_from_queue(request):
-    #Remove the first song from the queue
-    #Return success
-    if request.method == 'POST':
-        song = Queue.objects.first().song
-        song.delete()
-        return JsonResponse({'result': 'success'})
-def empty_queue(request):
-    #Remove all songs from the queue
-    #Return success
-    if request.method == 'POST':
-        queue = Queue.objects.all()
-        for song in queue:
+
+@csrf_exempt  
+def skip_song(request):
+    try:
+        if request.method == 'POST':
+            song = Queue.objects.first().song
             song.delete()
-        return JsonResponse({'result': 'success'})
+            return JsonResponse({'result': 'success'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+    
+@csrf_exempt
+def empty_queue(request):
+    try:
+        if request.method == 'POST':
+            Queue.objects.all().delete()
+            return JsonResponse({'result': 'success'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 def get_song_queue(request):
-    #Return the queue as a JSON array
     queue = Queue.objects.all()
     return JsonResponse({'result': [song.song.to_dict() for song in queue]})
 def get_next_song(request):
     #Return the first song in the queue
     return Queue.objects.first().song
+
+@csrf_exempt
+def verify_login(request):
+    #Return true if the username and password are correct
+    #Return false otherwise
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        username = data.get('username', '')
+        password = data.get('password', '')
+        ADMIN_ID = os.environ.get('ADMIN_ID')
+        ADMIN_PW = os.environ.get('ADMIN_PW')
+        if username == ADMIN_ID and password == ADMIN_PW:
+            return JsonResponse({'result': 'success'})
+        else:
+            return JsonResponse({'result': 'failure'})
+    else:
+        return JsonResponse({'error': 'Invalid request method'})
+
+def display(request):
+    template = loader.get_template('display.html')
+    return HttpResponse(template.render())

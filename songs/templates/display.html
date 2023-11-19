@@ -5,65 +5,35 @@
 <html>
 
     <head>
-        <title>Jukebox</title>
+        <title>CatJam Admin</title>
         <link rel = "stylesheet" href = "{% static 'css/styles.css' %}">
         <link rel="icon" href="pusayPinkFace.png"> <!--icon for the tab-->
-        <div id="app">
-            <ul>
-              <li v-for="item in array">{{ item }}</li>
-            </ul>
-          </div>
-          
-          <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
-          <script>
-            var app = new Vue({
-              el: '#app',
-              data: {
-                array: [],
-              },
-              mounted() {
-                this.fetchArray();
-                this.timer = setInterval(this.fetchArray, 2000); // Poll every 2 seconds
-              },
-              methods: {
-                async fetchArray() {
-                  try {
-                    const response = await fetch('/api/get_array/');
-                    if (!response.ok) {
-                      throw new Error('Network response was not ok');
-                    }
-                    this.array = await response.json();
-                  } catch (error) {
-                    console.error('There has been a problem with your fetch operation:', error);
-                  }
-                },
-              },
-              beforeDestroy() {
-                clearInterval(this.timer);
-              },
-            });
-          </script>
-          
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     </head>
     <body>
-        <div class="background-container">
-            <div class="header">
-                <h1>CSH Jukebox</h1>
-            </div>
-
+        <div class="container">
+            <header>
+                <h1>CatJam Player</h1>
+            </header>
+            <button id="clearQueue" class="clear-queue-button">Clear Queue</button>
+            <script>
+              document.getElementById('clearQueue').addEventListener('click', function() {
+                fetch('/empty_queue/', {
+                  method: 'POST',  // Use POST as the request method
+                })
+                .then(response => response.json())
+                .then(data => {
+                  console.log(data);
+                  document.getElementById('song-list').innerHTML = '';
+                });
+              });
+            </script>
             <div class="container">
                 <div class="section">
                     <script src="https://open.spotify.com/embed-podcast/iframe-api/v1" async></script>
-                    <iframe 
-                        style="border-radius:12px"
-                        src="https://open.spotify.com/embed/track/2MSgFefjK0T7Iwjvr3OKqV?utm_source=generator"
-                        width="33%"
-                        height="352"
-                        frameBorder="0"
-                        allowfullscreen=""
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                        loading="lazy">
-                </iframe>
+                    <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay" style="display: none;"></iframe>
                 </div>
 
                 <div class="section">
@@ -75,9 +45,6 @@
                     <h2>Upcoming Songs</h2>
                     <!--Dynamically update list with names of songs from array and show those changes in HTML-->
                     <ul id="song-list">
-                    {% for song in song_queue %}
-                    <li>{{ song }}</li>
-                    {% endfor %}
                     </ul>
                 </div>
             

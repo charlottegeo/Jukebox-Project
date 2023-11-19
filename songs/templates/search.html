@@ -18,15 +18,45 @@
     <div class="sidebar" style="display:none" id="mySidebar">
         <button onclick="sidebar_close()" class="w3-bar-item w3-large">Close &times;</button>
         <form id="loginForm">
-            <input type="text" id="username" class="w3-bar-item w3-input" placeholder="Username">
-            <input type="password" id="password" class="w3-bar-item w3-input" placeholder="Password">
+            <input type="text" id="username" class="barInput" placeholder="Username">
+            <input type="password" id="password" class="barInput" placeholder="Password">
             <button type="submit" class="w3-bar-item w3-button">Login</button>
+            <div class="error" id="error">Invalid username or password.</div>
         </form>
     </div>
-    <button class="sidebarbtn" onclick="sidebar_open()">☰</button>
+    <button class="sidebarbtn" onclick="sidebar_open()" onkeydown="errorGone()">☰</button>
     <script>
+        function errorGone() {
+            document.getElementById("error").style.display = "none";
+        }
         document.getElementById('loginForm').addEventListener('submit', function(event) {
             event.preventDefault();
+            var username = document.getElementById('username').value;
+            var password = document.getElementById('password').value;
+            console.log(username);
+            fetch('/verify_login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password }),
+            })
+            .then(response => response.text())
+            .then(text => {
+                console.log(text);  // Log the text
+                return JSON.parse(text);  // Parse the text as JSON
+            })
+            .then(data => {
+                var result = data.result;
+                if (result == 'success') {
+                    window.location.href = "/display/";
+                    console.log("Login successful");
+                }
+                else {
+                    document.getElementById("error").style.display = "block";
+                    console.log("Login failed");
+                }
+            });
         });
         function sidebar_open() {
           document.getElementById("mySidebar").style.display = "block";
@@ -69,6 +99,8 @@
         <script>
             window.onload = function () {
                 document.getElementById('searchbar').value = ""
+                document.getElementById('username').value = ""
+                document.getElementById('password').value = ""
                 updateQueue();
                 // Call updateQueue() every 5 seconds
                 setInterval(updateQueue, 5000);
