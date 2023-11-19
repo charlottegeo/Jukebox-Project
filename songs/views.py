@@ -78,9 +78,15 @@ def empty_queue(request):
 def get_song_queue(request):
     queue = Queue.objects.all()
     return JsonResponse({'result': [song.song.to_dict() for song in queue]})
-def get_next_song(request):
-    #Return the first song in the queue
-    return Queue.objects.first().song
+
+def get_first_song(request):
+    #Return the first song in the queue as a JSON object
+    try:
+        if request.method == 'GET':
+            song = Queue.objects.first().song
+            return JsonResponse({'result': song.to_dict()})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 def verify_login(request):

@@ -249,3 +249,8 @@ input {
     margin-bottom: 5px;
     display: none;
 }
+
+#song {
+    display: flex;
+    flex-direction: column;
+}
