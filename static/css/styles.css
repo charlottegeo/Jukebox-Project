@@ -37,6 +37,10 @@ p {
 }
 
 h1 {
+    height: 5%;
+    text-align: left;
+    font-size: 60px;
+    padding-left: 2%;
     color: #BBBBBB;
 }
 .leftSection {
@@ -190,7 +194,7 @@ input {
     flex-direction: row;
     width: 100%;
     align-items: center;
-    margin-left: 25%;
+    margin-left: 5%;
     margin-right: auto;
     padding-bottom: 2%;
     color: #BBBBBB;
@@ -207,7 +211,7 @@ input {
     text-align: right;
     text-decoration: none;
     display: float;
-    font-size: 90px;
+    font-size: 70px;
     font-weight: bold;
     cursor: pointer;
     width: 100%;
@@ -253,4 +257,14 @@ input {
 #song {
     display: flex;
     flex-direction: column;
+}
+
+.queue-header {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    padding-left: 5%;
+    color: #BBBBBB;
+    text-decoration: underline;
 }

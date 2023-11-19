@@ -11,8 +11,12 @@
 </head>
 
 <body>
-    <div class="header">
-        <h1>CatJam</h1>
+    <div style="display: flex; align-items: center;">
+        <h1>CatJam</h1> <!-- Assuming this is your header -->
+        <button class="sidebarbtn" onclick="sidebar_open()" onkeydown="errorGone()">☰</button>
+    </div>
+    <div class="queue-header">
+        <h2>Queue</h2>
     </div>
     <!-- Sidebar -->
     <div class="sidebar" style="display:none" id="mySidebar">
@@ -24,7 +28,7 @@
             <div class="error" id="error">Invalid username or password.</div>
         </form>
     </div>
-    <button class="sidebarbtn" onclick="sidebar_open()" onkeydown="errorGone()">☰</button>
+    
     <script>
         function errorGone() {
             document.getElementById("error").style.display = "none";
@@ -67,9 +71,7 @@
         }
         </script>
     <div class="queue">
-        <div class="queue-header">
-            <h2>Queue</h2>
-        </div>
+        
         <div id="queuelist"></div>
             <script>
                 function updateQueue() {
