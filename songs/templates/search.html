@@ -16,15 +16,11 @@
         <script>
             window.onload = function() {
                 document.getElementById('searchbar').value = ""
-                console.log("loaded")
             };
             function printText(input) {
-                console.log(input.value);
-                console.log("pressed key")
                 if (event.keyCode === 13) {  // 13 is the key code for the Enter key
                     event.preventDefault();  // prevent form submission
                     var searchText = input.value;  // get the text from the search bar
-                    console.log("pressed enter")
                     fetch('/search_for_tracks/?track_name=' + searchText)
                         .then(response => response.json())
                         .then(data => {
@@ -37,39 +33,53 @@
                                 // Create a new div for the track
                                 var item = document.createElement('div');
                                 item.className = 'item';
-                                item.onclick = function() {
-                                    input.value = this.textContent;  // set the search bar value to the clicked item's text
-                                    dropdown.classList.remove('show');  // hide the dropdown
-                                };
-                                
-                                // Create an img element for the album cover
+                                item.style.display = 'flex';
+                                item.style.justifyContent = 'space-between';  // new line
+                                item.onclick = (function(track) {
+                                    return function() {
+                                        console.log('clicked');
+                                        var selectedItem = document.getElementById('selected-item');
+                                        var displayStyle = window.getComputedStyle(selectedItem).display;
+                                        if(displayStyle == 'none'){
+                                            selectedItem.style.display = 'block';
+                                        }
+                                        selectedItem.style.display = 'flex';
+                                        selectedItem.justifyContent = 'space-between';
+                                        var sImg = document.getElementById('selected-img');
+                                        var sTrackName = document.getElementById('selected-track-name');
+                                        var sArtistName = document.getElementById('selected-artist-name');
+                                        var sTrackLength = document.getElementById('selected-track-length');
+                                        sImg.src = track.cover_url;
+                                        sTrackName.textContent = track.track_name;
+                                        sArtistName.textContent = track.artist_name;
+                                        sTrackLength.textContent = track.track_length;
+                                        var addButton = document.getElementById('add-button');
+                                        var btnDisplayStyle = window.getComputedStyle(addButton).display;
+                                        if(btnDisplayStyle == 'none'){
+                                            addButton.style.display = 'block';
+                                        }
+                                    };
+                                })(track);
+                                var imgTextWrapper = document.createElement('div');
+                                imgTextWrapper.style.display = 'flex';
                                 var img = document.createElement('img');
-                                img.src = track.cover_url;  // replace with the actual album cover URL
-                                item.appendChild(img);
-
-                                // Create a new div for the text (song title and artist name)
+                                img.src = track.cover_url;
+                                imgTextWrapper.appendChild(img);
                                 var textWrapper = document.createElement('div');
                                 textWrapper.style.display = 'flex';
                                 textWrapper.style.flexDirection = 'column';
-
-                                // Create a new div for the track name and append it to the text wrapper
                                 var trackName = document.createElement('div');
                                 trackName.textContent = track.track_name;
+                                textWrapper.appendChild(trackName);
+                                item.appendChild(textWrapper);
+                                var artistName = document.createElement('div');
+                                artistName.textContent = track.artist_name;
+                                textWrapper.appendChild(artistName);
+                                imgTextWrapper.appendChild(textWrapper);
+                                item.appendChild(imgTextWrapper);
                                 var trackLength = document.createElement('div');
                                 trackLength.textContent = track.track_length;
-                                trackLength.style.marginLeft = 'auto';  // align it to the right
-                                trackName.appendChild(trackLength);
-                                textWrapper.appendChild(trackName);
-
-                                // Create a new div for the artist name and append it to the text wrapper
-                                var artistName = document.createElement('div');
-                                artistName.textContent = 'by ' + track.artist_name;
-                                textWrapper.appendChild(artistName);
-
-                                // Append the image and text wrapper to the item
-                                item.appendChild(img);
-                                item.appendChild(textWrapper);
-                                // Add the item to the dropdown
+                                item.appendChild(trackLength);
                                 dropdown.appendChild(item);
                             }
                             dropdown.style.display = 'block';
@@ -81,6 +91,26 @@
         </script>
     </div>
     <div id="dropdown" aria-labelledby="searchbar"></div>
-    <div class="results"></div>
+    <div class="selected" aria-labelledby="searchbar">
+        <div id="info-text">Selected Song:</div>
+        <div id="selected-song">
+            <div id="selected-item">
+                <div id="selected-imgtext">
+                    <img id="selected-img">
+                    <div id="selected-text">
+                        <div id="selected-track-name"></div>
+                        <div id="selected-artist-name"></div>
+                    </div>
+                </div>
+                <div id="selected-track-length"></div>
+            </div>
+    </div>
+    <button id="add-button" onclick="submitSong()">Add to Queue</button>
+    <script>
+        function submitSong() {
+            console.log('submitting song');
+        }
+    </script>
+
 </body>
 </html>

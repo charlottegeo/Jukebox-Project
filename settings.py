@@ -38,8 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'songs',
-    'rest_framework'
+    'rest_framework',
+    'songs.apps.SongsConfig'
 ]
 
 MIDDLEWARE = [
@@ -77,8 +77,11 @@ WSGI_APPLICATION = 'wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'catjam',
+        'HOST': 'postgres.csh.rit.edu',
+        'PASSWORD': 'assignation6<defectively',
+        'USER': 'catjam'
     }
 }
 

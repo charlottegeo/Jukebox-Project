@@ -100,7 +100,7 @@ input {
 
 #dropdown {
     display: none;  /* hide the dropdown by default */
-    position: absolute;  /* position the dropdown below the search bar */
+    position: relative;  /* position the dropdown below the search bar */
     width: 50%;  /* make the dropdown the same width as the search bar */
     margin-left: 25%;  /* center the dropdown */
 }
@@ -111,7 +111,7 @@ input {
 
 #dropdown .item {
     display: flex;  /* use flexbox to layout the item */
-    flex-direction: row;  /* stack the .item elements vertically */
+    flex-direction: auto;  /* stack the .item elements vertically */
     align-items: center;  /* center the text and image vertically */
     padding: 10px;  /* add some padding */
     cursor: pointer;  /* change the cursor when hovering over the item */
@@ -122,10 +122,57 @@ input {
 #dropdown .item:hover {
     background-color: #898989;  /* change the background color when hovering over the item */
 }
-#dropdown .item .trackName {
-    display: flex;
-}
 #dropdown .item img {
     width: 50px;  /* set the width of the album cover */
     margin-right: 10px;  /* add some space between the album cover and the text */
+}
+.selected {
+    width: 50%;
+    margin-left: 25%;
+}
+#info-text {
+    color: #BBBBBB;
+    text-align: center;
+    padding-top: 10%;
+    padding-bottom: 2%;
+}
+#selected-item {
+    align-items: center;
+    padding: 10px;
+    background-color: #D9D9D9;
+    width: 100%;
+    display : none;
+}
+#selected-img {
+    width: 50px;
+    margin-right: 10px;
+}
+#selected-imgtext {
+    display: flex;
+
+}
+#selected-text{
+    display: flex;
+    flex-direction: column;
+}
+
+#selected-track-length {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    margin-left: auto;
+}
+#add-button {
+    margin-left: 25%;
+    margin-right: auto;
+    width: 50%;
+    padding: 10px;
+    margin-top: 5%;
+    text-align: center;
+    background-color: #D9D9D9;
+    border-radius: 25px;
+    color: #1e1e1e;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
 }

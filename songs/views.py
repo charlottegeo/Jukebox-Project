@@ -33,3 +33,6 @@ def get_search_results(request):
             print(result_array[i].getTrackName())
         result_array = [track.to_dict() for track in result_array]
         return JsonResponse({'result': result_array})
+
+def add_to_queue(request):
+    
