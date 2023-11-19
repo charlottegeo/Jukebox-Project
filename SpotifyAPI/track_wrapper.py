@@ -80,3 +80,13 @@ class TrackWrapper:
     def getURI(self) -> str:
         """returns the URI for a media playing i think?"""
         return self.TrackObject['uri']
+    
+    def to_dict(self):
+        return {
+            'track_name': self.getTrackName(),
+            'artist_name': self.getArtistNames(),
+            'cover_url': self.getAlbumCoverURL(),
+            'track_length': self.getFormattedTrackLength(),
+            'track_id': self.getTrackID(),
+            'uri': self.getURI()
+        }

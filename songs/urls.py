@@ -8,6 +8,7 @@ from django.urls import path
 urlpatterns = [
     path('', views.songs, name='songs'),
     path('static/css/styles.css', views.styles, name='styles'),
-    path('api/get_array/', views.get_array, name="get_array")
+    path('api/get_array/', views.get_array, name="get_array"),
+    path('search_for_tracks/', views.get_search_results, name='search_results_view')
 ]
 

@@ -109,7 +109,6 @@ def search_for_tracks(
         array.append(TrackWrapper(TrackObject))
    
     return array
-
 def get_song_queue(queue: SongQueue):
     """
     Returns the song queue

@@ -5,7 +5,7 @@ from django.conf import settings
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.core import serializers
-from SpotifyAPI.main import get_song_queue, SongQueue
+from SpotifyAPI.main import *
 from SpotifyAPI.track_wrapper import TrackWrapper
 
 
@@ -24,3 +24,12 @@ def styles(request):
     except Exception as e:
         return HttpResponse(e)
 
+def get_search_results(request):
+    if request.method == 'GET':
+        token = get_token()
+        track_name = request.GET.get('track_name', '')
+        result_array = search_for_tracks(token, track_name, 3)
+        for i in range(len(result_array)):
+            print(result_array[i].getTrackName())
+        result_array = [track.to_dict() for track in result_array]
+        return JsonResponse({'result': result_array})

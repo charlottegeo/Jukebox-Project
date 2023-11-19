@@ -4,6 +4,7 @@
 <head>
     <title>CatJam</title>
     <link rel = "stylesheet" href = "{% static 'css/styles.css' %}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 
 <body>
@@ -11,7 +12,32 @@
         <h1>CatJam</h1>
     </div>
     <div class="search">
-        <input type="text" name="song" placeholder="Search for a song here:">
+        <input type="text" id="searchbar" name="song" placeholder="Search for a song here:" onkeyup="printText(this)">
+        <script>
+            window.onload = function() {
+                document.getElementById('searchbar').value = ""
+                console.log("loaded")
+            };
+            function printText(input) {
+                console.log(input.value);
+                console.log("pressed key")
+                if (event.keyCode === 13) {  // 13 is the key code for the Enter key
+                    event.preventDefault();  // prevent form submission
+                    var searchText = input.value;  // get the text from the search bar
+                    console.log("pressed enter")
+                    fetch('/search_for_tracks/?track_name=' + searchText)
+                        .then(response => response.json())
+                        //print out response
+                        .then(data => {
+                            for(var i = 0; i < data.result.length; i++) {
+                                console.log(data.result[i]);
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                                }
+                            }
+            
+        </script>
     </div>
 </body>
 </html>
