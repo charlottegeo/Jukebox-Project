@@ -3,6 +3,7 @@
   
 
 An online jukebox application for creating a shared/collaborative music queue.
+Made with Django, Python, and HTML/CSS/JS.
 Developed by Charlotte George, Matt Marafino, Saavan Tandon, and Jinna Smail as part of the CSHacks and Opcommathon hackathons.
 Available at [catjam.cs.house](catjam.cs.house)
 
