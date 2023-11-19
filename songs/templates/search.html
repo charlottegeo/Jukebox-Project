@@ -14,11 +14,33 @@
     <div class="header">
         <h1>CatJam</h1>
     </div>
+    <!-- Sidebar -->
+    <div class="sidebar" style="display:none" id="mySidebar">
+        <button onclick="sidebar_close()" class="w3-bar-item w3-large">Close &times;</button>
+        <form id="loginForm">
+            <input type="text" id="username" class="w3-bar-item w3-input" placeholder="Username">
+            <input type="password" id="password" class="w3-bar-item w3-input" placeholder="Password">
+            <button type="submit" class="w3-bar-item w3-button">Login</button>
+        </form>
+    </div>
+    <button class="sidebarbtn" onclick="sidebar_open()">☰</button>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+        });
+        function sidebar_open() {
+          document.getElementById("mySidebar").style.display = "block";
+        }
+        
+        function sidebar_close() {
+          document.getElementById("mySidebar").style.display = "none";
+        }
+        </script>
     <div class="queue">
         <div class="queue-header">
             <h2>Queue</h2>
         </div>
-        <div id="queuelist">
+        <div id="queuelist"></div>
             <script>
                 function updateQueue() {
                     fetch('/get_song_queue/')
@@ -27,7 +49,9 @@
                             console.log(queue);
                             var queuelist = document.getElementById('queuelist');
                             queuelist.innerHTML = '';  // clear the queuelist
-                            for (var i = 0; i < queue.result.length; i++) {
+                            var length = Math.min(5, queue.result.length);
+
+                            for (var i = 0; i < length; i++) {
                                 console.log("Adding song to queue")
                                 var img = document.createElement('img');
                                 img.src = queue.result[i].cover_url;
@@ -39,7 +63,6 @@
 
                 
             </script>
-        </div>
     </div>
     <div class="search">
         <input type="text" id="searchbar" name="song" placeholder="Search for a song here:" onkeyup="printText(this)">

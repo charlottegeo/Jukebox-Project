@@ -161,6 +161,7 @@ input {
     flex-direction: row;
     align-items: flex-end;
     margin-left: auto;
+    color: #696969;
 }
 #add-button {
     margin-left: 25%;
@@ -175,4 +176,69 @@ input {
     font-weight: bold;
     cursor: pointer;
     display: none;
+}
+.queue {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    padding-bottom: 2%;
+    color: #BBBBBB;
+}
+#queuelist {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    margin-left: 25%;
+    margin-right: auto;
+    padding-bottom: 2%;
+    color: #BBBBBB;
+}
+#queuelist img {
+    width: 50px;
+    margin-right: 10px;
+}
+.sidebarbtn {
+    background-color: #1e1e1e;
+    border: none;
+    color: #BBBBBB;
+    padding: 15px 32px;
+    text-align: right;
+    text-decoration: none;
+    display: float;
+    font-size: 90px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    border-radius: 25px;
+    margin-bottom: 2%;
+}
+.sidebar {
+    width: 250px;
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    background-color: #636363;
+    padding: 20px;
+    box-sizing: border-box;
+    transition: transform 0.3s ease-in-out;
+    overflow: auto;
+}
+
+.sidebar input {
+    margin-bottom: 10px;
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sidebar button {
+    width: 100%;
+    padding: 10px;
+    background-color: #1e1e1e;
+    color: white;
+    border: none;
+    cursor: pointer;
 }
