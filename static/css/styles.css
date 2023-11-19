@@ -93,3 +93,39 @@ input {
 #artistName { 
     color: #FF8FAD;
 }
+
+.results {
+    color: #BBBBBB;
+}
+
+#dropdown {
+    display: none;  /* hide the dropdown by default */
+    position: absolute;  /* position the dropdown below the search bar */
+    width: 50%;  /* make the dropdown the same width as the search bar */
+    margin-left: 25%;  /* center the dropdown */
+}
+
+#dropdown.show {
+    display: block;  /* show the dropdown when the .show class is added */
+}
+
+#dropdown .item {
+    display: flex;  /* use flexbox to layout the item */
+    flex-direction: row;  /* stack the .item elements vertically */
+    align-items: center;  /* center the text and image vertically */
+    padding: 10px;  /* add some padding */
+    cursor: pointer;  /* change the cursor when hovering over the item */
+    background-color: #D9D9D9;  /* add a grey background color */
+    width: 100%;
+}
+
+#dropdown .item:hover {
+    background-color: #898989;  /* change the background color when hovering over the item */
+}
+#dropdown .item .trackName {
+    display: flex;
+}
+#dropdown .item img {
+    width: 50px;  /* set the width of the album cover */
+    margin-right: 10px;  /* add some space between the album cover and the text */
+}
