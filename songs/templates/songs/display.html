@@ -1,13 +1,13 @@
+{% load static %}
 <!DOCTYPE html>
 <!--https://www.w3schools.com/html/default.asp-->
 <!--https://www.w3schools.com/css/default.asp-->
-{% load static %}
+
 <html>
 
     <head>
         <title>CatJam Admin</title>
         <link rel = "stylesheet" href = "{% static 'css/styles.css' %}">
-        <link rel="icon" href="pusayPinkFace.png"> <!--icon for the tab-->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
         integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -56,18 +56,12 @@
                                 
                             }
                         </script>
-                        <img id="album-cover">
+                        <img id="album-cover" src="{% static "img/song_placeholder.png" %}" width="250" height="250">
                         <div id="song_title">Song Title</div>
                         <div id="artist_name">Artist Name</div>
                     </div>
                     
                 </div>
-
-                <div class="section">
-                    <!--contains pusay-->
-                    <img src = "PusayWholePink.png"> <!--big pusay in center-->
-                </div>
-
                 <div class="section">
                     <h2>Upcoming Songs</h2>
                     <!--Dynamically update list with names of songs from array and show those changes in HTML-->

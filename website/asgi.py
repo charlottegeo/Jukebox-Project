@@ -11,10 +11,8 @@ import os
 import django
 from channels.http import AsgiHandler
 from channels.routing import ProtocolTypeRouter
+from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'jukebox_site.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'website.settings')
 
-application = ProtocolTypeRouter({
-  "http": AsgiHandler(),
-  ## IMPORTANT::Just HTTP for now. (We can add other protocols later.)
-})
+application = get_asgi_application()

@@ -17,8 +17,9 @@ def get_array(request):
     return JsonResponse(get_song_queue())
 
 def songs(request):
-    template = loader.get_template('search.html')
-    return HttpResponse(template.render())
+    template = loader.get_template('songs/search.html')
+    context = {}
+    return HttpResponse(template.render(context, request))
 
 
 def styles(request):
@@ -106,5 +107,6 @@ def verify_login(request):
         return JsonResponse({'error': 'Invalid request method'})
 
 def display(request):
-    template = loader.get_template('display.html')
-    return HttpResponse(template.render())
+    template = loader.get_template('songs/display.html')
+    context = {}
+    return HttpResponse(template.render(context, request))
