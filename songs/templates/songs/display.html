@@ -8,6 +8,7 @@
     <head>
         <title>CatJam Admin</title>
         <link rel = "stylesheet" href = "{% static 'css/styles.css' %}">
+        <script src="{% static 'js/script.js' %}"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
         integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -16,19 +17,7 @@
         <div class="container">
             <header>
                 <h1>CatJam Player</h1>
-                <button id="clearQueue" class="clear-queue-button">Clear Queue</button>
-                <script>
-                document.getElementById('clearQueue').addEventListener('click', function() {
-                    fetch('/empty_queue/', {
-                    method: 'POST',  // Use POST as the request method
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                    console.log(data);
-                    document.getElementById('song-list').innerHTML = '';
-                    });
-                });
-                </script>
+                <button id="clearQueue" class="clear-queue-button" onclick=clearQueue()>Clear Queue</button>
             </header>
             
             <div class="container">
@@ -36,26 +25,6 @@
                     <div class="song">
                         <script src="https://open.spotify.com/embed-podcast/iframe-api/v1" async></script>
                         <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay" style="display: none;"></iframe>
-                        <script>
-                            function playSong(){
-                                /*Get next song from queue*/
-                                /*Update song title and artist name*/
-                                /*Update album cover*/
-                                /*Update spotify player*/
-                                fetch('/get_first_song/', {
-                                    method: 'GET',
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    // The first queue item is now in 'data'
-                                    document.getElementById("spotify-player").src = "https://open.spotify.com/embed/track/" + data['track_id'];
-                                    document.getElementById("song_title").innerHTML = data['track_name'];
-                                    document.getElementById("artist_name").innerHTML = data['artist_name'];
-                                    document.getElementById("album-cover").src = data['cover_url'];
-                                });
-                                
-                            }
-                        </script>
                         <img id="album-cover" src="{% static "img/song_placeholder.png" %}" width="250" height="250">
                         <div id="song_title">Song Title</div>
                         <div id="artist_name">Artist Name</div>
