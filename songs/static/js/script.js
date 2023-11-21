@@ -1,44 +1,58 @@
 /*Code for main/search page*/
 window.onload = function () {
-    document.getElementById('searchbar').value = ""
-    document.getElementById('username').value = ""
-    document.getElementById('password').value = ""
-    updateQueue();
-    // Call updateQueue() every 5 seconds
-    setInterval(updateQueue, 5000);
+    var loginForm = document.getElementById('loginForm');
+    if(loginForm){
+        loginForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            console.log("Login form submitted");
+            var username = document.getElementById('username').value;
+            var password = document.getElementById('password').value;
+            console.log(username);
+            fetch('/verify_login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password }),
+            })
+            .then(response => response.text())
+            .then(text => {
+                console.log(text);  // Log the text
+                return JSON.parse(text);  // Parse the text as JSON
+            })
+            .then(data => {
+                var result = data.result;
+                if (result == 'success') {
+                    console.log("Login successful");
+                    window.location.href = "/display/";
+                    console.log("Login successful");
+                }
+                else {
+                    document.getElementById("error").style.display = "block";
+                    console.log("Login failed");
+                }
+            });
+        });
+    }
+    var searchbar = document.getElementById('searchbar');
+    var username = document.getElementById('username');
+    var password = document.getElementById('password');
+    if(searchbar) searchbar.value = ""
+    if(username) username.value = ""
+    if(password) password.value = ""
+    console.log("Page loaded");
+    if (window.location.pathname === '/') { // Only run this code on the main page
+        updateQueue();
+        setInterval(updateQueue, 5000); // Update the queue every 5 seconds
+    }
+    if (window.location.pathname === '/display/') {
+        playSong();
+    }
 };
 function errorGone() {
     document.getElementById("error").style.display = "none";
 }
-document.getElementById('loginForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    var username = document.getElementById('username').value;
-    var password = document.getElementById('password').value;
-    console.log(username);
-    fetch('/verify_login/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-    })
-    .then(response => response.text())
-    .then(text => {
-        console.log(text);  // Log the text
-        return JSON.parse(text);  // Parse the text as JSON
-    })
-    .then(data => {
-        var result = data.result;
-        if (result == 'success') {
-            window.location.href = "/display/";
-            console.log("Login successful");
-        }
-        else {
-            document.getElementById("error").style.display = "block";
-            console.log("Login failed");
-        }
-    });
-});
+
 function sidebar_open() {
   document.getElementById("mySidebar").style.display = "block";
 }
@@ -191,6 +205,15 @@ function submitSong() {
         addButton.style.display = 'none';
         var searchbar = document.getElementById('searchbar');
         searchbar.value = '';
+        fetch('/get_song_queue/', { 
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(queue => {
+            if (queue.result.length > 0) {
+                playSong();
+            }
+        });
     })
     .catch((error) => {
         console.error('Error:', error);
@@ -198,6 +221,7 @@ function submitSong() {
 }
 
 /*Code for the player and admin panel*/
+
 function clearQueue() {
     fetch('/empty_queue/', {
     method: 'POST',  // Use POST as the request method
@@ -218,11 +242,16 @@ function playSong(){
     })
     .then(response => response.json())
     .then(data => {
-        // The first queue item is now in 'data'
-        document.getElementById("spotify-player").src = "https://open.spotify.com/embed/track/" + data['track_id'];
-        document.getElementById("song_title").innerHTML = data['track_name'];
-        document.getElementById("artist_name").innerHTML = data['artist_name'];
-        document.getElementById("album-cover").src = data['cover_url'];
+        if (!data['result'] || data['result'].length == 0) {
+            console.log('Queue is empty');
+            return;
+        } else{
+            EmbedController.loadUri(data['result']['uri']);
+            document.getElementById("song_title").innerHTML = data['result']['track_name'];
+            document.getElementById("artist_name").innerHTML = data['result']['artist_name'];
+            document.getElementById("album-cover").src = data['result']['cover_url'];
+            EmbedController.play();
+        }
     });
     
 }

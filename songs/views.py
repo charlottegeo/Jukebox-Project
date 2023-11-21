@@ -77,6 +77,7 @@ def empty_queue(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 def get_song_queue(request):
+    #if the page is the main page, return the entire queue
     queue = Queue.objects.all()
     return JsonResponse({'result': [song.song.to_dict() for song in queue]})
 
