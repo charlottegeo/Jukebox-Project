@@ -77,7 +77,7 @@ def empty_queue(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 def get_song_queue(request):
-    #if the page is the main page, return the entire queue
+    #return the entire queue
     queue = Queue.objects.all()
     return JsonResponse({'result': [song.song.to_dict() for song in queue]})
 
@@ -85,6 +85,8 @@ def get_first_song(request):
     #Return the first song in the queue as a JSON object
     try:
         if request.method == 'GET':
+            if Queue.objects.count() == 0:
+                return JsonResponse({'result': None})
             song = Queue.objects.first().song
             return JsonResponse({'result': song.to_dict()})
     except Exception as e:

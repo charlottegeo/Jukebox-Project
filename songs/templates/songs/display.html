@@ -11,17 +11,17 @@
         <script src="{% static 'js/script.js' %}"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" crossorigin="anonymous" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" referrerpolicy="no-referrer"></script>
         <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
-
-
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    </head>
+        </head>
     <body>
         <div class="container">
             <header>
                 <h1>CatJam Player</h1>
                 <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
             </header>
-            
+           <div id="progressBar">
+                <div id="progressTimestamp">0 s</div>
+                <div id="progressBarInner"></div>
+            </div>
             <div class="container">
                 <div class="section">
                     <div class="song">
@@ -31,13 +31,22 @@
                             window.onSpotifyIframeApiReady = (IFrameAPI) => {
                                 let element = document.getElementById('spotify-player');
                                 let options = {
-                                    uri: 'spotify:track:6rqhFgbbKwnb9MLmUQDhG6',
+                                    uri: null,
                                   };
                                 let callback = (controller) => {
                                     EmbedController = controller;
                                 };
                                 IFrameAPI.createController(element, options, callback);
+                                EmbedController.addListener('playback_update', e => {
+                                    document.getElementById('progressTimestamp').innerText = `${parseInt(e.data.position / 1000, 10)} s`;
+                                    if(e.data.position == e.data.duration) {
+                                        console.log("Song ended");
+                                    }
+                                    console.log(e.data.position);
+                                });
                               };
+                            
+
                         </script>
                         <img id="album-cover" src="{% static "img/song_placeholder.png" %}" width="250" height="250">
                         <div id="song_title">Song Title</div>
