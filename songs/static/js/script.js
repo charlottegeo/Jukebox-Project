@@ -2,32 +2,25 @@
 window.onload = function () {
     var loginForm = document.getElementById('loginForm');
     if(loginForm){
-        loginForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            console.log("Login form submitted");
-            var username = document.getElementById('username').value;
-            var password = document.getElementById('password').value;
-            console.log(username);
-            fetch('/verify_login/', {
+        $('#loginForm').on('submit', function(e) {
+            e.preventDefault();
+            var username = $('#username').val();
+            var password = $('#password').val();
+
+            $.ajax({
+                url: '/verify_login/',
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password }),
+                data: {
+                    username: username,
+                    password: password
+                }
             })
-            .then(response => response.text())
-            .then(text => {
-                console.log(text);  // Log the text
-                return JSON.parse(text);  // Parse the text as JSON
-            })
-            .then(data => {
-                var result = data.result;
-                if (result == 'success') {
+            .done(function(data) {
+                if (data.success) {
                     console.log("Login successful");
                     window.location.href = "/display/";
                     console.log("Login successful");
-                }
-                else {
+                } else {
                     document.getElementById("error").style.display = "block";
                     console.log("Login failed");
                 }
