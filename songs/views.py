@@ -97,12 +97,20 @@ def verify_login(request):
     #Return true if the username and password are correct
     #Return false otherwise
     if request.method == 'POST':
-        data = json.loads(request.body)
-        username = data.get('username', '')
-        password = data.get('password', '')
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+                print(data)
+            except json.JSONDecodeError:
+                return JsonResponse({'result': 'failure', 'reason': 'Invalid JSON'})
+        else:
+            data = request.POST
+            print(data)
+            print(os.environ.get('ADMIN_ID'))
+            print(os.environ.get('ADMIN_PW'))
         ADMIN_ID = os.environ.get('ADMIN_ID')
         ADMIN_PW = os.environ.get('ADMIN_PW')
-        if username == ADMIN_ID and password == ADMIN_PW:
+        if data['username'] == ADMIN_ID and data['password'] == ADMIN_PW:
             return JsonResponse({'result': 'success'})
         else:
             return JsonResponse({'result': 'failure'})

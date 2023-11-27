@@ -6,7 +6,7 @@ window.onload = function () {
             e.preventDefault();
             var username = $('#username').val();
             var password = $('#password').val();
-
+            console.log("Username: ", username);
             $.ajax({
                 url: '/verify_login/',
                 method: 'POST',
@@ -16,11 +16,14 @@ window.onload = function () {
                 }
             })
             .done(function(data) {
-                if (data.success) {
+                console.log("Data: ", data);
+                if (data.result == "success") {
                     console.log("Login successful");
                     window.location.href = "/display/";
                     console.log("Login successful");
+                    EmbedController.play();
                 } else {
+                    
                     document.getElementById("error").style.display = "block";
                     console.log("Login failed");
                 }

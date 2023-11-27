@@ -31,6 +31,8 @@
                             window.onSpotifyIframeApiReady = (IFrameAPI) => {
                                 let element = document.getElementById('spotify-player');
                                 let options = {
+                                    width: 0,
+                                    height: 0,
                                     uri: null,
                                   };
                                 let callback = (controller) => {
