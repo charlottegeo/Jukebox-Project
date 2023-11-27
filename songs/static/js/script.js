@@ -43,6 +43,7 @@ window.onload = function () {
     }
     if (window.location.pathname === '/display/') {
         playSong();
+        setInterval(updateAdminQueue, 5000); // Update the queue every 5 seconds
     }
 };
 function errorGone() {
@@ -74,6 +75,7 @@ function updateQueue() {
             }
         });
 }
+
 
 function printText(input) {
     var resultText = document.getElementById('resulttext');
@@ -201,6 +203,7 @@ function submitSong() {
         addButton.style.display = 'none';
         var searchbar = document.getElementById('searchbar');
         searchbar.value = '';
+        updateAdminQueue();
         fetch('/get_song_queue/', { 
             method: 'GET',
         })
@@ -217,6 +220,41 @@ function submitSong() {
 }
 
 /*Code for the player and admin panel*/
+
+function updateAdminQueue() {
+    fetch('/get_song_queue/')
+        .then(response => response.json())
+        .then(queue => {
+            console.log(queue);
+            var queuelist = document.getElementById('song-list');
+            queuelist.innerHTML = '';  // clear the queuelist
+            var length = queue.result.length;
+
+            for (var i = 1; i < length; i++) {
+                console.log("Adding song to queue")
+                var img = document.createElement('img');
+                img.src = queue.result[i].cover_url;
+                img.style.width = '100px';
+                queuelist.appendChild(img);
+            }
+        });
+}
+
+function removeFirstSong() {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: '/remove_first_song/',
+            type: 'POST',
+            success: function(response) {
+                resolve();
+            },
+            error: function(error) {
+                console.log(error);
+                reject();
+            }
+        });
+    });
+}
 
 function clearQueue() {
     fetch('/empty_queue/', {
@@ -242,7 +280,9 @@ function playSong(){
             console.log('Queue is empty');
             return;
         } else{
+            console.log(data);
             EmbedController.loadUri(data['result']['uri']);
+            console.log("Current song: ", data['result']['track_name'], data['result']['uri']);
             document.getElementById("song_title").innerHTML = data['result']['track_name'];
             document.getElementById("artist_name").innerHTML = data['result']['artist_name'];
             document.getElementById("album-cover").src = data['result']['cover_url'];

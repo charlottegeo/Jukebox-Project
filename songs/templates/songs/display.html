@@ -31,8 +31,8 @@
                             window.onSpotifyIframeApiReady = (IFrameAPI) => {
                                 let element = document.getElementById('spotify-player');
                                 let options = {
-                                    width: 0,
-                                    height: 0,
+                                    width: 350,
+                                    height: 100,
                                     uri: null,
                                   };
                                 let callback = (controller) => {
@@ -41,8 +41,10 @@
                                 IFrameAPI.createController(element, options, callback);
                                 EmbedController.addListener('playback_update', e => {
                                     document.getElementById('progressTimestamp').innerText = `${parseInt(e.data.position / 1000, 10)} s`;
-                                    if(e.data.position == e.data.duration) {
-                                        console.log("Song ended");
+                                    if(e.data.position == e.data.duration && e.data.duration != 0) {  
+                                        removeFirstSong().then(() => {
+                                            playSong();
+                                        });
                                     }
                                     console.log(e.data.position);
                                 });

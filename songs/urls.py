@@ -16,6 +16,7 @@ urlpatterns = [
     path('verify_login/', views.verify_login, name='verify_login'),
     path('display/', views.display, name='display'),
     path('skip_song/', views.skip_song, name='skip_song'),
-    path('get_first_song/', views.get_first_song, name='get_first_song')
+    path('get_first_song/', views.get_first_song, name='get_first_song'),
+    path('remove_first_song/', views.remove_first_song, name='remove_first_song'),
 ]
 

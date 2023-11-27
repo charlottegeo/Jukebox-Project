@@ -65,6 +65,21 @@ def skip_song(request):
         return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+@csrf_exempt
+def remove_first_song(request):
+    #Remove the first song in the queue
+    try:
+        if request.method == 'POST':
+            queue = Queue.objects.first()
+            if queue is not None:
+                song = queue.song
+                song.delete()
+                return JsonResponse({'result': 'success'})
+            else:
+                return JsonResponse({'error': 'Queue is empty'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
     
 @csrf_exempt
 def empty_queue(request):
