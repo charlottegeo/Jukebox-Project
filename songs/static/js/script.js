@@ -300,9 +300,18 @@ function playSong(){
             document.getElementById("song_title").innerHTML = data['result']['track_name'];
             document.getElementById("artist_name").innerHTML = data['result']['artist_name'];
             document.getElementById("album-cover").src = data['result']['cover_url'];
-            console.log("BPM: ", data['result']['tempo']);
+            console.log("BPM: ", data['result']['bpm']);
             EmbedController.play();
             isPlaying = true;
+            
+            let bpm = data['result']['bpm'];
+            let catBobs = 160;
+            let speedRatio = bpm / catBobs;
+            let gif = document.getElementById("catjam");
+            console.log("Initial animation duration: ", gif.style.animationDuration);
+            gif.style.animationDuration = speedRatio + "s";
+            console.log("Speed ratio: ", speedRatio);
+            console.log("Animation duration: ", gif.style.animationDuration);
             checkQueue();
         }
     });

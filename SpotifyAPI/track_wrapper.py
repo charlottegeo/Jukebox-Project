@@ -3,7 +3,8 @@ author: matt marafino(?)
 """
 
 import math
-
+import requests
+import SpotifyAPI.main as SpotifyAPI
 def formatTime(time_seconds: int) -> str:
     """returns the time in seconds in the format minutes:seconds"""
     timeString = ""
@@ -81,9 +82,18 @@ class TrackWrapper:
         """returns the URI for a media playing i think?"""
         return self.TrackObject['uri']
     
-    def getBPM(self) -> int:
+    def get_audio_features(self, token):
+        """returns the audio features for the song"""
+        track_id = self.getTrackID()
+        headers = {'Authorization': 'Bearer ' + token}
+        response = requests.get(f'https://api.spotify.com/v1/audio-features/{track_id}', headers=headers)
+        audio_features = response.json()
+        return audio_features
+
+    def getBPM(self, token) -> int:
         """returns the BPM of the song"""
-        return self.TrackObject['audio_features'][0]['tempo']
+        audio_features = self.get_audio_features(token)
+        return audio_features['tempo']
     def to_dict(self):
         return {
             'track_name': self.getTrackName(),
@@ -92,5 +102,5 @@ class TrackWrapper:
             'track_length': self.getFormattedTrackLength(),
             'track_id': self.getTrackID(),
             'uri': self.getURI(),
-            'bpm': self.getBPM(),
+            'bpm': self.getBPM(token=SpotifyAPI.get_token()),
         }

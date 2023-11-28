@@ -88,27 +88,30 @@ def search_for_tracks(
     """
     Returns an array of length 'search_limit' of track objects wrapped in TrackWrapper
     """
+    try:
+        print(f"Searching for {track_name}")
+        url = "https://api.spotify.com/v1/search"
+        headers = get_auth_header(token)
+        query = f"q={track_name}&type=track&limit={search_limit}"
 
-    print(f"Searching for {track_name}")
-    url = "https://api.spotify.com/v1/search"
-    headers = get_auth_header(token)
-    query = f"q={track_name}&type=track&limit={search_limit}"
+        query_url = url + "?" + query
 
-    query_url = url + "?" + query
+        result = get(query_url, headers=headers)
+        json_result = json.loads(result.content)["tracks"]["items"]  # an array of all the TrackObject results
+        
+        if len(json_result) == 0:
+            print("No track with this name exists, so sorry.")
+            return None
+        
+        array = []
 
-    result = get(query_url, headers=headers)
-    json_result = json.loads(result.content)["tracks"]["items"]  # an array of all the TrackObject results
+        for TrackObject in json_result:
+            array.append(TrackWrapper(TrackObject))
     
-    if len(json_result) == 0:
-        print("No track with this name exists, so sorry.")
+        return array
+    except Exception as e:
+        print(f"An error occurred while searching for tracks: {e}")
         return None
-    
-    array = []
-
-    for TrackObject in json_result:
-        array.append(TrackWrapper(TrackObject))
-   
-    return array
 def get_song_queue(queue: SongQueue):
     """
     Returns the song queue

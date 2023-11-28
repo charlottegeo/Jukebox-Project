@@ -268,3 +268,6 @@ input {
     color: #BBBBBB;
     text-decoration: underline;
 }
+#catjam {
+    animation: catjam 1s steps(23) infinite;
+}
