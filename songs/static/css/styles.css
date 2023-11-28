@@ -1,6 +1,7 @@
 html {
     font-family: 'Akshar Unicode', sans-serif;
     font-weight: bold;
+    color: white;
 }
 .header {
     height: 5%;
@@ -20,7 +21,8 @@ body {
 
 
 .container {
-
+    display: flex;
+    flex-direction: space-between;
     height: 100%;
 }
 
