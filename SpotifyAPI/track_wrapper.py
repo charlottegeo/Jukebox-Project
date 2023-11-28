@@ -81,6 +81,9 @@ class TrackWrapper:
         """returns the URI for a media playing i think?"""
         return self.TrackObject['uri']
     
+    def getBPM(self) -> int:
+        """returns the BPM of the song"""
+        return self.TrackObject['audio_features'][0]['tempo']
     def to_dict(self):
         return {
             'track_name': self.getTrackName(),
@@ -88,5 +91,6 @@ class TrackWrapper:
             'cover_url': self.getAlbumCoverURL(),
             'track_length': self.getFormattedTrackLength(),
             'track_id': self.getTrackID(),
-            'uri': self.getURI()
+            'uri': self.getURI(),
+            'bpm': self.getBPM(),
         }

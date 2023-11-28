@@ -185,7 +185,8 @@ function submitSong() {
             'track_length': trackLength,
             'cover_url': coverUrl,
             'track_id': trackId,
-            'uri': uri
+            'uri': uri,
+            'bpm' : track.bpm
         })
     })
     .then(response => response.json())
@@ -299,6 +300,7 @@ function playSong(){
             document.getElementById("song_title").innerHTML = data['result']['track_name'];
             document.getElementById("artist_name").innerHTML = data['result']['artist_name'];
             document.getElementById("album-cover").src = data['result']['cover_url'];
+            console.log("BPM: ", data['result']['tempo']);
             EmbedController.play();
             isPlaying = true;
             checkQueue();
@@ -315,7 +317,7 @@ function doneSong(){
             } else{
                 document.getElementById("song_title").innerHTML = "-";
                 document.getElementById("artist_name").innerHTML = "-";
-                document.getElementById("album-cover").src = "static/img/song_placeholder.png";
+                document.getElementById("album-cover").src = songPlaceholderUrl;
             }
         })
         .catch((error) => {

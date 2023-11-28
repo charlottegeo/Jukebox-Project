@@ -7,6 +7,7 @@ class Song(models.Model):
     cover_url = models.CharField(max_length=255)
     track_id = models.CharField(max_length=255)
     uri = models.CharField(max_length=255)
+    bpm = models.IntegerField(default=0)
     def to_dict(self):
         return {
             'track_name': self.track_name,
@@ -15,6 +16,7 @@ class Song(models.Model):
             'cover_url': self.cover_url,
             'track_id': self.track_id,
             'uri': self.uri,
+            'bpm': self.bpm,
         }
 class Queue(models.Model):
     song = models.ForeignKey(Song, on_delete=models.CASCADE)

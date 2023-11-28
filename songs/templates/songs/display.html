@@ -54,6 +54,13 @@
                             
 
                         </script>
+                        <script type="text/javascript">
+                            function resetDisplay(){
+                                document.getElementById("album-cover").src="{% static 'img/song_placeholder.png' %}";
+                                document.getElementById("song_title").innerHTML = "Song Title";
+                                document.getElementById("artist_name").innerHTML = "Artist Name";
+                            }
+                        </script>
                         <img id="album-cover" src="{% static "img/song_placeholder.png" %}" width="250" height="250">
                         <div id="song_title">Song Title</div>
                         <div id="artist_name">Artist Name</div>
@@ -66,7 +73,13 @@
                     <ul id="song-list">
                     </ul>
                 </div>
-            
+                <script type="text/javascript" src="./libgif.js"></script>
+                <script type="text/javascript">
+                    var catjam = new SuperGif({ gif: document.getElementById('catjam') } );
+                    catjam.load();
+                    
+                </script>
+                <img id="catjam" src="{% static "img/catjam.gif" %}" width="250" height="250">
             </div>
         </div>
     </body>
