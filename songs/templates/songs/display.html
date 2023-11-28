@@ -17,6 +17,7 @@
             <header>
                 <h1>CatJam Player</h1>
                 <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
+                <button id="playQueue" class="play-queue-button" onclick="startPlay()">Play Queue</button>
             </header>
            <div id="progressBar">
                 <div id="progressTimestamp">0 s</div>
@@ -42,8 +43,9 @@
                                 EmbedController.addListener('playback_update', e => {
                                     document.getElementById('progressTimestamp').innerText = `${parseInt(e.data.position / 1000, 10)} s`;
                                     if(e.data.position == e.data.duration && e.data.duration != 0) {  
+                                        isPlaying = false;
                                         removeFirstSong().then(() => {
-                                            playSong();
+                                            doneSong();
                                         });
                                     }
                                     console.log(e.data.position);

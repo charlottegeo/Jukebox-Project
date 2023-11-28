@@ -1,3 +1,5 @@
+var isPlaying = false;
+
 /*Code for main/search page*/
 window.onload = function () {
     var loginForm = document.getElementById('loginForm');
@@ -42,8 +44,7 @@ window.onload = function () {
         setInterval(updateQueue, 5000); // Update the queue every 5 seconds
     }
     if (window.location.pathname === '/display/') {
-        playSong();
-        setInterval(updateAdminQueue, 5000); // Update the queue every 5 seconds
+        checkQueue();
     }
 };
 function errorGone() {
@@ -204,15 +205,6 @@ function submitSong() {
         var searchbar = document.getElementById('searchbar');
         searchbar.value = '';
         updateAdminQueue();
-        fetch('/get_song_queue/', { 
-            method: 'GET',
-        })
-        .then(response => response.json())
-        .then(queue => {
-            if (queue.result.length > 0) {
-                playSong();
-            }
-        });
     })
     .catch((error) => {
         console.error('Error:', error);
@@ -221,6 +213,9 @@ function submitSong() {
 
 /*Code for the player and admin panel*/
 
+function startPlay(){
+    EmbedController.play();
+}
 function updateAdminQueue() {
     fetch('/get_song_queue/')
         .then(response => response.json())
@@ -240,6 +235,24 @@ function updateAdminQueue() {
         });
 }
 
+function checkQueue() {
+    fetch('/get_song_queue/')
+        .then(response => response.json())
+        .then(queue => {
+            updateAdminQueue();
+            if (queue.result.length > 0) {
+                // Update the queue on the page
+                
+                if (!isPlaying) {
+                    playSong();
+                }
+            }
+            setTimeout(checkQueue, 5000);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
 function removeFirstSong() {
     return new Promise((resolve, reject) => {
         $.ajax({
@@ -287,7 +300,25 @@ function playSong(){
             document.getElementById("artist_name").innerHTML = data['result']['artist_name'];
             document.getElementById("album-cover").src = data['result']['cover_url'];
             EmbedController.play();
+            isPlaying = true;
+            checkQueue();
         }
     });
     
+}
+function doneSong(){
+    fetch('/get_song_queue/')
+        .then(response => response.json())
+        .then(queue => {
+            if(queue.result.length > 0){
+                playSong();
+            } else{
+                document.getElementById("song_title").innerHTML = "-";
+                document.getElementById("artist_name").innerHTML = "-";
+                document.getElementById("album-cover").src = "static/img/song_placeholder.png";
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
 }
