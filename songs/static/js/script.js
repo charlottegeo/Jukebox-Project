@@ -302,8 +302,16 @@ function playSong(){
             document.getElementById("album-cover").src = data['result']['cover_url'];
             console.log("BPM: ", data['result']['bpm']);
             EmbedController.play();
+            document.getElementById("pausePlayBtn").style.display = "block";
+
             isPlaying = true;
-            
+            let trackLength = data['result']['length'];
+            console.log("Track length: ", trackLength);
+            let [minutes, seconds] = trackLength.split(':').map(Number);
+            let totalSeconds = minutes * 60 + seconds;
+
+            document.getElementById('progressBar').max = totalSeconds;
+            document.getElementById('duration').innerHTML = trackLength;
             let bpm = data['result']['bpm'];
             let catBobs = 160;
             let speedRatio = bpm / catBobs;
@@ -327,9 +335,21 @@ function doneSong(){
                 document.getElementById("song_title").innerHTML = "-";
                 document.getElementById("artist_name").innerHTML = "-";
                 document.getElementById("album-cover").src = songPlaceholderUrl;
+                EmbedController.loadUri(null);
             }
         })
         .catch((error) => {
             console.error('Error:', error);
         });
+}
+
+function pausePlay(){
+    if (isPlaying){
+        isPlaying = false;
+        document.getElementById("pausePlayBtn").innerHTML = "Play";
+    } else{
+        isPlaying = true;
+        document.getElementById("pausePlayBtn").innerHTML = "Pause";
+    }
+    EmbedController.togglePlay()
 }

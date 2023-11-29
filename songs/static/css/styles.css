@@ -273,3 +273,19 @@ input {
 #catjam {
     animation: catjam 1s steps(23) infinite;
 }
+
+.timeText {
+    color: #BBBBBB;
+    font-size: 12px;
+    margin-left: auto;
+    margin-right: 5%;
+}
+
+#progress {
+    display: flex;
+    flex-direction: row;
+}
+
+#pausePlayBtn {
+    visibility: hidden;
+}

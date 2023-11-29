@@ -137,3 +137,12 @@ def display(request):
     template = loader.get_template('songs/display.html')
     context = {}
     return HttpResponse(template.render(context, request))
+
+@csrf_exempt
+def seconds_to_minutes(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        seconds = data.get('seconds', '')
+        return JsonResponse({'result': formatTime(seconds)})
+    else:
+        return JsonResponse({'error': 'Invalid request method'})

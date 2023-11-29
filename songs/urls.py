@@ -18,5 +18,6 @@ urlpatterns = [
     path('skip_song/', views.skip_song, name='skip_song'),
     path('get_first_song/', views.get_first_song, name='get_first_song'),
     path('remove_first_song/', views.remove_first_song, name='remove_first_song'),
+    path('seconds_to_minutes/', views.seconds_to_minutes, name='seconds_to_minutes'),
 ]
 

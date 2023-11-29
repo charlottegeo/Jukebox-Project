@@ -16,13 +16,14 @@
         <div class="container">
             <header>
                 <h1>CatJam Player</h1>
-                <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
-                <button id="playQueue" class="play-queue-button" onclick="startPlay()">Play Queue</button>
+                <section class="admin">
+                    <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
+                    <button id="playQueue" class="play-queue-button" onclick="startPlay()">Play Queue</button>
+                    <button id="pausePlayBtn" class="pause-play-button" onclick="pausePlay()">Pause</button>
+                </section>
+                
             </header>
-           <div id="progressBar">
-                <div id="progressTimestamp">0 s</div>
-                <div id="progressBarInner"></div>
-            </div>
+           
             <div class="container">
                 <div class="section">
                     <div class="song">
@@ -41,7 +42,22 @@
                                 };
                                 IFrameAPI.createController(element, options, callback);
                                 EmbedController.addListener('playback_update', e => {
-                                    document.getElementById('progressTimestamp').innerText = `${parseInt(e.data.position / 1000, 10)} s`;
+                                    fetch('/seconds_to_minutes/', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            'seconds': parseInt(e.data.position / 1000, 10),
+                                        })
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        document.getElementById('progressTimestamp').innerText = data['result'];
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                    });
                                     if(e.data.position == e.data.duration && e.data.duration != 0) {  
                                         isPlaying = false;
                                         removeFirstSong().then(() => {
@@ -49,6 +65,8 @@
                                         });
                                     }
                                     console.log(e.data.position);
+                                    
+                                    document.getElementById('progressBar').value = e.data.position / e.data.duration * 100;
                                 });
                               };
                             
@@ -64,6 +82,11 @@
                         <img id="album-cover" src="{% static "img/song_placeholder.png" %}" width="250" height="250">
                         <div id="song_title">Song Title</div>
                         <div id="artist_name">Artist Name</div>
+                        <div id="progress">
+                            <div id="progressTimestamp" class="timeText">0:00</div>
+                            <progress id="progressBar" value="0" max="100"></progress>
+                            <div id="duration" class="timeText">0:00</div>
+                        </div>
                     </div>
                     
                 </div>
