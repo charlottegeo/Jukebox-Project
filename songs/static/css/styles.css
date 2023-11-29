@@ -1,20 +1,23 @@
 html {
     font-family: 'Akshar Unicode', sans-serif;
     font-weight: bold;
-    color: white;
+    color: #F5F5F5;
 }
-.header {
+
+header {
     height: 5%;
     text-align: left;
     font-size: 30px;
     padding-left: 5%;
+    word-break: break-all;
+    
 }
 
 
     
 body { 
    /*background-image: url('../../templates/pusayBG.png'); */
-    background-color: #1e1e1e;
+    background-color: #2F2F2F;
     height: 100%;
     margin: 0;
 }
@@ -31,11 +34,11 @@ body {
 }
 
 b {
-    color: #EEEEEE;
+    color: #F5F5F5;
 }
 
 p {
-    color: #BBBBBB;
+    color: #F5F5F5;
 }
 
 h1 {
@@ -43,7 +46,7 @@ h1 {
     text-align: left;
     font-size: 60px;
     padding-left: 2%;
-    color: #BBBBBB;
+    color: #F5F5F5;
 }
 .leftSection {
     width: 33%;
@@ -206,7 +209,7 @@ input {
     margin-right: 10px;
 }
 .sidebarbtn {
-    background-color: #1e1e1e;
+    background-color: #2F2F2F;
     border: none;
     color: #BBBBBB;
     padding: 15px 32px;
@@ -243,7 +246,7 @@ input {
 .sidebar button {
     width: 100%;
     padding: 10px;
-    background-color: #1e1e1e;
+    background-color: #2F2F2F;
     color: white;
     border: none;
     cursor: pointer;
@@ -289,3 +292,26 @@ input {
 #pausePlayBtn {
     visibility: hidden;
 }
+
+footer {
+    position: absolute;
+    bottom: 0;
+}
+#song-list {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    margin-left: 5%;
+    margin-right: auto;
+    padding-bottom: 2%;
+    color: #BBBBBB;
+}
+#song-list img {
+    width: 50px;
+    margin-right: 10px;
+}
+
+progress::-moz-progress-bar { background: #9055A2; }
+progress::-webkit-progress-value { background: #9055A2; }
+progress { color: #9055A2; }
