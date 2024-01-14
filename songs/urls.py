@@ -5,6 +5,8 @@ from . import views
 from django.urls import path
 
 
+# URL patterns for songs app, all views are in views.py
+#Use this to add functions you want to be able to call from the front end
 urlpatterns = [
     path('', views.songs, name='songs'),
     path('static/css/styles.css', views.styles, name='styles'),

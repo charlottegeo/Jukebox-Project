@@ -13,21 +13,27 @@ from .models import Queue
 import json
 from django.views.decorators.csrf import csrf_exempt
 import os
+
+#Views here are called from the front end through urls.py
+
+#Gets the array of songs in the queue
 def get_array(request):
     return JsonResponse(get_song_queue())
 
+#Loads the search page
 def songs(request):
     template = loader.get_template('songs/search.html')
     context = {}
     return HttpResponse(template.render(context, request))
 
-
+#Loads the styles.css file
 def styles(request):
     try:
         return serve(request, 'css/styles.css', document_root=settings.STATIC_ROOT)
     except Exception as e:
         return HttpResponse(e)
 
+#Gets the search results from the Spotify API
 def get_search_results(request):
     if request.method == 'GET':
         token = get_token()
@@ -38,6 +44,7 @@ def get_search_results(request):
         result_array = [track.to_dict() for track in result_array]
         return JsonResponse({'result': result_array})
 
+#Adds a song to the queue
 @csrf_exempt
 def add_to_queue(request):
     if request.method == 'POST':
@@ -55,6 +62,7 @@ def add_to_queue(request):
         queue.save()
         return JsonResponse({'result': 'success'})
 
+#Skip the current song by deleting it from the queue
 @csrf_exempt  
 def skip_song(request):
     try:
@@ -66,9 +74,9 @@ def skip_song(request):
         return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+#Remove the first song in the queue
 @csrf_exempt
 def remove_first_song(request):
-    #Remove the first song in the queue
     try:
         if request.method == 'POST':
             queue = Queue.objects.first()
@@ -82,6 +90,7 @@ def remove_first_song(request):
         return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
     
+#Empty the queue
 @csrf_exempt
 def empty_queue(request):
     try:
@@ -92,13 +101,13 @@ def empty_queue(request):
         return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+#return the entire queue
 def get_song_queue(request):
-    #return the entire queue
     queue = Queue.objects.all()
     return JsonResponse({'result': [song.song.to_dict() for song in queue]})
 
+#Return the first song in the queue as a JSON object
 def get_first_song(request):
-    #Return the first song in the queue as a JSON object
     try:
         if request.method == 'GET':
             if Queue.objects.count() == 0:
@@ -108,10 +117,10 @@ def get_first_song(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+#Return true if the username and password are correct
+#Return false otherwise
 @csrf_exempt
 def verify_login(request):
-    #Return true if the username and password are correct
-    #Return false otherwise
     if request.method == 'POST':
         if request.content_type == 'application/json':
             try:
@@ -133,11 +142,13 @@ def verify_login(request):
     else:
         return JsonResponse({'error': 'Invalid request method'})
 
+#Display the queue
 def display(request):
     template = loader.get_template('songs/display.html')
     context = {}
     return HttpResponse(template.render(context, request))
 
+#Convert seconds to minutes (used for displaying song length)
 @csrf_exempt
 def seconds_to_minutes(request):
     if request.method == 'POST':
