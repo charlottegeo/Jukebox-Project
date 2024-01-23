@@ -1,5 +1,5 @@
 var isPlaying = false;
-
+var animationInterval;
 /*Code for main/search page*/
 window.onload = function () {
     var loginForm = document.getElementById('loginForm');
@@ -313,13 +313,7 @@ function playSong(){
             document.getElementById('progressBar').max = totalSeconds;
             document.getElementById('duration').innerHTML = trackLength;
             let bpm = data['result']['bpm'];
-            let catBobs = 160;
-            let speedRatio = bpm / catBobs;
-            let gif = document.getElementById("catjam");
-            console.log("Initial animation duration: ", gif.style.animationDuration);
-            gif.style.animationDuration = speedRatio + "s";
-            console.log("Speed ratio: ", speedRatio);
-            console.log("Animation duration: ", gif.style.animationDuration);
+            animateFrames(bpm);
             checkQueue();
         }
     });
@@ -352,4 +346,24 @@ function pausePlay(){
         document.getElementById("pausePlayBtn").innerHTML = "Pause";
     }
     EmbedController.togglePlay()
+}
+
+function calculateFrameDuration(bpm) {
+    var bps = bpm / 60;
+    return 1 / (2 * bps); // Duration of each frame in seconds
+}
+
+function animateFrames(bpm) {
+    if (animationInterval) {
+        clearInterval(animationInterval); // Clear existing interval
+    }
+
+    var frames = [frame1, frame2]; // Replace with your actual frame paths
+    var frameIndex = 0;
+    var frameDuration = calculateFrameDuration(bpm);
+
+    animationInterval = setInterval(function() {
+        document.getElementById('catjam').src = frames[frameIndex];
+        frameIndex = (frameIndex + 1) % frames.length;
+    }, frameDuration * 1000);
 }
