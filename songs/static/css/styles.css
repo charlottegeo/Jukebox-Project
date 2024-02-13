@@ -1,19 +1,51 @@
 html {
     font-family: 'Akshar Unicode', sans-serif;
     font-weight: bold;
-    color: #F5F5F5;
+    color: #9055a2;
 }
 
-header {
+/*header {
     height: 5%;
-    text-align: left;
     font-size: 30px;
     padding-left: 5%;
     word-break: break-all;
-    
+}*/
+
+/*IGOR CHANGES: Created a new Hamburger icon (currently doesn't do anything,
+as well as three flexboxes. The first stores the Title and Cat GIF, the second
+contains the Extra Song Info and the Album Cover, then there are the buttons underneath,
+and then finally there is a third flex box that will contain the Queue*/
+#hamburger-icon {
+    position: absolute;
+    top: 25px;
+    right: 25px;
 }
 
+#flexbox-top, #flexbox-middle, #flexbox-bottom, .admin {
+    display: flex;
+    text-align: center;
+    justify-content: center;
+    flex-direction: space-between;
+    gap: 5px;
+}
 
+#flexbox-middle img, #flexbox-middle div {
+    margin-bottom: 5px;
+}
+
+#queue-header {
+    color: #a5c4d4;
+}
+
+button {
+    background-color: #f7b2bd;
+}
+
+button:hover {
+    background-color: #a5c4d4;
+}
+
+/*Igor changes end here. Hopefully didn't fuck anything up*/
     
 body { 
    /*background-image: url('../../templates/pusayBG.png'); */
@@ -22,16 +54,16 @@ body {
     margin: 0;
 }
 
-
+/*
 .container {
     display: flex;
     flex-direction: space-between;
     height: 100%;
-}
+}*/
 
-.section {
+/* .section {
     padding: 20px;
-}
+} */
 
 b {
     color: #F5F5F5;
@@ -43,12 +75,20 @@ p {
 
 h1 {
     height: 5%;
-    text-align: left;
+    text-align: center;
     font-size: 60px;
     padding-left: 2%;
-    color: #F5F5F5;
+    color: #f7b2bd;
 }
-.leftSection {
+
+h2 {
+    text-align: center;
+    justify-content: center;
+}
+
+/* Hi, Igor again. Had to get rid of this to get stuff centered*/
+
+/*.leftSection {
     width: 33%;
     height: 100%;
     margin: center;
@@ -82,7 +122,7 @@ h1 {
     width: 50%;
     padding: 10px;
     text-align: center;
-}
+}*/
 
 
 input {
@@ -287,16 +327,14 @@ input {
 #progress {
     display: flex;
     flex-direction: row;
+    justify-content: center;
+    max-width: 75%;
 }
 
-#pausePlayBtn {
+/* #pausePlayBtn {
     visibility: hidden;
-}
+} */
 
-footer {
-    position: absolute;
-    bottom: 0;
-}
 #song-list {
     display: flex;
     flex-direction: row;
