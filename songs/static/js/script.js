@@ -1,52 +1,78 @@
 var isPlaying = false;
 var animationInterval;
+var pingInterval = null;
+var socket = new WebSocket('ws://' + window.location.host + '/ws/songs/');
+
+socket.onopen = function(e) {
+    console.log('WebSocket opened');
+    socket.send(JSON.stringify({ action: 'ping' }));
+};
+
+socket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    console.log('Received:', data);
+        switch(data.action) {
+            case 'updateQueue':
+                updateQueue(data.queue);
+                break;
+            case 'searchResults':
+                handleSearchResults(data.results);
+                break;
+            case 'playSong':
+                playSong();
+                break;
+            case 'doneSong':
+                doneSong();
+                break;
+            case 'loginResponse':
+                if (data.result == 'success') {
+                    window.location.href = '/display/';
+                } else {
+                    var error = document.getElementById("error");
+                    error.style.display = "block";
+                    error.textContent = data.result;
+                }
+        }
+};
+
+socket.onerror = function(e) {
+    console.error("WebSocket error observed:", e);
+};
+
+socket.onclose = function(e) {
+    console.log("WebSocket closed:", e);
+};
+
 /*Code for main/search page*/
 window.onload = function () {
+    //setupSocket();
+    
+    initializeLoginForm();
+};
+
+//Has been changed to websocket
+function initializeLoginForm() {
     var loginForm = document.getElementById('loginForm');
-    if(loginForm){
+    if (loginForm) {
         $('#loginForm').on('submit', function(e) {
             e.preventDefault();
             var username = $('#username').val();
             var password = $('#password').val();
-            console.log("Username: ", username);
-            $.ajax({
-                url: '/verify_login/',
-                method: 'POST',
-                data: {
-                    username: username,
-                    password: password
-                }
-            })
-            .done(function(data) {
-                console.log("Data: ", data);
-                if (data.result == "success") {
-                    console.log("Login successful");
-                    window.location.href = "/display/";
-                    console.log("Login successful");
-                    EmbedController.play();
-                } else {
-                    
-                    document.getElementById("error").style.display = "block";
-                    console.log("Login failed");
-                }
-            });
+            verifyLogin(username, password);
         });
     }
-    var searchbar = document.getElementById('searchbar');
-    var username = document.getElementById('username');
-    var password = document.getElementById('password');
-    if(searchbar) searchbar.value = ""
-    if(username) username.value = ""
-    if(password) password.value = ""
-    console.log("Page loaded");
-    if (window.location.pathname === '/') { // Only run this code on the main page
-        updateQueue();
-        setInterval(updateQueue, 5000); // Update the queue every 5 seconds
-    }
-    if (window.location.pathname === '/display/') {
-        checkQueue();
-    }
-};
+}
+
+//Has been changed to websocket
+function verifyLogin(username, password) {
+    socket.send(JSON.stringify({
+        action: 'verifyLogin',
+        username: username,
+        password: password
+    }));
+}
+
+
 function errorGone() {
     document.getElementById("error").style.display = "none";
 }
@@ -58,81 +84,98 @@ function sidebar_open() {
 function sidebar_close() {
   document.getElementById("mySidebar").style.display = "none";
 }
-function updateQueue() {
-    fetch('/get_song_queue/')
-        .then(response => response.json())
-        .then(queue => {
-            console.log(queue);
-            var queuelist = document.getElementById('queuelist');
-            queuelist.innerHTML = '';  // clear the queuelist
-            var length = Math.min(5, queue.result.length);
 
-            for (var i = 0; i < length; i++) {
-                console.log("Adding song to queue")
-                var img = document.createElement('img');
-                img.src = queue.result[i].cover_url;
-                img.style.width = '100px';
-                queuelist.appendChild(img);
-            }
-        });
+
+function updateQueue(queueData) {
+    var queuelist = document.getElementById('queuelist');
+    queuelist.innerHTML = '';
+    queueData.forEach(song => {
+        var img = document.createElement('img');
+        img.src = song.cover_url;
+        img.style.width = '100px';
+        queuelist.appendChild(img);
+        console.log(song.track_name);
+    });
 }
 
-
-function printText(input) {
-    var resultText = document.getElementById('resulttext');
-    resultText.textContent = "";
-    if (event.keyCode === 13) {  // 13 is the key code for the Enter key
-        event.preventDefault();  // prevent form submission
-        var searchText = input.value;  // get the text from the search bar
-        fetch('/search_for_tracks/?track_name=' + searchText)
-            .then(response => response.json())
-            .then(data => {
-                var dropdown = document.getElementById('dropdown');
-                dropdown.innerHTML = '';  // clear the previous results
-
-                for (var i = 0; i < data.result.length; i++) {
-                    var track = data.result[i];
-
-                    // Create a new div for the track
-                    var item = document.createElement('div');
-                    item.className = 'item';
-                    item.style.display = 'flex';
-                    item.style.justifyContent = 'space-between';  // new line
-                    item.onclick = (function (track) {
-                        return function () {
-                            console.log('clicked');
-                            var selectedItem = document.getElementById('selected-item');
-                            selectedItem.dataset.track = JSON.stringify(track);
-                            setText();
-                        };
-                    })(track);
-                    var imgTextWrapper = document.createElement('div');
-                    imgTextWrapper.style.display = 'flex';
-                    var img = document.createElement('img');
-                    img.src = track.cover_url;
-                    imgTextWrapper.appendChild(img);
-                    var textWrapper = document.createElement('div');
-                    textWrapper.style.display = 'flex';
-                    textWrapper.style.flexDirection = 'column';
-                    var trackName = document.createElement('div');
-                    trackName.textContent = track.track_name;
-                    textWrapper.appendChild(trackName);
-                    item.appendChild(textWrapper);
-                    var artistName = document.createElement('div');
-                    artistName.textContent = track.artist_name;
-                    textWrapper.appendChild(artistName);
-                    imgTextWrapper.appendChild(textWrapper);
-                    item.appendChild(imgTextWrapper);
-                    var trackLength = document.createElement('div');
-                    trackLength.textContent = track.track_length;
-                    item.appendChild(trackLength);
-                    dropdown.appendChild(item);
-                }
-                dropdown.style.display = 'block';
-            })
-            .catch(error => console.error('Error:', error));
+//Has been changed to websocket
+function printText(event, input) {
+    if (event.keyCode === 13) {
+        event.preventDefault();
+        var searchText = input.value;
+        console.log('Sending search text:', searchText);
+        socket.send(JSON.stringify({
+            action: 'searchTracks',
+            track_name: searchText
+        }));
     }
 }
+
+//Has been changed to websocket
+function handleSearchResults(data) {
+    console.log('Received search results:', data);
+    console.log('Search results:', data);
+    var dropdown = document.getElementById('dropdown');
+    dropdown.innerHTML = '';
+
+    data.forEach(track => {
+        var item = createTrackItem(track);
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+//Has been changed to websocket
+function createTrackItem(track) {
+    var item = document.createElement('div');
+    item.className = 'item';
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
+    var img = document.createElement('img');
+    img.src = track.cover_url;
+    img.style.width = '50px';
+    img.style.height = '50px';
+    img.style.marginRight = '10px';
+    var textWrapper = document.createElement('div');
+    textWrapper.style.display = 'flex';
+    textWrapper.style.flexDirection = 'column';
+    textWrapper.style.justifyContent = 'center';
+    var trackName = document.createElement('div');
+    trackName.textContent = track.track_name;
+    trackName.style.fontWeight = 'bold';
+
+    // Create the artist name element
+    var artistName = document.createElement('div');
+    artistName.textContent = track.artist_name;
+
+    // Append the track name and artist name to the text wrapper
+    textWrapper.appendChild(trackName);
+    textWrapper.appendChild(artistName);
+
+    // Create the track length element
+    var trackLength = document.createElement('div');
+    trackLength.textContent = track.track_length;
+    trackLength.style.marginLeft = 'auto'; // Push the track length to the right
+
+    // Append image and text wrapper to the item
+    item.appendChild(img);
+    item.appendChild(textWrapper);
+    item.appendChild(trackLength);
+
+    // Set onclick function for item
+    item.onclick = function() {
+        console.log('Track clicked:', track.track_name);
+        var selectedItem = document.getElementById('selected-item');
+        selectedItem.dataset.track = JSON.stringify(track);
+        setText();
+    };
+
+    return item;
+}
+
+
+
 function setText() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
@@ -166,55 +209,35 @@ function setText() {
 function submitSong() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
-    var trackName = track.track_name;
-    var artistName = track.artist_name;
-    var trackLength = track.track_length;
-    var coverUrl = track.cover_url;
-    var trackId = track.track_id;
-    var uri = track.uri;
+    
+    socket.send(JSON.stringify({
+        action: 'addSongToQueue',
+        track: track
+    }));
 
-    fetch('/add_to_queue/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            // Include other headers here
-        },
-        body: JSON.stringify({
-            'track_name': trackName,
-            'artist_name': artistName,
-            'track_length': trackLength,
-            'cover_url': coverUrl,
-            'track_id': trackId,
-            'uri': uri,
-            'bpm' : track.bpm
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Handle the response data here
-        console.log(data);
-        var resultText = document.getElementById('resulttext');
-        resultText.textContent = "Song added to queue!";
-        var dropdown = document.getElementById('dropdown');
-        dropdown.innerHTML = '';
-        var selectedSong = document.getElementById('selected-song');
-        selectedSong.style.display = 'none';
-        var infoText = document.getElementById('info-text');
-        infoText.textContent = '';
-        var addButton = document.getElementById('add-button');
-        addButton.style.display = 'none';
-        var searchbar = document.getElementById('searchbar');
-        searchbar.value = '';
-        updateAdminQueue();
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
+    var resultText = document.getElementById('resulttext');
+    resultText.textContent = "Song added to queue!";
+    resetSongSelectionUI();
 }
+
+function resetSongSelectionUI() {
+    var dropdown = document.getElementById('dropdown');
+    dropdown.innerHTML = '';
+    var selectedSong = document.getElementById('selected-song');
+    selectedSong.style.display = 'none';
+    var infoText = document.getElementById('info-text');
+    infoText.textContent = '';
+    var addButton = document.getElementById('add-button');
+    addButton.style.display = 'none';
+    var searchbar = document.getElementById('searchbar');
+    searchbar.value = '';
+}
+
 
 /*Code for the player and admin panel*/
 
 function startPlay(){
+    console.log("Starting play");
     EmbedController.play();
 }
 function updateAdminQueue() {
@@ -296,12 +319,25 @@ function playSong(){
         } else{
             console.log(data);
             EmbedController.loadUri(data['result']['uri']);
-            console.log("Current song: ", data['result']['track_name'], data['result']['uri']);
             document.getElementById("song_title").innerHTML = data['result']['track_name'];
             document.getElementById("artist_name").innerHTML = data['result']['artist_name'];
             document.getElementById("album-cover").src = data['result']['cover_url'];
             console.log("BPM: ", data['result']['bpm']);
-            EmbedController.play();
+            console.log(EmbedController);
+            console.log(EmbedController.play);
+
+            EmbedController.on('error', (error) => {
+                console.error("Playback failed: ", error);
+            });
+            let iframe = document.getElementById('spotify-player');
+            let iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+            let playbtn = iframeDocument.querySelector('[data-testid="play-pause-button"]');
+            if (playbtn) {
+                playbtn.click();
+                console.log("Play button clicked");
+            } else {
+                console.error("Play button not found");
+            }
             document.getElementById("pausePlayBtn").style.display = "block";
 
             isPlaying = true;
@@ -324,6 +360,7 @@ function doneSong(){
         .then(response => response.json())
         .then(queue => {
             if(queue.result.length > 0){
+                console.log("Playing next song");
                 playSong();
             } else{
                 document.getElementById("song_title").innerHTML = "-";
@@ -345,7 +382,7 @@ function pausePlay(){
         isPlaying = true;
         document.getElementById("pausePlayBtn").innerHTML = "Pause";
     }
-    EmbedController.togglePlay()
+    EmbedController.togglePlay();
 }
 
 function calculateFrameDuration(bpm) {
@@ -358,7 +395,7 @@ function animateFrames(bpm) {
         clearInterval(animationInterval); // Clear existing interval
     }
 
-    var frames = [frame1, frame2]; // Replace with your actual frame paths
+    var frames = [frame1, frame2];
     var frameIndex = 0;
     var frameDuration = calculateFrameDuration(bpm);
 

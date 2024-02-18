@@ -1,11 +1,11 @@
+#models.py
 from django.db import models
-
 
 #Song model to store all data about song
 class Song(models.Model):
     track_name = models.CharField(max_length=255)
     artist_name = models.CharField(max_length=255)
-    length = models.CharField(max_length=255)
+    track_length = models.CharField(max_length=255)
     cover_url = models.CharField(max_length=255)
     track_id = models.CharField(max_length=255)
     uri = models.CharField(max_length=255)
@@ -14,7 +14,7 @@ class Song(models.Model):
         return {
             'track_name': self.track_name,
             'artist_name': self.artist_name,
-            'length': self.length,
+            'track_length': self.track_length,
             'cover_url': self.cover_url,
             'track_id': self.track_id,
             'uri': self.uri,
