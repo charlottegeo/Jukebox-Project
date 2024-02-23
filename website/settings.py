@@ -81,7 +81,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'website.wsgi.application'
+#WSGI_APPLICATION = 'website.wsgi.application'
 ASGI_APPLICATION = 'website.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -108,6 +108,11 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
         },
+        'channels' : {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'handlers': ['console'],
+        }
     },
     'loggers': {
         '': {  # 'root' logger
