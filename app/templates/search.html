@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>CatJam</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</head>
+
+<body>
+    <div style="display: flex; align-items: center;">
+        <h1>CatJam</h1> <!-- Assuming this is your header -->
+    </div>
+    <div class="queue-header">
+        <h2>Queue</h2>
+    </div>
+    <div class="queue">
+        <div id="queuelist"></div>
+    </div>
+    <div class="search">
+        <input type="text" id="searchbar" name="song" placeholder="Search for a song here (Press enter to search):">
+    </div>
+    <div id="dropdown" aria-labelledby="searchbar"></div>
+    <div class="selected" aria-labelledby="searchbar">
+        <div id="info-text"></div>
+        <div id="selected-song">
+            <div id="selected-item">
+                <div id="selected-imgtext">
+                    <img id="selected-img">
+                    <div id="selected-text">
+                        <div id="selected-track-name"></div>
+                        <div id="selected-artist-name"></div>
+                    </div>
+                </div>
+                <div id="selected-track-length"></div>
+            </div>
+        </div>
+        <button id="add-button" onclick="submitSong()">Add to Queue</button>
+    </div>
+    <div id="resulttext"></div>
+</body>
+
+</html>
