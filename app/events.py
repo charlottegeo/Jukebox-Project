@@ -1,5 +1,6 @@
 from flask_socketio import SocketIO, emit
 from app import socketio
+from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
 @socketio.on('connect')
 def handle_connect():
@@ -45,11 +46,34 @@ def handle_search_tracks(data):
 # Handle adding song to queue
 @socketio.on('addSongToQueue')
 def handle_add_song_to_queue(data):
-    track = data.get('track')
-    # Logic to add track to queue
-    # After adding, emit an update to all clients
-    socketio.emit('message', {'action': 'updateQueue', 'queue': 'Updated queue data'})
+    track_data = data.get('track')
+    if track_data:
+        track_name = track_data.get('track_name', '')
+        artist_name = track_data.get('artist_name', '')
+        cover_url = track_data.get('cover_url', '')
+        track_length = track_data.get('track_length', '')
+        track_id = track_data.get('track_id', '')
+        uri = track_data.get('uri', '')
+        bpm = track_data.get('bpm', 0)
 
+        song = Song(track_name=track_name, artist_name=artist_name, track_length=track_length, 
+                    cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm)
+        db.session.add(song)
+        db.session.commit()
+
+        queue_item = Queue(song=song)
+        db.session.add(queue_item)
+        db.session.commit()
+        emit('queue_update', {'message': 'Song added to queue successfully.'})
+    else:
+        emit('error', {'message': 'Invalid song data.'})
+
+# Handle getting the queue
+@socketio.on('get_song_queue')
+def handle_get_queue():
+    queue = Queue.query.all()
+    result = [song.song.to_dict() for song in queue]
+    emit('update_queue', {'queue': result})  # Send updated queue to the client
 # Example: Removing the first song
 @socketio.on('removeFirstSong')
 def handle_remove_first_song():

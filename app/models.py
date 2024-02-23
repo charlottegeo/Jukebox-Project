@@ -20,3 +20,8 @@ class Song(db.Model):
             'uri': self.uri,
             'bpm': self.bpm,
         }
+
+class Queue(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    song_id = db.Column(db.Integer, db.ForeignKey('song.id'), nullable=False)
+    song = db.relationship('Song', backref=db.backref('queue', lazy=True))

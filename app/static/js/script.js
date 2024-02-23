@@ -44,6 +44,7 @@ window.onload = function () {
 function updateQueue(queueData) {
     var queuelist = document.getElementById('queuelist');
     queuelist.innerHTML = '';
+    console.log("Queue Data:" + queueData);
     queueData.forEach(song => {
         var img = document.createElement('img');
         img.src = song.cover_url;
@@ -137,7 +138,6 @@ function setText() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
     /*Print all data in track*/
-    console.log(track);
     var displayStyle = window.getComputedStyle(selectedItem).display;
     if (displayStyle == 'none') {
         selectedItem.style.display = 'block';

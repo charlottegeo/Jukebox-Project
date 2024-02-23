@@ -1,4 +1,5 @@
 .env
+.flaskenv
 *.pyc
 venv/
 flaskenv/
