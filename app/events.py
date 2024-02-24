@@ -16,34 +16,17 @@ def handle_ping():
     print('Ping received')
     emit('pong')
 
-# Handle login verification
-@socketio.on('verifyLogin')
-def handle_verify_login(data):
-    username = data.get('username')
-    password = data.get('password')
-    # Add your authentication logic here
-    # If login is successful:
-    emit('message', {'action': 'loginResponse', 'result': 'success'})
-    # Else:
-    # emit('message', {'action': 'loginResponse', 'result': 'failure'})
-
-# Handle search tracks
 @socketio.on('searchTracks')
 def handle_search_tracks(data):
     track_name = data.get('track_name')
-    
-    # Assuming get_token() and search_for_tracks() are synchronous or have synchronous equivalents
     try:
-        token = get_token()  # Fetch Spotify API token
-        result_array = search_for_tracks(token, track_name, 3)  # Perform the search
-        
-        # Prepare the response
+        token = get_token()
+        result_array = search_for_tracks(token, track_name, 3)
         search_results = [track.to_dict() for track in result_array]
         emit('message', {'action': 'searchResults', 'results': search_results})
     except Exception as e:
         emit('message', {'action': 'error', 'error': str(e)})
 
-# Handle adding song to queue
 @socketio.on('addSongToQueue')
 def handle_add_song_to_queue(data):
     track_data = data.get('track')
@@ -64,26 +47,31 @@ def handle_add_song_to_queue(data):
         queue_item = Queue(song=song)
         db.session.add(queue_item)
         db.session.commit()
-        emit('queue_update', {'message': 'Song added to queue successfully.'})
+        
+        queue = get_queue()
+        emit('message', {'action': 'updateQueue', 'queue': queue})
     else:
+        print('Invalid song data')
         emit('error', {'message': 'Invalid song data.'})
 
-# Handle getting the queue
+
+def get_queue():
+    queue = Queue.query.all()
+    queue_data = [song.song.to_dict() for song in queue]
+    return queue_data
+
+
 @socketio.on('get_song_queue')
 def handle_get_queue():
-    queue = Queue.query.all()
-    result = [song.song.to_dict() for song in queue]
-    emit('update_queue', {'queue': result})  # Send updated queue to the client
-# Example: Removing the first song
+    result = get_queue()
+    emit('update_queue', {'queue': result})
+
 @socketio.on('removeFirstSong')
 def handle_remove_first_song():
-    # Logic to remove the first song from the queue
-    # Notify all clients about the updated queue
+    # Remove the first song from the queue
     socketio.emit('message', {'action': 'updateQueue', 'queue': 'Updated queue after removal'})
 
-# Example: Clearing the queue
 @socketio.on('clearQueue')
 def handle_clear_queue():
-    # Logic to clear the queue
-    # Notify all clients about the cleared queue
+    # Empty the queue
     socketio.emit('message', {'action': 'updateQueue', 'queue': 'Queue cleared'})

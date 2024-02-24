@@ -1,4 +1,3 @@
-{% load static %}
 <!DOCTYPE html>
 <!--https://www.w3schools.com/html/default.asp-->
 <!--https://www.w3schools.com/css/default.asp-->
@@ -6,21 +5,19 @@
 <html>
 
     <head>
-        <title>CatJam Admeow</title>
+        <title>CatJam Display</title>
         <script>
             var frame1 = "/static/img/frame1.png";
             var frame2 = "/static/img/frame2.png";
         </script>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
         <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" crossorigin="anonymous" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" referrerpolicy="no-referrer"></script>
         <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
         </head>
     <body>
         <div class="container">
-            <header>
-                <img id="hamburger-icon" src="{% static "img/hamburger_icon.png" %}" width="75" height="75">
-            </header>
+            <header></header>
            
             <div class="container">
                 <div class="section">
@@ -72,7 +69,7 @@
                         </script>
                         <script type="text/javascript">
                             function resetDisplay(){
-                                document.getElementById("album-cover").src="{% static 'img/song_placeholder.png' %}";
+                                document.getElementById("album-cover").src="img/song_placeholder.png";
                                 document.getElementById("song_title").innerHTML = "Song Title";
                                 document.getElementById("artist_name").innerHTML = "Artist Name";
                             }
@@ -80,18 +77,18 @@
 
                         <div id="flexbox-top">
                             <h1>CatJam<br>Player</h1>
-                            <img id="catjam" src="{% static "img/frame1.png" %}" width="250" height="250">
+                            <img id="catjam" src="img/frame1.png" width="250" height="250">
                         </div>
 
                         <div id="flexbox-middle">
                             <div id="flexbox-middle-right">
                                 <h2>Song Info</h2>
-                                <img id="album-cover" src="{% static "img/song_placeholder.png" %}" width="250" height="250">
+                                <img id="album-cover" src="img/song_placeholder.png" width="250" height="250">
                                 <div id="song_title">Song Title</div>
                             </div>
                             <div id="flexbox-middle-left">
                                 <h2>Current Song</h2>
-                                <img id="album-cover" src="{% static "img/song_placeholder.png" %}" width="250" height="250">
+                                <img id="album-cover" src="song_placeholder.png" width="250" height="250">
                                 <div id="artist_name">Artist Name</div>
                             </div>
                         </div>
@@ -119,16 +116,16 @@
     <footer>
         <h2 id="queue-header">Upcoming Songs</h2>
         <div id="flexbox-bottom">
-            <img id="catjam" src="{% static "img/frame1.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame2.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame1.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame2.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame1.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame2.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame1.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame2.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame1.png" %}" width="75" height="75">
-            <img id="catjam" src="{% static "img/frame2.png" %}" width="75" height="75">
+            <img id="catjam" src="img/frame1.png" width="75" height="75">
+            <img id="catjam" src="img/frame2.png" width="75" height="75">
+            <img id="catjam" src="img/frame1.png" width="75" height="75">
+            <img id="catjam" src="img/frame2.png" width="75" height="75">
+            <img id="catjam" src="img/frame1.png" width="75" height="75">
+            <img id="catjam" src="img/frame2.png" width="75" height="75">
+            <img id="catjam" src="img/frame1.png" width="75" height="75">
+            <img id="catjam" src="img/frame2.png" width="75" height="75">
+            <img id="catjam" src="img/frame1.png" width="75" height="75">
+            <img id="catjam" src="img/frame2.png" width="75" height="75">
         </div>
             <!--Dynamically update list with names of songs from array and show those changes in HTML-->
         <ul id="song-list"></ul>

@@ -13,6 +13,7 @@ socket.on('message', function(data) {
     console.log('Received:', data);
     switch(data.action) {
         case 'updateQueue':
+            console.log('Updating queue:', data.queue);
             updateQueue(data.queue);
             break;
         case 'searchResults':
@@ -171,8 +172,10 @@ function submitSong() {
         track: track
     });
 
+    //Consider removing the result text if the song shows up in the queue right away
     var resultText = document.getElementById('resulttext');
     resultText.textContent = "Song added to queue!";
+
     resetSongSelectionUI();
 }
 

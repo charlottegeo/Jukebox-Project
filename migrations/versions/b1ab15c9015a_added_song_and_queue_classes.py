@@ -53,7 +53,7 @@ def upgrade():
     with op.batch_alter_table('auth_permission', schema=None) as batch_op:
         batch_op.drop_index('auth_permission_content_type_id_2f476e4b')
 
-    op.drop_table('auth_permission')
+    op.execute('DROP TABLE IF EXISTS auth_permission CASCADE')
     with op.batch_alter_table('django_session', schema=None) as batch_op:
         batch_op.drop_index('django_session_expire_date_a5c62663')
         batch_op.drop_index('django_session_session_key_c0390e0f_like')
@@ -61,11 +61,11 @@ def upgrade():
     op.drop_table('django_session')
     op.drop_table('django_migrations')
     op.drop_table('django_content_type')
-    op.drop_table('songs_song')
+    op.execute('DROP TABLE IF EXISTS songs_song CASCADE')
     with op.batch_alter_table('auth_group', schema=None) as batch_op:
         batch_op.drop_index('auth_group_name_a6ea08ec_like')
 
-    op.drop_table('auth_group')
+    op.execute('DROP TABLE IF EXISTS auth_group CASCADE')
     with op.batch_alter_table('auth_group_permissions', schema=None) as batch_op:
         batch_op.drop_index('auth_group_permissions_group_id_b120cbf9')
         batch_op.drop_index('auth_group_permissions_permission_id_84c5c92e')
@@ -74,7 +74,7 @@ def upgrade():
     with op.batch_alter_table('songs_queue', schema=None) as batch_op:
         batch_op.drop_index('songs_queue_song_id_70ed71bd')
 
-    op.drop_table('songs_queue')
+    op.execute('DROP TABLE IF EXISTS songs_queue CASCADE')
     with op.batch_alter_table('auth_user', schema=None) as batch_op:
         batch_op.drop_index('auth_user_username_6821ab7c_like')
 
