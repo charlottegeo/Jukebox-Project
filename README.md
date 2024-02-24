@@ -10,7 +10,7 @@ An online jukebox application for creating a shared/collaborative music queue.
 
   
 
-Made with Django, Python, and HTML/CSS/JS.
+Made with Flask, Python, and HTML/CSS/JS.
 
   
 
@@ -124,8 +124,7 @@ To run the server locally, activate your venv and then run
 
   
 
-    py manage.py runserver
-
+    flask run
   
 
-The terminal will spit out a link to a local server that runs the website locally. It will also automatically update if you make any changes to your code.
+The terminal will spit out a link to a local server that runs the website locally.
