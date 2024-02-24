@@ -2,6 +2,7 @@ from flask_socketio import SocketIO, emit
 from app import socketio
 from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
+from app.utils.track_wrapper import formatTime
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
@@ -64,7 +65,7 @@ def get_queue():
 @socketio.on('get_song_queue')
 def handle_get_queue():
     result = get_queue()
-    emit('update_queue', {'queue': result})
+    emit('message', {'action': 'updateQueue', 'queue': result})
 
 @socketio.on('removeFirstSong')
 def handle_remove_first_song():
@@ -74,4 +75,10 @@ def handle_remove_first_song():
 @socketio.on('clearQueue')
 def handle_clear_queue():
     # Empty the queue
-    socketio.emit('message', {'action': 'updateQueue', 'queue': 'Queue cleared'})
+    Queue.query.delete()    
+    socketio.emit('message', {'action': 'updateQueue', 'queue': ''})
+
+@socketio.on('secondsToMinutes')
+def handle_seconds_to_minutes(data):
+    formatted_time = formatTime(data.get('seconds'))
+    emit('message', {'action': 'formattedTime', 'time': formatted_time})

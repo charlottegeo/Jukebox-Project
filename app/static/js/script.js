@@ -40,6 +40,8 @@ socket.on('error', function(error) {
 /*Code for main/search page*/
 window.onload = function () {
     //anything that should happen on page load goes here
+    socket.emit('get_song_queue');
+    
 };
 
 function updateQueue(queueData) {
@@ -200,6 +202,7 @@ function startPlay(){
     EmbedController.play();
 }
 function updateAdminQueue() {
+    /*
     fetch('/get_song_queue/')
         .then(response => response.json())
         .then(queue => {
@@ -216,6 +219,8 @@ function updateAdminQueue() {
                 queuelist.appendChild(img);
             }
         });
+    */
+   
 }
 
 function checkQueue() {
