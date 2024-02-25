@@ -22,9 +22,9 @@
             <div class="container">
                 <div class="section">
                     <div class="song">
-                        <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay" style="display: none;"></iframe>
+                        <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
                         <script>
-                            let EmbedController
+                            let EmbedController 
                             window.onSpotifyIframeApiReady = (IFrameAPI) => {
                                 let element = document.getElementById('spotify-player');
                                 let options = {
@@ -77,27 +77,24 @@
 
                         <div id="flexbox-top">
                             <h1>CatJam<br>Player</h1>
-                            <img id="catjam" src="img/frame1.png" width="250" height="250">
+                            <img id="catjam" src="/static/img/frame1.png" width="250" height="250">
                         </div>
 
                         <div id="flexbox-middle">
-                            <div id="flexbox-middle-right">
-                                <h2>Song Info</h2>
-                                <img id="album-cover" src="img/song_placeholder.png" width="250" height="250">
-                                <div id="song_title">Song Title</div>
-                            </div>
                             <div id="flexbox-middle-left">
                                 <h2>Current Song</h2>
-                                <img id="album-cover" src="song_placeholder.png" width="250" height="250">
+                                <img id="album-cover" src="/static/img/song_placeholder.png" width="250" height="250">
                                 <div id="artist_name">Artist Name</div>
+                                <div id="song_title">Song Title</div>
+                                <div id="progress">
+                                    <div id="progressTimestamp" class="timeText">0:00</div>
+                                    <progress id="progressBar" value="0" max="100"></progress>
+                                    <div id="duration" class="timeText">0:00</div>
+                                </div>
                             </div>
                         </div>
 
-                        <div id="progress">
-                            <div id="progressTimestamp" class="timeText">0:00</div>
-                            <progress id="progressBar" value="0" max="100"></progress>
-                            <div id="duration" class="timeText">0:00</div>
-                        </div>
+                        
 
                         <section class="admin">
                             <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
@@ -115,19 +112,7 @@
     </body>
     <footer>
         <h2 id="queue-header">Upcoming Songs</h2>
-        <div id="flexbox-bottom">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame1.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame2.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame1.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame2.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame1.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame2.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame1.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame2.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame1.png') }}" width="75" height="75">
-            <img id="catjam" src="{{ url_for('static', filename='img/frame2.png') }}" width="75" height="75">
-        </div>
+        <div id="song-list"></div>
             <!--Dynamically update list with names of songs from array and show those changes in HTML-->
-        <ul id="song-list"></ul>
     </footer>
 </html>

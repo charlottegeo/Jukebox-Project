@@ -13,7 +13,6 @@ socket.on('message', function(data) {
     console.log('Received:', data);
     switch(data.action) {
         case 'updateQueue':
-            console.log('Updating queue:', data.queue);
             updateQueue(data.queue);
             break;
         case 'searchResults':
@@ -25,6 +24,14 @@ socket.on('message', function(data) {
         case 'doneSong':
             doneSong();
             break;
+        case 'updateAdminQueue':
+            updateAdminQueue(data);
+            break;
+        case 'next_song':
+            console.log("Next song");
+            if(data.song){
+                playSong(data.song);
+            }
     }
 });
 
@@ -40,21 +47,41 @@ socket.on('error', function(error) {
 /*Code for main/search page*/
 window.onload = function () {
     //anything that should happen on page load goes here
-    socket.emit('get_song_queue');
-    
+    //if the page is the main page, we want to get the queue from the server
+
+    if (window.location.pathname == "/") {
+        socket.emit('get_song_queue');
+    }
+    if(window.location.pathname == "/display"){
+        socket.emit('get_admin_queue');
+    }    
 };
 
 function updateQueue(queueData) {
-    var queuelist = document.getElementById('queuelist');
-    queuelist.innerHTML = '';
-    console.log("Queue Data:" + queueData);
-    queueData.forEach(song => {
-        var img = document.createElement('img');
-        img.src = song.cover_url;
-        img.style.width = '100px';
-        queuelist.appendChild(img);
-        console.log(song.track_name);
-    });
+    console.log(typeof(queueData));
+    if (window.location.pathname == "/"){
+        var queuelist = document.getElementById('queuelist');
+        queuelist.innerHTML = '';
+        console.log("Queue Data:" + queueData);
+        queueData.forEach(song => {
+            var img = document.createElement('img');
+            img.src = song.cover_url;
+            img.style.width = '100px';
+            queuelist.appendChild(img);
+            console.log(song.track_name);
+        });
+    }
+    if(window.location.pathname == "/display"){
+        var queuelist = document.getElementById('song-list');
+        queuelist.innerHTML = '';
+        queueData.forEach(song => {
+            var img = document.createElement('img');
+            img.src = song.cover_url;
+            img.style.width = '100px';
+            queuelist.appendChild(img);
+            console.log(song.track_name);
+        });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -69,8 +96,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-
-
 
 //Has been changed to websocket
 function handleSearchResults(data) {
@@ -142,9 +167,7 @@ function setText() {
     var track = JSON.parse(selectedItem.dataset.track);
     /*Print all data in track*/
     var displayStyle = window.getComputedStyle(selectedItem).display;
-    if (displayStyle == 'none') {
-        selectedItem.style.display = 'block';
-    }
+    selectedItem.style.display = 'block';
     var infoText = document.getElementById('info-text');
     if (infoText.value == null) {
         infoText.textContent = "Selected Song:";
@@ -198,30 +221,24 @@ function resetSongSelectionUI() {
 /*Code for the player and admin panel*/
 
 function startPlay(){
-    console.log("Starting play");
-    EmbedController.play();
+    socket.emit('get_next_song');
 }
-function updateAdminQueue() {
-    /*
-    fetch('/get_song_queue/')
-        .then(response => response.json())
-        .then(queue => {
-            console.log(queue);
-            var queuelist = document.getElementById('song-list');
-            queuelist.innerHTML = '';  // clear the queuelist
-            var length = queue.result.length;
 
-            for (var i = 1; i < length; i++) {
-                console.log("Adding song to queue")
-                var img = document.createElement('img');
-                img.src = queue.result[i].cover_url;
-                img.style.width = '100px';
-                queuelist.appendChild(img);
-            }
-        });
-    */
-   
+//Has been changed to websocket
+function updateAdminQueue(data) {
+    var queue = data.queue;
+    var queuelist = document.getElementById('song-list');
+    queuelist.innerHTML = '';  // clear the queuelist
+    var length = queue.length;
+    for (var i = 0; i < length; i++) {
+        var img = document.createElement('img');
+        img.src = queue[i].cover_url;
+        img.style.width = '100px';
+        queuelist.appendChild(img);
+    }
+    
 }
+
 
 function checkQueue() {
     fetch('/get_song_queue/')
@@ -249,58 +266,86 @@ function clearQueue() {
     socket.emit('clearQueue');
     document.getElementById('song-list').innerHTML = '';
 }
-function playSong(){
-    /*Get next song from queue*/
-    /*Update song title and artist name*/
-    /*Update album cover*/
-    /*Update spotify player*/
-    fetch('/get_first_song/', {
-        method: 'GET',
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (!data['result'] || data['result'].length == 0) {
-            console.log('Queue is empty');
-            return;
-        } else{
-            console.log(data);
-            EmbedController.loadUri(data['result']['uri']);
-            document.getElementById("song_title").innerHTML = data['result']['track_name'];
-            document.getElementById("artist_name").innerHTML = data['result']['artist_name'];
-            document.getElementById("album-cover").src = data['result']['cover_url'];
-            console.log("BPM: ", data['result']['bpm']);
-            console.log(EmbedController);
-            console.log(EmbedController.play);
 
-            EmbedController.on('error', (error) => {
-                console.error("Playback failed: ", error);
-            });
-            let iframe = document.getElementById('spotify-player');
-            let iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
-            let playbtn = iframeDocument.querySelector('[data-testid="play-pause-button"]');
-            if (playbtn) {
-                playbtn.click();
-                console.log("Play button clicked");
-            } else {
-                console.error("Play button not found");
-            }
+function playNextSong() {
+    socket.emit('get_next_song');
+
+}
+
+function playSong(song) {
+    if(!song || !song.uri) {
+        console.log("Invalid song data");
+        return;
+    }
+    console.log("Playing:", song.track_name, "by", song.artist_name);
+    // Load the song URI into the Spotify player
+    EmbedController.loadUri(song.uri).then(() => {
+        // Once the song is loaded, play it
+        EmbedController.play();
+        console.log("Playing:", song.track_name);
+
+        // Update the UI with the current song's details
+        document.getElementById("song_title").innerHTML = song.track_name;
+        document.getElementById("artist_name").innerHTML = song.artist_name;
+        document.getElementById("album-cover").src = song.cover_url;
+    }).catch(error => {
+        console.error("Playback error:", error);
+    });
+}
+
+function playSong(){
+    // Fetch the first song from the queue
+    socket.emit('get_next_song'); // Using Socket.IO to request the next song
+
+    // Listen for the 'next_song' event from the server
+    socket.on('next_song', function(data) {
+        var song = data.song;
+        if (!song) {
+            console.log('Queue is empty');
+            // Optionally, reset the player UI to indicate no song is playing
+            resetPlayerUI();
+            return;
+        }
+
+        // If there is a song, load it into the EmbedController and play it
+        console.log('Playing:', song.track_name, 'by', song.artist_name);
+        EmbedController.loadUri(song.uri).then(() => {
+            console.log('Playback started');
+            // Update the UI with the song details
+            document.getElementById("song_title").innerHTML = song.track_name;
+            document.getElementById("artist_name").innerHTML = song.artist_name;
+            document.getElementById("album-cover").src = song.cover_url;
             document.getElementById("pausePlayBtn").style.display = "block";
 
-            isPlaying = true;
-            let trackLength = data['result']['length'];
-            console.log("Track length: ", trackLength);
-            let [minutes, seconds] = trackLength.split(':').map(Number);
-            let totalSeconds = minutes * 60 + seconds;
+            // Listen for playback errors
+            EmbedController.on('error', (error) => {
+                console.error("Playback error:", error);
+            });
 
-            document.getElementById('progressBar').max = totalSeconds;
-            document.getElementById('duration').innerHTML = trackLength;
-            let bpm = data['result']['bpm'];
-            animateFrames(bpm);
-            checkQueue();
-        }
+            isPlaying = true;
+            updatePlayerProgress(song.track_length);
+            animateFrames(song.bpm); // Assuming this function animates something based on the BPM
+        }).catch(error => {
+            console.error("Playback error:", error);
+        });
     });
-    
 }
+
+function resetPlayerUI() {
+    document.getElementById("song_title").innerHTML = "No song is playing";
+    document.getElementById("artist_name").innerHTML = "";
+    document.getElementById("album-cover").src = ""; // Path to a placeholder image or leave it blank
+    document.getElementById("pausePlayBtn").style.display = "none";
+}
+
+function updatePlayerProgress(trackLength) {
+    let [minutes, seconds] = trackLength.split(':').map(Number);
+    let totalSeconds = minutes * 60 + seconds;
+    document.getElementById('progressBar').max = totalSeconds;
+    document.getElementById('duration').innerHTML = trackLength;
+}
+
+
 function doneSong(){
     fetch('/get_song_queue/')
         .then(response => response.json())

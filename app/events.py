@@ -50,7 +50,7 @@ def handle_add_song_to_queue(data):
         db.session.commit()
         
         queue = get_queue()
-        emit('message', {'action': 'updateQueue', 'queue': queue})
+        emit('message', {'action': 'updateQueue', 'queue': queue}, broadcast=True)
     else:
         print('Invalid song data')
         emit('error', {'message': 'Invalid song data.'})
@@ -62,21 +62,48 @@ def get_queue():
     return queue_data
 
 
+def get_next_song():
+    next_song = Queue.query.first()
+    if next_song:
+        return next_song.song.to_dict()
+    return None
+
+@socketio.on('get_next_song')
+def handle_get_next_song():
+    next_song = get_next_song()
+    if next_song:
+        emit('message', {'action': 'next_song', 'nextSong': next_song})
+    else:
+        emit('message', {'action': 'error', 'error': 'Queue is empty'})
+
+
 @socketio.on('get_song_queue')
 def handle_get_queue():
     result = get_queue()
     emit('message', {'action': 'updateQueue', 'queue': result})
 
+@socketio.on('get_admin_queue')
+def handle_get_admin_queue():
+    result = get_queue()
+    emit('message', {'action': 'updateAdminQueue', 'queue': result})
+
+
 @socketio.on('removeFirstSong')
 def handle_remove_first_song():
-    # Remove the first song from the queue
-    socketio.emit('message', {'action': 'updateQueue', 'queue': 'Updated queue after removal'})
+    first_song = Queue.query.first()
+    if first_song:
+        db.session.delete(first_song)
+        db.session.commit()
+        queue = get_queue()
+        emit('message', {'action': 'updateQueue', 'queue': queue}, broadcast=True)
+    else:
+        emit('message', {'action': 'error', 'error': 'Queue is empty'})
 
 @socketio.on('clearQueue')
 def handle_clear_queue():
-    # Empty the queue
-    Queue.query.delete()    
-    socketio.emit('message', {'action': 'updateQueue', 'queue': ''})
+    Queue.query.delete()
+    db.session.commit()
+    emit('message', {'action': 'updateQueue', 'queue': []}, broadcast=True)
 
 @socketio.on('secondsToMinutes')
 def handle_seconds_to_minutes(data):

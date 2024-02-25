@@ -326,10 +326,38 @@ input {
 
 #progress {
     display: flex;
-    flex-direction: row;
-    justify-content: center;
-    max-width: 75%;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
 }
+
+#progressBar {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.timeText {
+    flex-shrink: 0;
+}
+
+progress[value] {
+    -webkit-appearance: none; /* Chrome, Safari, Opera */
+    appearance: none;
+}
+
+progress[value]::-webkit-progress-bar {
+    background-color: #eee; /* Background of the bar */
+}
+
+progress[value]::-webkit-progress-value {
+    background-color: #9055A2; /* Progress indicator color */
+}
+
+progress[value]::-moz-progress-bar {
+    background-color: #9055A2; /* Progress indicator color for Firefox */
+}
+
 
 /* #pausePlayBtn {
     visibility: hidden;
@@ -349,7 +377,3 @@ input {
     width: 50px;
     margin-right: 10px;
 }
-
-progress::-moz-progress-bar { background: #9055A2; }
-progress::-webkit-progress-value { background: #9055A2; }
-progress { color: #9055A2; }
