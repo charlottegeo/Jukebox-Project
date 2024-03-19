@@ -1,3 +1,5 @@
+#app/events.py
+
 from flask_socketio import SocketIO, emit
 from app import socketio
 from .models import db, Song, Queue
@@ -51,6 +53,10 @@ def handle_add_song_to_queue(data):
         
         queue = get_queue()
         emit('message', {'action': 'updateQueue', 'queue': queue}, broadcast=True)
+
+        # If no song is currently playing, emit the queueUpdated event
+        if Queue.query.count() == 0:
+            emit('message', {'action': 'queueUpdated', 'queue': queue}, broadcast=True)
     else:
         print('Invalid song data')
         emit('error', {'message': 'Invalid song data.'})
@@ -72,7 +78,7 @@ def get_next_song():
 def handle_get_next_song():
     next_song = get_next_song()
     if next_song:
-        emit('message', {'action': 'next_song', 'nextSong': next_song})
+        emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
     else:
         emit('message', {'action': 'error', 'error': 'Queue is empty'})
 
@@ -80,12 +86,12 @@ def handle_get_next_song():
 @socketio.on('get_song_queue')
 def handle_get_queue():
     result = get_queue()
-    emit('message', {'action': 'updateQueue', 'queue': result})
+    emit('message', {'action': 'updateQueue', 'queue': result}, broadcast=True)
 
 @socketio.on('get_admin_queue')
 def handle_get_admin_queue():
     result = get_queue()
-    emit('message', {'action': 'updateAdminQueue', 'queue': result})
+    emit('message', {'action': 'updateAdminQueue', 'queue': result}, broadcast=True)
 
 
 @socketio.on('removeFirstSong')
@@ -108,4 +114,4 @@ def handle_clear_queue():
 @socketio.on('secondsToMinutes')
 def handle_seconds_to_minutes(data):
     formatted_time = formatTime(data.get('seconds'))
-    emit('message', {'action': 'formattedTime', 'time': formatted_time})
+    emit('message', {'action': 'formattedTime', 'time': formatted_time}, broadcast=True)

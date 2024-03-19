@@ -24,47 +24,46 @@
                     <div class="song">
                         <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
                         <script>
+                            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
                             let EmbedController 
                             window.onSpotifyIframeApiReady = (IFrameAPI) => {
                                 let element = document.getElementById('spotify-player');
                                 let options = {
                                     width: 350,
                                     height: 100,
-                                    uri: null,
+                                    uri:  null,
                                   };
                                 let callback = (controller) => {
                                     EmbedController = controller;
                                 };
                                 IFrameAPI.createController(element, options, callback);
                                 EmbedController.addListener('playback_update', e => {
-                                    fetch('/seconds_to_minutes/', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                            'seconds': parseInt(e.data.position / 1000, 10),
-                                        })
-                                    })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        document.getElementById('progressTimestamp').innerText = data['result'];
-                                    })
-                                    .catch(error => {
-                                        console.error('Error:', error);
-                                    });
+                                    socket.emit('secondsToMinutes', {'seconds': parseInt(e.data.position / 1000, 10)});
                                     if(e.data.position == e.data.duration && e.data.duration != 0) {  
                                         isPlaying = false;
-                                        removeFirstSong().then(() => {
-                                            doneSong();
-                                        });
+                                        socket.emit('removeFirstSong');
+                                        document.getElementById('playQueue').click();
                                     }
-                                    console.log(e.data.position);
-                                    
-                                    document.getElementById('progressBar').value = e.data.position / e.data.duration * 100;
+                                    var progress = (e.data.position / e.data.duration) * 100;
+                                    document.getElementById('progressBar').value = progress;
                                 });
+
+                                
                               };
-                            
+                            document.addEventListener('DOMContentLoaded', () => {
+                                document.getElementById('pausePlayBtn').addEventListener('click', () => {
+                                    if (isPlaying) {
+                                        isPlaying = false;
+                                        document.getElementById("pausePlayBtn").innerHTML = "Play";
+                                        EmbedController.pause();
+                                    } else {
+                                        isPlaying = true;
+                                        document.getElementById("pausePlayBtn").innerHTML = "Pause";
+                                        EmbedController.togglePlay();
+                                    }
+                                });
+                                
+                            });
 
                         </script>
                         <script type="text/javascript">
@@ -98,8 +97,8 @@
 
                         <section class="admin">
                             <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
-                            <button id="pausePlayBtn" class="pause-play-button" onclick="pausePlay()">Pause</button>
-                            <button id="playQueue" class="play-queue-button" onclick="startPlay()">Play Queue</button>                            
+                            <button id="pausePlayBtn" class="pause-play-button">Pause</button>
+                            <button id="playQueue" class="play-queue-button">Play Queue</button>                            
                         </section>
                     </div>
                     
