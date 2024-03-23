@@ -1,4 +1,3 @@
-//app/static/js/script.js
 var isPlaying = false;
 var animationInterval;
 var pingInterval = null;
@@ -38,7 +37,18 @@ socket.on('message', function(data) {
             }
             break;
         case 'formattedTime':
+            if (window.location.pathname === '/display') {
             document.getElementById('progressTimestamp').innerText = data.time;
+            }
+            break;
+        /*
+        case 'queueLength':
+            if (data.length == 1) {
+                document.getElementById('playQueue').click();
+                console.log("Playing first song");
+            }
+            break;
+        */
     }
 });
 
@@ -60,7 +70,7 @@ window.onload = function () {
         socket.emit('get_song_queue');
     }
     if(window.location.pathname == "/display"){
-        
+        document.getElementById('clearQueue').click();
         socket.emit('get_admin_queue');
     }    
 };
@@ -207,7 +217,13 @@ function submitSong() {
     socket.emit('addSongToQueue', {
         track: track
     });
-
+    socket.emit('get_queue_length', function(queueLength) {
+        console.log('Queue length:', queueLength);
+        if (queueLength == 0) {
+            document.getElementById('playQueue').click();
+            console.log("Playing first song");
+        }
+    });
     //Consider removing the result text if the song shows up in the queue right away
     var resultText = document.getElementById('resulttext');
     resultText.textContent = "Song added to queue!";
@@ -265,51 +281,56 @@ function clearQueue() {
 function playSong(song) {
     if (!song) {
         console.log('Queue is empty');
-        // Optionally, reset the player UI to indicate no song is playing
         resetPlayerUI();
         return;
     }
 
-    // If there is a song, load it into the EmbedController and play it
     console.log('Playing:', song.track_name, 'by', song.artist_name);
-    EmbedController.uri = song.uri;
-    EmbedController.loadUri(song.uri);
-    console.log('Playback started');
-    // Update the UI with the song details
+    
+
+    //check if the website is the display page
+    if (window.location.pathname === '/display') {
+        EmbedController.uri = song.uri;
+        EmbedController.loadUri(song.uri);
+        console.log('Playback started');
+
+        // Update the UI with the song details
+        setCurrentSongUI(song);
+        // Play the song
+        EmbedController.play();
+
+        // Listen for playback errors
+        EmbedController.on('error', (error) => {
+            console.error("Playback error:", error);
+        });
+
+        isPlaying = true;
+        updatePlayerProgress(song.track_length);
+        animateFrames(song.bpm);
+    }
+}
+
+function setCurrentSongUI(song) {
     document.getElementById("song_title").innerHTML = song.track_name;
     document.getElementById("artist_name").innerHTML = song.artist_name;
     document.getElementById("album-cover").src = song.cover_url;
     document.getElementById("pausePlayBtn").style.display = "block";
-    EmbedController.play();
-
-    // Listen for playback finish event
-    EmbedController.on('finish', () => {
-        console.log('Playback finished');
-        socket.emit('removeFirstSong');
-        socket.emit('get_next_song');
-    });
-
-    // Listen for playback errors
-    EmbedController.on('error', (error) => {
-        console.error("Playback error:", error);
-    });
-
-    isPlaying = true;
-    updatePlayerProgress(song.track_length);
-    animateFrames(song.bpm);
 }
 
+function resetDisplay(){
+    document.getElementById("album-cover").src="img/song_placeholder.png";
+    document.getElementById("song_title").innerHTML = "Song Title";
+    document.getElementById("artist_name").innerHTML = "Artist Name";
+}
 
 function resetPlayerUI() {
     document.getElementById("song_title").innerHTML = "No song is playing";
     document.getElementById("artist_name").innerHTML = "";
-    document.getElementById("album-cover").src = ""; // Path to a placeholder image or leave it blank
+    document.getElementById("album-cover").src = "img/song_placeholder.png";
     document.getElementById("pausePlayBtn").style.display = "none";
 }
 
 function updatePlayerProgress(trackLength) {
-    let [minutes, seconds] = trackLength.split(':').map(Number);
-    let totalSeconds = minutes * 60 + seconds;
     document.getElementById('progressBar').max = 100;
     document.getElementById('duration').innerHTML = trackLength;
 }

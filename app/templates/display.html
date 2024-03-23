@@ -40,8 +40,9 @@
                                 EmbedController.addListener('playback_update', e => {
                                     socket.emit('secondsToMinutes', {'seconds': parseInt(e.data.position / 1000, 10)});
                                     if(e.data.position == e.data.duration && e.data.duration != 0) {  
+                                        console.log('Song ended');
                                         isPlaying = false;
-                                        socket.emit('removeFirstSong');
+                                        socket.emit('get_next_song');
                                         document.getElementById('playQueue').click();
                                     }
                                     var progress = (e.data.position / e.data.duration) * 100;
@@ -65,13 +66,6 @@
                                 
                             });
 
-                        </script>
-                        <script type="text/javascript">
-                            function resetDisplay(){
-                                document.getElementById("album-cover").src="img/song_placeholder.png";
-                                document.getElementById("song_title").innerHTML = "Song Title";
-                                document.getElementById("artist_name").innerHTML = "Artist Name";
-                            }
                         </script>
 
                         <div id="flexbox-top">

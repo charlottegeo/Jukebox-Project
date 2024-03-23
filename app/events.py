@@ -1,10 +1,16 @@
 #app/events.py
 
+import os
 from flask_socketio import SocketIO, emit
 from app import socketio
 from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
 from app.utils.track_wrapper import formatTime
+
+def set_brigtness(brightness):
+    os.system(f"xrandr --output eDP-1 --brightness {brightness}")
+
+
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
@@ -57,6 +63,9 @@ def handle_add_song_to_queue(data):
         # If no song is currently playing, emit the queueUpdated event
         if Queue.query.count() == 0:
             emit('message', {'action': 'queueUpdated', 'queue': queue}, broadcast=True)
+
+        queue_length = len(queue)
+        emit('message', {'action': 'queueLength', 'length': queue_length}, broadcast=True)
     else:
         print('Invalid song data')
         emit('error', {'message': 'Invalid song data.'})
@@ -105,11 +114,23 @@ def handle_remove_first_song():
     else:
         emit('message', {'action': 'error', 'error': 'Queue is empty'})
 
+def remove_first_song():
+    first_song = Queue.query.first()
+    if first_song:
+        db.session.delete(first_song)
+        db.session.commit()
+        queue = get_queue()
+        
 @socketio.on('clearQueue')
 def handle_clear_queue():
     Queue.query.delete()
     db.session.commit()
     emit('message', {'action': 'updateQueue', 'queue': []}, broadcast=True)
+
+@socketio.on('get_queue_length')
+def handle_get_queue_length():
+    queue = get_queue()
+    return {'length': len(queue)}
 
 @socketio.on('secondsToMinutes')
 def handle_seconds_to_minutes(data):
