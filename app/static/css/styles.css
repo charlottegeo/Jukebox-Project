@@ -54,12 +54,13 @@ body {
     margin: 0;
 }
 
-/*
 .container {
     display: flex;
-    flex-direction: space-between;
-    height: 100%;
-}*/
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    min-height: calc(100vh - 250px);
+}
 
 /* .section {
     padding: 20px;
@@ -124,6 +125,13 @@ h2 {
     text-align: center;
 }*/
 
+footer {
+    background-color: #2F2F2F;
+    width: 100%;
+    box-sizing: border-box;
+    color: #BBBBBB;
+    text-align: center;
+}
 
 input {
     width: 100%;
@@ -358,10 +366,6 @@ progress[value]::-moz-progress-bar {
     background-color: #9055A2; /* Progress indicator color for Firefox */
 }
 
-
-/* #pausePlayBtn {
-    visibility: hidden;
-} */
 
 #song-list {
     display: flex;
