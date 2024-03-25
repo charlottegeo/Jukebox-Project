@@ -71,12 +71,6 @@ body {
     margin: auto;
     overflow: hidden;
 }
-@media (max-width: 1024px) {
-    .container {
-        width: 100%;
-        height: 100%;
-    }
-}
 /* .section {
     padding: 20px;
 } */
@@ -395,4 +389,17 @@ progress[value]::-moz-progress-bar {
 #song-list img {
     width: 50px;
     margin-right: 10px;
+}
+
+@media (max-width: 1024px) {
+    .container {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+@media (max-width: 1024px) {
+    html, body {
+        overflow: auto;
+    }
 }
