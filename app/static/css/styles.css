@@ -4,6 +4,12 @@ html {
     color: #9055a2;
 }
 
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
 /*header {
     height: 5%;
     font-size: 30px;
@@ -60,9 +66,17 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    
+    width: 1024px;
+    height: 600px;
+    margin: auto;
+    overflow: hidden;
 }
-
+@media (max-width: 1024px) {
+    .container {
+        width: 100%;
+        height: 100%;
+    }
+}
 /* .section {
     padding: 20px;
 } */
