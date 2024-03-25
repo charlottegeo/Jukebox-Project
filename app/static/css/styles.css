@@ -52,6 +52,7 @@ body {
     background-color: #2F2F2F;
     height: 100%;
     margin: 0;
+    
 }
 
 .container {
@@ -59,7 +60,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    min-height: calc(100vh - 250px);
+    
 }
 
 /* .section {
