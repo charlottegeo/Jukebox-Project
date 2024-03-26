@@ -6,7 +6,7 @@ from app import socketio
 from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
 from app.utils.track_wrapper import formatTime
-
+isPlaying = False
 def set_brigtness(brightness):
     os.system(f"xrandr --output eDP-1 --brightness {brightness}")
 
@@ -52,25 +52,32 @@ def handle_add_song_to_queue(data):
                     cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm)
         db.session.add(song)
         db.session.commit()
-
+        
         queue_item = Queue(song=song)
         db.session.add(queue_item)
         db.session.commit()
         
-        queue = get_queue()
-        emit('message', {'action': 'updateQueue', 'queue': queue}, broadcast=True)
-
-        # If no song is currently playing, emit the queueUpdated event
-        if Queue.query.count() == 0:
-            emit('message', {'action': 'queueUpdated', 'queue': queue}, broadcast=True)
-
-        queue_length = len(queue)
-        emit('message', {'action': 'queueLength', 'length': queue_length}, broadcast=True)
+        queue_length = len(get_queue())
+        if queue_length == 1:
+            # If no song is currently playing, start playing the newly added song
+            emit('playSong', {'song': song.to_dict()}, broadcast=True)
+        
+        # Emit a message to update the queue length for all clients
+        emit('queueLength', {'length': queue_length}, broadcast=True)
+        emit('queueUpdated', broadcast=True)
+        emit('message', {'action': 'updateQueue', 'queue': get_queue()}, broadcast=True)   
     else:
         print('Invalid song data')
         emit('error', {'message': 'Invalid song data.'})
 
-
+@socketio.on('isPlaying')
+def handle_is_playing(data):
+    global isPlaying
+    isPlaying = data.get('isPlaying')
+    print('Is playing:', isPlaying)
+    if not isPlaying:
+        print('Playing next song')
+        
 def get_queue():
     queue = Queue.query.all()
     queue_data = [song.song.to_dict() for song in queue]
@@ -88,6 +95,7 @@ def handle_get_next_song():
     next_song = get_next_song()
     if next_song:
         emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
+        remove_first_song()
     else:
         emit('message', {'action': 'error', 'error': 'Queue is empty'})
 

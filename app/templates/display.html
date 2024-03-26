@@ -9,6 +9,7 @@
         <script>
             var frame1 = "/static/img/frame1.png";
             var frame2 = "/static/img/frame2.png";
+            var song_placeholder = "/static/img/song_placeholder.png";
         </script>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
         <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -73,12 +74,12 @@
                                 };
                                 document.addEventListener('DOMContentLoaded', () => {
                                     document.getElementById('pausePlayBtn').addEventListener('click', () => {
-                                        if (isPlaying) {
-                                            isPlaying = false;
+                                        if (isPaused) {
+                                            isPaused = false;
                                             document.getElementById("pausePlayBtn").innerHTML = "Play";
                                             EmbedController.pause();
                                         } else {
-                                            isPlaying = true;
+                                            isPaused = true;
                                             document.getElementById("pausePlayBtn").innerHTML = "Pause";
                                             EmbedController.togglePlay();
                                         }
@@ -98,6 +99,7 @@
                 </div>
             </div>
         </div>
+        <button id="startButton" class="start-button">Start</button>
     </body>
     <footer>
         <h2 id="queue-header">Upcoming Songs</h2>
