@@ -227,7 +227,9 @@ function submitSong() {
     //Consider removing the result text if the song shows up in the queue right away
     var resultText = document.getElementById('resulttext');
     resultText.textContent = "Song added to queue!";
-
+    setTimeout(function() {
+        resultText.textContent = "";
+    }, 3000);
     resetSongSelectionUI();
 }
 

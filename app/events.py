@@ -119,7 +119,6 @@ def remove_first_song():
     if first_song:
         db.session.delete(first_song)
         db.session.commit()
-        queue = get_queue()
         
 @socketio.on('clearQueue')
 def handle_clear_queue():

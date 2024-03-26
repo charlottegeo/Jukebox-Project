@@ -40,51 +40,54 @@
             <div class="container">
                 <div class="section">
                     <div class="song">
-                        <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
-                        <script>
-                            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-                            let EmbedController 
-                            window.onSpotifyIframeApiReady = (IFrameAPI) => {
-                                let element = document.getElementById('spotify-player');
-                                let options = {
-                                    width: 350,
-                                    height: 100,
-                                    uri:  null,
-                                  };
-                                let callback = (controller) => {
-                                    EmbedController = controller;
+                        <div id="spotify-player-wrapper">
+                            <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
+                            <script>
+                                var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+                                let EmbedController 
+                                window.onSpotifyIframeApiReady = (IFrameAPI) => {
+                                    let element = document.getElementById('spotify-player');
+                                    let options = {
+                                        width: 350,
+                                        height: 100,
+                                        uri:  null,
+                                    };
+                                    let callback = (controller) => {
+                                        EmbedController = controller;
+                                    };
+                                    IFrameAPI.createController(element, options, callback);
+                                    EmbedController.addListener('playback_update', e => {
+                                        socket.emit('secondsToMinutes', {'seconds': parseInt(e.data.position / 1000, 10)});
+                                        if(e.data.position == e.data.duration && e.data.duration != 0) {  
+                                            console.log('Song ended');
+                                            isPlaying = false;
+                                            socket.emit('removeFirstSong');
+                                            socket.emit('get_next_song');
+                                            document.getElementById('playQueue').click();
+                                        }
+                                        var progress = (e.data.position / e.data.duration) * 100;
+                                        document.getElementById('progressBar').value = progress;
+                                    });
+
+                                    
                                 };
-                                IFrameAPI.createController(element, options, callback);
-                                EmbedController.addListener('playback_update', e => {
-                                    socket.emit('secondsToMinutes', {'seconds': parseInt(e.data.position / 1000, 10)});
-                                    if(e.data.position == e.data.duration && e.data.duration != 0) {  
-                                        console.log('Song ended');
-                                        isPlaying = false;
-                                        socket.emit('get_next_song');
-                                        document.getElementById('playQueue').click();
-                                    }
-                                    var progress = (e.data.position / e.data.duration) * 100;
-                                    document.getElementById('progressBar').value = progress;
+                                document.addEventListener('DOMContentLoaded', () => {
+                                    document.getElementById('pausePlayBtn').addEventListener('click', () => {
+                                        if (isPlaying) {
+                                            isPlaying = false;
+                                            document.getElementById("pausePlayBtn").innerHTML = "Play";
+                                            EmbedController.pause();
+                                        } else {
+                                            isPlaying = true;
+                                            document.getElementById("pausePlayBtn").innerHTML = "Pause";
+                                            EmbedController.togglePlay();
+                                        }
+                                    });
+                                    
                                 });
 
-                                
-                              };
-                            document.addEventListener('DOMContentLoaded', () => {
-                                document.getElementById('pausePlayBtn').addEventListener('click', () => {
-                                    if (isPlaying) {
-                                        isPlaying = false;
-                                        document.getElementById("pausePlayBtn").innerHTML = "Play";
-                                        EmbedController.pause();
-                                    } else {
-                                        isPlaying = true;
-                                        document.getElementById("pausePlayBtn").innerHTML = "Pause";
-                                        EmbedController.togglePlay();
-                                    }
-                                });
-                                
-                            });
-
-                        </script>
+                            </script>
+                        </div>
                         <section class="admin">
                             <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
                             <button id="pausePlayBtn" class="pause-play-button">Pause</button>
