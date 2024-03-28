@@ -1,3 +1,4 @@
+<!--display.html-->
 <!DOCTYPE html>
 <!--https://www.w3schools.com/html/default.asp-->
 <!--https://www.w3schools.com/css/default.asp-->
@@ -14,6 +15,9 @@
         </script>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
         <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+        <script>
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+        </script>
         <script src="{{ url_for('static', filename='js/script.js') }}"></script>
         <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
         </head>
@@ -45,59 +49,39 @@
                         <div id="spotify-player-wrapper">
                             <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
                             <script>
-                                var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-                                let EmbedController 
+                                var EmbedController;
                                 window.onSpotifyIframeApiReady = (IFrameAPI) => {
-                                    let element = document.getElementById('spotify-player');
-                                    let options = {
-                                        width: 350,
-                                        height: 100,
-                                        uri:  null,
-                                    };
-                                    let callback = (controller) => {
-                                        EmbedController = controller;
-                                    };
-                                    IFrameAPI.createController(element, options, callback);
-                                    EmbedController.addListener('playback_update', e => {
-                                        socket.emit('secondsToMinutes', {'seconds': parseInt(e.data.position / 1000, 10)});
-                                        if(e.data.position == e.data.duration && e.data.duration != 0) {  
-                                            console.log('Song ended');
-                                            isPlaying = false;
-                                            defaultFrame();
-                                            clearInterval(animationInterval);
-                                            socket.emit('removeFirstSong');
-                                            socket.emit('get_next_song');
-                                            document.getElementById('playQueue').click();
-                                        }
-                                        var progress = (e.data.position / e.data.duration) * 100;
-                                        document.getElementById('progressBar').value = progress;
-                                    });
-
-                                    
+                                let element = document.getElementById('spotify-player');
+                                let options = {
+                                    width: 0,
+                                    height: 0,
+                                    uri: null,
                                 };
-                                document.addEventListener('DOMContentLoaded', () => {
-                                    document.getElementById('pausePlayBtn').addEventListener('click', () => {
-                                        if (isPaused) {
-                                            isPaused = false;
-                                            document.getElementById("pausePlayBtn").innerHTML = "Play";
-                                            EmbedController.pause();
-                                        } else {
-                                            isPaused = true;
-                                            document.getElementById("pausePlayBtn").innerHTML = "Pause";
-                                            EmbedController.togglePlay();
-                                        }
-                                    });
-                                    
+                                let callback = (controller) => {
+                                    EmbedController = controller;
+                                };
+                                IFrameAPI.createController(element, options, callback);
+                                EmbedController.addListener('playback_update', e => {
+                                    socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
+                                    if (e.data.position == e.data.duration && e.data.duration != 0) {
+                                        console.log('Song ended');
+                                        isPlaying = false;
+                                        defaultFrame();
+                                        clearInterval(animationInterval);
+                                        resetPlayerUI();
+                                        socket.emit('removeFirstSong');
+                                        socket.emit('get_next_song');
+                                        document.getElementById('playQueue').click();
+                                    }
+                                    var progress = (e.data.position / e.data.duration) * 100;
+                                    document.getElementById('progressBar').value = progress;
                                 });
-
+                            };
                             </script>
                         </div>
                         <section class="admin">
                             <button id="startButton" class="start-button">Start</button>
-                            <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
-                            <button id="pausePlayBtn" class="pause-play-button">Pause</button>
-                            <button id="playQueue" class="play-queue-button">Play Queue</button>    
-                            <button id="skipSongBtn" class="skip-song-button">Skip Song</button>                        
+                            <button id="playQueue" class="play-queue-button">Play Queue</button>                        
                         </section>
                     </div>
                     

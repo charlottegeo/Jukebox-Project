@@ -6,15 +6,16 @@ var pingInterval = null;
 var typingTimer;
 var doneTypingInterval = 500;
 var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-
+var EmbedController;
 socket.on('connect', function() {
     console.log('Socket.IO connected');
     socket.emit('ping');
 });
 
 socket.on('message', function(data) {
-    //console.log('Received:', data);
+    console.log('Received:', data);
     //console.log(isPlaying);
+
     switch(data.action) {
         case 'updateQueue':
             console.log("Updating queue");
@@ -69,6 +70,15 @@ socket.on('message', function(data) {
             }
             updateQueue(data.queue);
             break;
+        case 'togglePlay':
+            console.log("Toggling play");
+            if (isPlaying) {
+                EmbedController.pause();
+                isPlaying = false;
+            } else {
+                EmbedController.togglePlay();
+                isPlaying = true;
+            }
     }
 });
 
@@ -81,19 +91,24 @@ socket.on('error', function(error) {
 });
 
 
+
+
 /*Code for main/search page*/
 window.onload = function () {
     //anything that should happen on page load goes here
     //if the page is the main page, we want to get the queue from the server
-
     if (window.location.pathname == "/") {
         socket.emit('get_song_queue');
     }
     if(window.location.pathname == "/display"){
-        document.getElementById('clearQueue').click();
+        clearQueue();
         defaultFrame();
         socket.emit('get_admin_queue');
     }    
+
+    if(window.location.pathname == "/admin"){
+        document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
+    }
 };
 
 
@@ -115,7 +130,7 @@ function updateQueue(queueData) {
     if(window.location.pathname == "/display"){
         var queuelist = document.getElementById('song-list');
         queuelist.innerHTML = '';
-        queueData.slice(1).forEach(song => { // Start from the second song
+        queueData.forEach(song => { // Start from the second song
             var img = document.createElement('img');
             img.src = song.cover_url;
             img.style.width = '100px';
@@ -123,7 +138,15 @@ function updateQueue(queueData) {
         });
     }
 }
-
+function pausePlay() {
+    console.log('pausePlayBtn clicked');
+    socket.emit('message', { action: 'togglePlay' }); // Emit 'togglePlay' action
+    if(isPaused) {
+        document.getElementById('pausePlayBtn').innerHTML = 'Pause';
+    } else {
+        document.getElementById('pausePlayBtn').innerHTML = 'Play';
+    }
+}
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname == "/") {
         var searchInput = document.getElementById('searchbar');
@@ -144,9 +167,16 @@ document.addEventListener('DOMContentLoaded', function() {
         startButton.addEventListener('click', function() {
             startButton.style.display = 'none';
         });
+        
+    
+    }
+    if (window.location.pathname == "/admin") {
         document.getElementById('skipSongBtn').addEventListener('click', function() {
             socket.emit('skipSong');
         });
+        document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
+        document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
+
     }
 });
 
@@ -322,9 +352,9 @@ function updateAdminQueue(data) {
 
 function clearQueue() {
     socket.emit('clearQueue');
-    document.getElementById('song-list').innerHTML = '';
-    resetPlayerUI();
     if (window.location.pathname === '/display') {
+        document.getElementById('song-list').innerHTML = '';
+        resetPlayerUI();
         EmbedController.pause();
         defaultFrame();
         clearInterval(animationInterval);
@@ -371,14 +401,12 @@ function setCurrentSongUI(song) {
     document.getElementById("song_title").innerHTML = song.track_name;
     document.getElementById("artist_name").innerHTML = song.artist_name;
     document.getElementById("album-cover").src = song.cover_url;
-    document.getElementById("pausePlayBtn").style.display = "block";
 }
 
 function resetPlayerUI() {
     document.getElementById("song_title").innerHTML = "No song is playing";
     document.getElementById("artist_name").innerHTML = "";
     document.getElementById("album-cover").src = song_placeholder;
-    document.getElementById("pausePlayBtn").style.display = "none";
 }
 
 function updatePlayerProgress(trackLength) {
