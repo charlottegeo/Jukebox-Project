@@ -58,14 +58,12 @@ def handle_add_song_to_queue(data):
         db.session.commit()
         
         queue_length = len(get_queue())
-        if queue_length == 1:
-            # If no song is currently playing, start playing the newly added song
-            emit('playSong', {'song': song.to_dict()}, broadcast=True)
-        
-        # Emit a message to update the queue length for all clients
         emit('queueLength', {'length': queue_length}, broadcast=True)
         emit('queueUpdated', broadcast=True)
         emit('message', {'action': 'updateQueue', 'queue': get_queue()}, broadcast=True)   
+
+        if queue_length == 1 and not isPlaying:
+            emit('playQueue', broadcast=True)
     else:
         print('Invalid song data')
         emit('error', {'message': 'Invalid song data.'})
@@ -97,7 +95,7 @@ def handle_get_next_song():
         emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
         remove_first_song()
     else:
-        emit('message', {'action': 'error', 'error': 'Queue is empty'})
+        emit('message', {'action': 'queue_empty'}, broadcast=True)
 
 
 @socketio.on('get_song_queue')
@@ -143,3 +141,12 @@ def handle_get_queue_length():
 def handle_seconds_to_minutes(data):
     formatted_time = formatTime(data.get('seconds'))
     emit('message', {'action': 'formattedTime', 'time': formatted_time}, broadcast=True)
+
+@socketio.on('skipSong')
+def handle_skip_song():
+    next_song = get_next_song()
+    if next_song:
+        emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
+        remove_first_song()
+    else:
+        emit('message', {'action': 'queue_empty'}, broadcast=True)

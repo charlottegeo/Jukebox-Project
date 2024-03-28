@@ -7,6 +7,7 @@
     <head>
         <title>CatJam Display</title>
         <script>
+            var frame0 = "/static/img/frame0.png";
             var frame1 = "/static/img/frame1.png";
             var frame2 = "/static/img/frame2.png";
             var song_placeholder = "/static/img/song_placeholder.png";
@@ -62,6 +63,8 @@
                                         if(e.data.position == e.data.duration && e.data.duration != 0) {  
                                             console.log('Song ended');
                                             isPlaying = false;
+                                            defaultFrame();
+                                            clearInterval(animationInterval);
                                             socket.emit('removeFirstSong');
                                             socket.emit('get_next_song');
                                             document.getElementById('playQueue').click();
@@ -90,16 +93,18 @@
                             </script>
                         </div>
                         <section class="admin">
+                            <button id="startButton" class="start-button">Start</button>
                             <button id="clearQueue" class="clear-queue-button" onclick="clearQueue()">Clear Queue</button>
                             <button id="pausePlayBtn" class="pause-play-button">Pause</button>
-                            <button id="playQueue" class="play-queue-button">Play Queue</button>                            
+                            <button id="playQueue" class="play-queue-button">Play Queue</button>    
+                            <button id="skipSongBtn" class="skip-song-button">Skip Song</button>                        
                         </section>
                     </div>
                     
                 </div>
             </div>
         </div>
-        <button id="startButton" class="start-button">Start</button>
+        
     </body>
     <footer>
         <h2 id="queue-header">Upcoming Songs</h2>
