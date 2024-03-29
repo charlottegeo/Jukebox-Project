@@ -150,3 +150,7 @@ def handle_skip_song():
         remove_first_song()
     else:
         emit('message', {'action': 'queue_empty'}, broadcast=True)
+
+@socketio.on('refreshDisplay')
+def handle_refresh_display():
+    emit('reloadPage', broadcast=True)

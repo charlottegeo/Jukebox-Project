@@ -8,9 +8,9 @@
     <head>
         <title>CatJam Display</title>
         <script>
-            var frame0 = "/static/img/frame0.png";
-            var frame1 = "/static/img/frame1.png";
-            var frame2 = "/static/img/frame2.png";
+            var frame0 = "/static/img/white/IMG_7999.PNG";
+            var frame1 = "/static/img/white/IMG_8001.PNG";
+            var frame2 = "/static/img/white/IMG_7998.PNG";
             var song_placeholder = "/static/img/song_placeholder.png";
         </script>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -77,6 +77,11 @@
                                     document.getElementById('progressBar').value = progress;
                                 });
                             };
+                            </script>
+                            <script>
+                                socket.on('reloadPage', function() {
+                                    location.reload();
+                                });
                             </script>
                         </div>
                         <section class="admin">

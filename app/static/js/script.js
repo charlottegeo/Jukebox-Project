@@ -176,6 +176,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
         document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
+        var refreshDisplayBtn = document.getElementById('refreshDisplayBtn');
+        refreshDisplayBtn.addEventListener('click', function() {
+            socket.emit('refreshDisplay');
+        });
 
     }
 });
@@ -424,17 +428,33 @@ function animateFrames(bpm) {
         clearInterval(animationInterval); // Clear existing interval
     }
 
-    var frames = [frame1, frame2];
+    var frames = [frame0, frame1, frame2];
     var frameIndex = 0;
     var frameDuration = calculateFrameDuration(bpm);
+    var increment = true; // Variable to track whether to increment or decrement
 
     animationInterval = setInterval(function() {
         document.getElementById('catjam').src = frames[frameIndex];
-        frameIndex = (frameIndex + 1) % frames.length;
+
+        if (increment) {
+            frameIndex++;
+        } else {
+            frameIndex--;
+        }
+
+        // If we've reached the end of the array, start decrementing
+        if (frameIndex === frames.length - 1) {
+            increment = false;
+        }
+
+        // If we've reached the start of the array, start incrementing
+        if (frameIndex === 0) {
+            increment = true;
+        }
     }, frameDuration * 1000);
 }
 
 function defaultFrame() {
     clearInterval(animationInterval);
-    document.getElementById('catjam').src = frame0;
+    document.getElementById('catjam').src = frame1;
 }
