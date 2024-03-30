@@ -305,8 +305,8 @@ input {
 #catjam {
     animation: catjam 1s steps(23) infinite;
     width: 500px;
-    height: 500px;
-    object-fit: cover;
+    height: 300px;
+    object-fit: none;
     margin-top: 5%;
 }
 
