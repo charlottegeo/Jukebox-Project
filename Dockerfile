@@ -10,4 +10,4 @@ COPY requirements.txt /app
 RUN pip3 install -r requirements.txt --no-cache-dir
 COPY . /app 
 ENTRYPOINT ["flask"]
-CMD ["run", "--host=0.0.0.0", "--port=5000"]
+CMD ["run", "--host=0.0.0.0", "--bind=0.0.0.0:8080"]
