@@ -10,4 +10,4 @@ COPY requirements.txt /app
 RUN pip3 install -r requirements.txt --no-cache-dir
 COPY . /app
 ENTRYPOINT ["gunicorn"]
-CMD ["-w", "4", "-b", "0.0.0.0:8080", "app:app"]
+CMD["gunicorn", "app:app", "--bind=0.0.0.0:8080"]
