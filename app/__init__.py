@@ -32,8 +32,3 @@ from app.routes import main as main_blueprint
 from app import models, events
 
 app.register_blueprint(main_blueprint)
-
-
-
-def create_app():
-    return app
