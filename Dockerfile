@@ -1,5 +1,12 @@
 FROM --platform=$BUILDPLATFORM python:3.11.5-alpine
 WORKDIR /app 
+RUN apk add --no-cache \
+    gcc \
+    libc-dev \
+    libldap \
+    openldap-dev \
+    libsasl \
+    libsasl-dev
 COPY requirements.txt /app
 RUN pip3 install -r requirements.txt --no-cache-dir
 COPY . /app 
