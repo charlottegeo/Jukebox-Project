@@ -9,5 +9,4 @@ RUN apk update && apk add --no-cache \
 COPY requirements.txt /app
 RUN pip3 install -r requirements.txt --no-cache-dir
 COPY . /app
-ENTRYPOINT ["gunicorn"]
-CMD ["gunicorn", "run:application", "--bind=0.0.0.0:8080"]
+CMD ["run", "--host=0.0.0.0", "--port=8080"]
