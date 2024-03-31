@@ -1,5 +1,5 @@
 FROM --platform=$BUILDPLATFORM python:3.11.5-alpine
-WORKDIR /app 
+WORKDIR /app
 RUN apk update && apk add --no-cache \
     gcc \
     libc-dev \
@@ -8,6 +8,6 @@ RUN apk update && apk add --no-cache \
     cyrus-sasl-dev
 COPY requirements.txt /app
 RUN pip3 install -r requirements.txt --no-cache-dir
-COPY . /app 
-ENTRYPOINT ["flask"]
-CMD ["run", "--host=0.0.0.0", "--port=8080"]
+COPY . /app
+ENTRYPOINT ["gunicorn"]
+CMD ["-w", "4", "-b", "0.0.0.0:8080", "app:app"]
