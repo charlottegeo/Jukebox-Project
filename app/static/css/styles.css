@@ -304,12 +304,18 @@ input {
 }
 #catjam {
     animation: catjam 1s steps(23) infinite;
-    width: 300px;  /*was previously 500 x 500 */
-    height: 300px;
-    object-fit: fill; /*was previously none*/
+    width: 500px;
+    height: 500px;
+    object-fit: cover; /* Will crop the image to fit the content box */
+    object-position: center;
     margin-top: 5%;
 }
 
+#flexbox-middle-right {
+    width: 50%;
+    height: 50%;
+    display: flex;
+}
 .timeText {
     color: #BBBBBB;
     font-size: 12px;
