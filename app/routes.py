@@ -14,8 +14,9 @@ def index():
 def display():
     return render_template('display.html')
 
-@auth.oidc_auth('default')
+
 @main.route('/admin')
+@auth.oidc_auth('default')
 @csh_user_auth
 def admin(auth_dict=None):
     if not auth_dict['admin']:
