@@ -7,4 +7,4 @@ class Config:
     OIDC_ISSUER = env.get("OIDC_ISSUER", "https://sso.csh.rit.edu/auth/realms/csh")
     OIDC_CLIENT_ID = env.get("OIDC_CLIENT_ID", "deadass")
     OIDC_CLIENT_SECRET = env.get("OIDC_CLIENT_SECRET", "NOT-A-SECRET")
-    OIDC_REDIRECT_URI = env.get("OIDC_REDIRECT_URI", "https://catjam.cs.house/oidc_callback")
+    OIDC_REDIRECT_URI = env.get("OIDC_REDIRECT_URI", "https://catjam.csh.rit.edu/oidc_callback")
