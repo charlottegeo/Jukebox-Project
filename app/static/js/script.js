@@ -334,7 +334,6 @@ function resetSongSelectionUI() {
 function startPlay(){
     console.log('startPlay clicked');
     socket.emit('get_next_song');
-    
 }
 
 
