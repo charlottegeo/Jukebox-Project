@@ -166,6 +166,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var startButton = document.getElementById('startButton');
         startButton.addEventListener('click', function() {
             startButton.style.display = 'none';
+            startButton.style.width = '0';
+            startButton.style.height = '0';
+
         });
         
     
@@ -411,6 +414,9 @@ function resetPlayerUI() {
     document.getElementById("song_title").innerHTML = "No song is playing";
     document.getElementById("artist_name").innerHTML = "";
     document.getElementById("album-cover").src = song_placeholder;
+    document.getElementById('progressBar').value = 0;
+    document.getElementById('duration').innerHTML = '0:00';
+    document.getElementById('progressTimestamp').innerHTML = '0:00';
 }
 
 function updatePlayerProgress(trackLength) {

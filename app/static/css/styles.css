@@ -10,6 +10,8 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    min-height: 100vh;
+
 }
 
 /*header {
@@ -44,6 +46,9 @@ and then finally there is a third flex box that will contain the Queue*/
     width: 100%;
 }
 
+.flex-container {
+    height: 60%;
+}
 #flexbox-middle-left {
     display: flex;
     flex-direction: column;
@@ -72,9 +77,11 @@ button:hover {
 body { 
    /*background-image: url('../../templates/pusayBG.png'); */
     background-color: #2F2F2F;
-    height: 100%;
+    min-height: 100vh;
     margin: 0;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .container {
@@ -84,6 +91,8 @@ body {
     justify-content: space-between;
     margin: auto;
     overflow: hidden;
+    width: 0;
+    height: 0;
 }
 
 b {
@@ -107,14 +116,35 @@ h2 {
     justify-content: center;
 }
 
-footer {
-    background-color: #2F2F2F;
-    width: 100%;
-    box-sizing: border-box;
-    color: #BBBBBB;
-    text-align: center;
+.admin{
+    height: 1px;
 }
 
+#startButton {
+    position: fixed; /* Position fixed to make it stay in place even when scrolling */
+    top: 0;
+    left: 0;
+    width: 100vw; /* 100% of the viewport width */
+    height: 100vh; /* 100% of the viewport height */
+    z-index: 9999; /* High z-index to ensure it's above other content */
+    color: white; /* Text color */
+    font-size: 24px; /* Larger font size */
+    border: none; /* Remove any border */
+}
+
+footer {
+    height: auto; /* Adjust based on your content, or use 'auto' */
+    /*padding: 9px 0; /* Top and Bottom Padding */
+    font-size: 14px; /* Adjust font size as needed */
+    text-align: center;
+    background-color: #2F2F2F;
+    color: #BBBBBB;
+    width: 100%;
+    box-sizing: border-box;
+}
+body, .flex-container {
+    margin-bottom: 120px; /* Adjust this value based on the actual height of your footer */
+}
 input {
     display: block;
     width: 80%;
@@ -295,6 +325,8 @@ input {
 }
 
 .queue-header {
+    padding-top: 0;
+    padding-bottom: 0;
     display: flex;
     flex-direction: row;
     width: 100%;
@@ -305,11 +337,10 @@ input {
 }
 #catjam {
     animation: catjam 1s steps(23) infinite;
-    width: 500px;
-    height: 500px;
+    width: 65%;
+    height: 65%;
     object-fit: cover; /* Will crop the image to fit the content box */
-    object-position: center;
-    margin-top: 5%;
+    margin-left: 40%;
 }
 
 #flexbox-middle-right {
@@ -383,11 +414,5 @@ progress[value]::-moz-progress-bar {
 @media (max-width: 1024px) {
     html, body {
         overflow: auto;
-    }
-}
-@media (min-width: 1025px) {
-    body,
-    .container {
-        overflow: auto; /* Allow scrolling on larger screens */
     }
 }
