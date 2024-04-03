@@ -8,15 +8,15 @@
     <head>
         <title>CatJam Display</title>
         <script>
-            var frame0 = "/static/img/cats/White/PusayLeft.png";
-            var frame1 = "/static/img/cats/White/PusayCenter.png";
-            var frame2 = "/static/img/cats/White/PusayRight.png";
+            var frame0 = "/static/img/white/PusayLeft.png";
+            var frame1 = "/static/img/white/PusayCenter.png";
+            var frame2 = "/static/img/white/PusayRight.png";
             var song_placeholder = "/static/img/song_placeholder.png";
         </script>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
         <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
         <script>
-            var socket = io.connect('https://' + document.domain + ':' + location.port);
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
         </script>
         <script src="{{ url_for('static', filename='js/script.js') }}"></script>
         <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
@@ -65,7 +65,6 @@
                                 };
                                 IFrameAPI.createController(element, options, callback);
                                 EmbedController.addListener('playback_update', e => {
-                                    console.log(e.data.position, e.data.duration);
                                     socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
                                     if (e.data.position == e.data.duration && e.data.duration != 0) {
                                         console.log('Song ended');
