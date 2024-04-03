@@ -163,7 +163,7 @@ def get_cat_colors():
 @socketio.on('get_cat_colors')
 def handle_get_cat_colors():
     colors = get_cat_colors()
-    emit('cat_colors', colors, broadcast=False)
+    emit('cat_colors', colors, broadcast=True)
 
 selected_color = "White"  # Default color
 
