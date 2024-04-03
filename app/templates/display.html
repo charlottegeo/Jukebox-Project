@@ -15,7 +15,6 @@
             var song_placeholder = "/static/img/song_placeholder.png";
             var socket = io.connect('http://' + document.domain + ':' + location.port);
             socket.on('color_changed', function(data) {
-                // Update the frame paths based on the new color
                 var newColor = data.color;
                 frame0 = "/static/img/cats/" + newColor + "/PusayLeft.png";
                 frame1 = "/static/img/cats/" + newColor + "/PusayCenter.png";
