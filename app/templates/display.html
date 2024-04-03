@@ -65,6 +65,7 @@
                                 };
                                 IFrameAPI.createController(element, options, callback);
                                 EmbedController.addListener('playback_update', e => {
+                                    console.log(e.data.position, e.data.duration);
                                     socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
                                     if (e.data.position == e.data.duration && e.data.duration != 0) {
                                         console.log('Song ended');
