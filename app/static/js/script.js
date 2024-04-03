@@ -51,8 +51,8 @@ socket.on('message', function(data) {
         case 'queueLength':
             if (data.length == 1) {
                 if(window.location.pathname === '/display'){
-                    socket.emit('get_next_song');
-                    //document.getElementById('playQueue').click();
+                    //socket.emit('get_next_song');
+                    document.getElementById('playQueue').click();
                     console.log("Playing first song");
                 }
             }
@@ -309,8 +309,8 @@ socket.on('queueLength', function(data) {
     // Check if the queue was previously empty
     if (queueLength === 1) {
         if (!isPlaying) {
-            socket.emit('get_next_song');
-            //document.getElementById('playQueue').click(); // Automatically click the play queue button
+            //socket.emit('get_next_song');
+            document.getElementById('playQueue').click(); // Automatically click the play queue button
             console.log("Playing first song");
         }
     }
@@ -332,6 +332,7 @@ function resetSongSelectionUI() {
 /*Code for the player and admin panel*/
 
 function startPlay(){
+    console.log('startPlay clicked');
     socket.emit('get_next_song');
     
 }
