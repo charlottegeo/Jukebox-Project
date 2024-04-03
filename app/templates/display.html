@@ -8,9 +8,9 @@
     <head>
         <title>CatJam Display</title>
         <script>
-            var frame0 = "/static/img/cats/White/PusayLeft.png";
-            var frame1 = "/static/img/cats/White/PusayCenter.png";
-            var frame2 = "/static/img/cats/White/PusayRight.png";
+            var frame0 = "/static/img/white/PusayCenter.png";
+            var frame1 = "/static/img/white/PusayLeft.png";
+            var frame2 = "/static/img/white/PusayRight.png";
             var song_placeholder = "/static/img/song_placeholder.png";
         </script>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -22,12 +22,9 @@
         <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
         </head>
     <body>
-        <div class="flex-container">
+        <div class="container">
             <header>
-                <section class="admin">
-                    <button id="startButton" class="start-button">Start</button>
-                    <button id="playQueue" class="play-queue-button">Play Queue</button>                        
-                </section>
+
                 <div id="flexbox-middle">
                     <div id="flexbox-middle-left">
                         <h2>Current Song</h2>
@@ -87,7 +84,10 @@
                                 });
                             </script>
                         </div>
-                        
+                        <section class="admin">
+                            <button id="startButton" class="start-button">Start</button>
+                            <button id="playQueue" class="play-queue-button">Play Queue</button>                        
+                        </section>
                     </div>
                     
                 </div>
