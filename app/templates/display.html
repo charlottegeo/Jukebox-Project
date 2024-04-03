@@ -7,17 +7,28 @@
 
     <head>
         <title>CatJam Display</title>
+        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
         <script>
             var frame0 = "/static/img/cats/White/PusayLeft.png";
             var frame1 = "/static/img/cats/White/PusayCenter.png";
             var frame2 = "/static/img/cats/White/PusayRight.png";
             var song_placeholder = "/static/img/song_placeholder.png";
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+            socket.on('color_changed', function(data) {
+                // Update the frame paths based on the new color
+                var newColor = data.color;
+                frame0 = "/static/img/cats/" + newColor + "/PusayLeft.png";
+                frame1 = "/static/img/cats/" + newColor + "/PusayCenter.png";
+                frame2 = "/static/img/cats/" + newColor + "/PusayRight.png";
+
+                // Optionally, update the displayed frame to reflect the new color immediately
+                defaultFrame(); // This function should use the updated frame1 path
+            });
+            function defaultFrame() {
+                document.getElementById('catjam').src = frame1;
+            }
         </script>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-        <script>
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
-        </script>
         <script src="{{ url_for('static', filename='js/script.js') }}"></script>
         <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
         </head>

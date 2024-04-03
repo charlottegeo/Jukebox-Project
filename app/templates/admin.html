@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +13,10 @@
         <button id="clearQueueBtn" class="clear-queue-button">Clear Queue</button>
         <button id="pausePlayBtn" class="pause-play-button">Pause</button>
         <button id="skipSongBtn" class="skip-song-button">Skip Song</button>           
-        <button id="refreshDisplayBtn" class="refresh-display-button">Refresh Display</button>             
+        <button id="refreshDisplayBtn" class="refresh-display-button">Refresh Display</button>   
+        <select id="catColorDropdown">
+            <!-- Options will be dynamically added here -->
+        </select>          
     </div>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

@@ -6,6 +6,7 @@ from app import socketio
 from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
 from app.utils.track_wrapper import formatTime
+
 isPlaying = False
 def set_brigtness(brightness):
     os.system(f"xrandr --output eDP-1 --brightness {brightness}")
@@ -154,3 +155,20 @@ def handle_skip_song():
 @socketio.on('refreshDisplay')
 def handle_refresh_display():
     emit('reloadPage', broadcast=True)
+
+def get_cat_colors():
+    base_path = os.path.join('app', 'static', 'img', 'cats')
+    return [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+
+@socketio.on('get_cat_colors')
+def handle_get_cat_colors():
+    colors = get_cat_colors()
+    emit('cat_colors', colors, broadcast=False)
+
+selected_color = "White"  # Default color
+
+@socketio.on('change_cat_color')
+def handle_change_cat_color(color):
+    global selected_color
+    selected_color = color
+    emit('color_changed', {'color': selected_color}, broadcast=True)

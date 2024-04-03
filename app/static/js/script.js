@@ -79,6 +79,21 @@ socket.on('message', function(data) {
                 EmbedController.togglePlay();
                 isPlaying = true;
             }
+            break;
+        case 'cat_colors':
+            if(window.location.pathname === '/admin'){
+                var dropdown = document.getElementById('catColorDropdown');
+                dropdown.innerHTML = '';
+                data.colors.forEach(color => {
+                    var option = document.createElement('option');
+                    option.value = color;
+                    option.innerText = color;
+                    dropdown.appendChild(option);
+                });
+            }
+            break;
+        case 'color_changed':
+            document.getElementById('catColorDropdown').value = data.color;
     }
 });
 
@@ -180,10 +195,17 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshDisplayBtn.addEventListener('click', function() {
             socket.emit('refreshDisplay');
         });
-
+        populateCatColorDropdown();
+        document.getElementById('catColorDropdown').addEventListener('change', function() {
+            var selectedColor = this.value;
+            socket.emit('change_cat_color', selectedColor);
+        });
     }
 });
 
+function populateCatColorDropdown() {
+    socket.emit('get_cat_colors');
+}
 function searchTracks() {
     var searchText = document.getElementById('searchbar').value;
     socket.emit('searchTracks', {
