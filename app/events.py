@@ -158,15 +158,18 @@ def handle_refresh_display():
 
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')
+    if not os.path.exists(base_path):
+        print("Base path does not exist:", base_path)
+        return []
     dirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
-    for d in dirs:
-        print(d)
+    print("Directories found:", dirs)
     return dirs
+
 
 @socketio.on('get_cat_colors')
 def handle_get_cat_colors():
     colors = get_cat_colors()
-    emit('cat_colors', colors, broadcast=True)
+    emit('message', {'action': 'cat_colors', 'colors': colors}, broadcast=True)
 
 selected_color = "White"  # Default color
 
