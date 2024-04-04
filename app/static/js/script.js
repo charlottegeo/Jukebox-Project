@@ -167,6 +167,7 @@ function pausePlay() {
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname == "/") {
         var searchInput = document.getElementById('searchbar');
+        searchInput.textContent = '';
         searchInput.addEventListener('keyup', function(event) {
             clearTimeout(typingTimer); // Clear the previous timer
 
