@@ -15,6 +15,7 @@
             var song_placeholder = "/static/img/song_placeholder.png";
             var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
             socket.on('color_changed', function(data) {
+                console.log('Color changed to: ' + data.color);
                 var newColor = data.color;
                 frame0 = "/static/img/cats/" + newColor + "/PusayLeft.png";
                 frame1 = "/static/img/cats/" + newColor + "/PusayCenter.png";
