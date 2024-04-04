@@ -149,6 +149,8 @@ def handle_skip_song():
         
     else:
         emit('message', {'action': 'queue_empty'}, broadcast=True)
+        global isPlaying
+        isPlaying = False
 
 @socketio.on('refreshDisplay')
 def handle_refresh_display():

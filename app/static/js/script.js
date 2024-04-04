@@ -39,7 +39,6 @@ socket.on('message', function(data) {
         case 'queueUpdated':
             if(!isPlaying){
                 socket.emit('get_next_song');
-                console.log("Playing next song");
             }
             break;
         case 'formattedTime':
