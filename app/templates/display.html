@@ -13,7 +13,7 @@
             var frame1 = "/static/img/cats/White/PusayCenter.png";
             var frame2 = "/static/img/cats/White/PusayRight.png";
             var song_placeholder = "/static/img/song_placeholder.png";
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
+            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
             socket.on('color_changed', function(data) {
                 var newColor = data.color;
                 frame0 = "/static/img/cats/" + newColor + "/PusayLeft.png";
