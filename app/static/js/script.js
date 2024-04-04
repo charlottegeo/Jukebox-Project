@@ -217,8 +217,6 @@ function searchTracks() {
 }
 //Has been changed to websocket
 function handleSearchResults(data) {
-    console.log('Received search results:', data);
-    console.log('Search results:', data);
     var dropdown = document.getElementById('dropdown');
     dropdown.innerHTML = '';
 

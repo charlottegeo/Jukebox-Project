@@ -83,7 +83,7 @@ def get_auth_header(token):
 def search_for_tracks(
         token: str,
         track_name: str,
-        search_limit=3
+        search_limit=5
         ) -> typing.Collection:
     """
     Returns an array of length 'search_limit' of track objects wrapped in TrackWrapper
