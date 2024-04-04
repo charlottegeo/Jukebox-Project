@@ -10,6 +10,7 @@ class Song(db.Model):
     track_id = db.Column(db.String(255), nullable=False)
     uri = db.Column(db.String(255), nullable=False)
     bpm = db.Column(db.Integer, default=0)
+    username = db.Column(db.String(255), nullable=False)
 
     def to_dict(self):
         return {
@@ -20,6 +21,7 @@ class Song(db.Model):
             'track_id': self.track_id,
             'uri': self.uri,
             'bpm': self.bpm,
+            'username': self.username,
         }
 
 class Queue(db.Model):

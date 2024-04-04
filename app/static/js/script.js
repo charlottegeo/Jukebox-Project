@@ -189,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (window.location.pathname == "/admin") {
         document.getElementById('skipSongBtn').addEventListener('click', function() {
+            isPlaying = false;
             socket.emit('skipSong');
         });
         document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);

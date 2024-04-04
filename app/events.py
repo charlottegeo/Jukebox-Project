@@ -6,6 +6,7 @@ from app import socketio
 from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
 from app.utils.track_wrapper import formatTime
+from .util import csh_user_auth
 
 isPlaying = False
 def set_brigtness(brightness):
@@ -48,7 +49,6 @@ def handle_add_song_to_queue(data):
         track_id = track_data.get('track_id', '')
         uri = track_data.get('uri', '')
         bpm = track_data.get('bpm', 0)
-
         song = Song(track_name=track_name, artist_name=artist_name, track_length=track_length, 
                     cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm)
         db.session.add(song)
@@ -147,8 +147,9 @@ def handle_seconds_to_minutes(data):
 def handle_skip_song():
     next_song = get_next_song()
     if next_song:
-        emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
         remove_first_song()
+        emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
+        
     else:
         emit('message', {'action': 'queue_empty'}, broadcast=True)
 
