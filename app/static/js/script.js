@@ -137,7 +137,7 @@ function updateQueue(queueData) {
         queueData.forEach(song => {
             var img = document.createElement('img');
             img.src = song.cover_url;
-            img.style.width = '100px';
+            img.style.width = '10%';
             queuelist.appendChild(img);
             console.log(song.track_name);
         });
@@ -368,7 +368,7 @@ function updateAdminQueue(data) {
     queue.forEach(song => {
         var img = document.createElement('img');
         img.src = song.cover_url;
-        img.style.width = '100px';
+        img.style.width = '10%';
         queuelist.appendChild(img);
     });
 }
