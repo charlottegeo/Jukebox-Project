@@ -29,7 +29,7 @@ def handle_search_tracks(data):
     track_name = data.get('track_name')
     try:
         token = get_token()
-        result_array = search_for_tracks(token, track_name, 3)
+        result_array = search_for_tracks(token, track_name, 5)
         search_results = [track.to_dict() for track in result_array]
         emit('message', {'action': 'searchResults', 'results': search_results})
     except Exception as e:
