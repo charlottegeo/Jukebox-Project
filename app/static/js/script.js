@@ -93,7 +93,9 @@ socket.on('message', function(data) {
             }
             break;
         case 'color_changed':
-            document.getElementById('catColorDropdown').value = data.color;
+            if(window.location.pathname === '/admin'){
+                document.getElementById('catColorDropdown').value = data.color;
+            }
     }
 });
 
