@@ -177,4 +177,4 @@ selected_color = "White"  # Default color
 def handle_change_cat_color(color):
     global selected_color
     selected_color = color
-    emit('message', {'action': 'color_changed', 'color': selected_color}, broadcast=True)
+    emit('color_changed', {'color': color}, broadcast=True)
