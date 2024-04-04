@@ -15,16 +15,13 @@ def set_brigtness(brightness):
 
 @socketio.on('connect')
 def handle_connect():
-    print('Client connected')
     emit('message', {'message': 'Connected to server'})
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    print('Client disconnected')
-
+    pass
 @socketio.on('ping')
 def handle_ping():
-    print('Ping received')
     emit('pong')
 
 @socketio.on('searchTracks')
@@ -160,10 +157,8 @@ def handle_refresh_display():
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')
     if not os.path.exists(base_path):
-        print("Base path does not exist:", base_path)
         return []
     dirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
-    print("Directories found:", dirs)
     return dirs
 
 

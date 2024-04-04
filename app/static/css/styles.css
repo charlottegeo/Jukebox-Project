@@ -138,11 +138,14 @@ input {
 }
 
 #dropdown {
-    display: none;  /* hide the dropdown by default */
-    position: relative;  /* position the dropdown below the search bar */
-    width: 50%;  /* make the dropdown the same width as the search bar */
-    margin-left: 25%;  /* center the dropdown */
+    display: none; /* keep this the same */
+    position: relative; /* keep this the same */
+    width: 50%; /* keep this the same */
+    margin-left: 25%; /* keep this the same */
+    max-height: 180px; /* adjust based on the size of your items */
+    overflow-y: auto; /* enables vertical scrollbar when content overflows */
 }
+
 
 #dropdown.show {
     display: block;  /* show the dropdown when the .show class is added */

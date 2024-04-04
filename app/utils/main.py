@@ -24,7 +24,7 @@ except:
 try:
     search_len = int(sys.argv[2])
 except:
-    search_len = 3  # default search length
+    search_len = 5  # default search length
 
 
 class SongQueue:
@@ -89,7 +89,6 @@ def search_for_tracks(
     Returns an array of length 'search_limit' of track objects wrapped in TrackWrapper
     """
     try:
-        print(f"Searching for {track_name}")
         url = "https://api.spotify.com/v1/search"
         headers = get_auth_header(token)
         query = f"q={track_name}&type=track&limit={search_limit}"
@@ -100,7 +99,6 @@ def search_for_tracks(
         json_result = json.loads(result.content)["tracks"]["items"]  # an array of all the TrackObject results
         
         if len(json_result) == 0:
-            print("No track with this name exists, so sorry.")
             return None
         
         array = []
@@ -110,7 +108,6 @@ def search_for_tracks(
     
         return array
     except Exception as e:
-        print(f"An error occurred while searching for tracks: {e}")
         return None
 def get_song_queue(queue: SongQueue):
     """
@@ -131,9 +128,6 @@ def main():
 
     for i, _TrackWrapper in enumerate(result):
         QUEUE.add_song(_TrackWrapper)
-        print(_TrackWrapper.getTrackName())
-
-    print(QUEUE.queue)
 
 
 if __name__ == "__main__":
