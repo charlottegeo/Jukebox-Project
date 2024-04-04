@@ -158,6 +158,7 @@ def handle_refresh_display():
 
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')
+    print(d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d)))
     return [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
 
 @socketio.on('get_cat_colors')
