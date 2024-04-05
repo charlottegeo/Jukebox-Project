@@ -19,6 +19,7 @@ def csh_user_auth(func):
             "picture": picture,
             "admin": is_eboard or is_rtp or uid == "ccyborgg",
         }
+        session["uid"] = uid
         kwargs["auth_dict"] = auth_dict
         return func(*args, **kwargs)
 
