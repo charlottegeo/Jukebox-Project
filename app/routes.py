@@ -8,7 +8,7 @@ main = Blueprint('main', __name__)
 @main.route('/')
 @auth.oidc_auth('default')
 @csh_user_auth
-def index():
+def index(auth_dict=None):
     return render_template('search.html')
 
 @main.route('/display')
