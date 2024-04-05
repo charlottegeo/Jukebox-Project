@@ -46,7 +46,7 @@ def handle_add_song_to_queue(data):
         track_id = track_data.get('track_id', '')
         uri = track_data.get('uri', '')
         bpm = track_data.get('bpm', 0)
-        uid = session = session.get('uid', 'preferred_username', '')
+        uid = session.get('uid') or session.get('preferred_username')
         song = Song(track_name=track_name, artist_name=artist_name, track_length=track_length, 
                     cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm, uid=uid)
         db.session.add(song)
