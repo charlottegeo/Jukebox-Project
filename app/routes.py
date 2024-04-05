@@ -7,6 +7,7 @@ from .util import csh_user_auth
 main = Blueprint('main', __name__)
 @main.route('/')
 @auth.oidc_auth('default')
+@csh_user_auth
 def index():
     return render_template('search.html')
 
