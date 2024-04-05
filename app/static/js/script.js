@@ -428,6 +428,7 @@ function setCurrentSongUI(song) {
     document.getElementById("song_title").innerHTML = song.track_name;
     document.getElementById("artist_name").innerHTML = song.artist_name;
     document.getElementById("album-cover").src = song.cover_url;
+    document.getElementById("submitter_uid").innerHTML = "Submitted By: " + song.uid;
 }
 
 function resetPlayerUI() {

@@ -7,7 +7,7 @@ from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
 from app.utils.track_wrapper import formatTime
 from .util import csh_user_auth
-
+from flask import session
 isPlaying = False
 def set_brigtness(brightness):
     os.system(f"xrandr --output eDP-1 --brightness {brightness}")
@@ -46,8 +46,9 @@ def handle_add_song_to_queue(data):
         track_id = track_data.get('track_id', '')
         uri = track_data.get('uri', '')
         bpm = track_data.get('bpm', 0)
+        uid = session = session.get('uid', 'preferred_username', '')
         song = Song(track_name=track_name, artist_name=artist_name, track_length=track_length, 
-                    cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm)
+                    cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm, uid=uid)
         db.session.add(song)
         db.session.commit()
         
