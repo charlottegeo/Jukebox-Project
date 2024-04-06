@@ -21,7 +21,6 @@ def csh_user_auth(func):
             "admin": is_eboard or is_rtp or uid == "ccyborgg",
         }
         session["uid"] = uid
-        print("Session UID:", session.get('uid'))
         kwargs["auth_dict"] = auth_dict
         return func(*args, **kwargs)
 

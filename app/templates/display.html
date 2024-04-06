@@ -8,6 +8,7 @@
     <head>
         <title>CatJam Display</title>
         <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+        <script src="{{ url_for('static', filename='js/script.js') }}"></script>
         <script>
             var frame0 = "/static/img/cats/White/PusayLeft.png";
             var frame1 = "/static/img/cats/White/PusayCenter.png";
@@ -20,16 +21,17 @@
                 frame0 = "/static/img/cats/" + newColor + "/PusayLeft.png";
                 frame1 = "/static/img/cats/" + newColor + "/PusayCenter.png";
                 frame2 = "/static/img/cats/" + newColor + "/PusayRight.png";
-
-                // Optionally, update the displayed frame to reflect the new color immediately
-                defaultFrame(); // This function should use the updated frame1 path
+                defaultFrame();
+                if(isPlaying){
+                    animateFrames(bpm);
+                }
             });
             function defaultFrame() {
                 document.getElementById('catjam').src = frame1;
             }
         </script>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-        <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+        
         <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
         </head>
     <body>

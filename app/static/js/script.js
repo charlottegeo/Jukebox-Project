@@ -7,6 +7,7 @@ var typingTimer;
 var doneTypingInterval = 500;
 var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
 var EmbedController;
+var bpm;
 socket.on('connect', function() {
     console.log('Socket.IO connected');
     socket.emit('ping');
@@ -420,6 +421,7 @@ function playSong(song) {
 
         isPlaying = true;
         updatePlayerProgress(song.track_length);
+        bpm = song.bpm;
         animateFrames(song.bpm);
     }
 }
