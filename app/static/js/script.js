@@ -67,6 +67,7 @@ socket.on('message', function(data) {
                 defaultFrame();
                 clearInterval(animationInterval);
                 EmbedController.pause();
+                isPlaying = false;
             }
             updateQueue(data.queue);
             break;
@@ -437,6 +438,7 @@ function resetPlayerUI() {
     document.getElementById("song_title").innerHTML = "No song is playing";
     document.getElementById("artist_name").innerHTML = "";
     document.getElementById("album-cover").src = song_placeholder;
+    document.getElementById("submitter_uid").innerHTML = "";
 }
 
 function updatePlayerProgress(trackLength) {
