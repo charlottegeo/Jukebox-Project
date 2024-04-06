@@ -16,7 +16,12 @@
         <button id="refreshDisplayBtn" class="refresh-display-button">Refresh Display</button>   
         <select id="catColorDropdown">
             <!-- Options will be dynamically added here -->
-        </select>          
+        </select>
+        <div class="volume-control">
+            <label for="volumeSlider">Volume:</label>
+            <input type="range" id="volumeSlider" min="0" max="100" value="50">
+            <button id="setVolumeBtn">Set Volume</button>
+        </div>               
     </div>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

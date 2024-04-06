@@ -141,6 +141,12 @@ function updateQueue(queueData) {
             var img = document.createElement('img');
             img.src = song.cover_url;
             img.style.width = '10%';
+            //on hover
+            img.addEventListener('mouseover', function() {
+                //make it show info about the song by making the image darker and putting the text on top
+                //hide the text when the mouse leaves and make the image normal again
+
+            }, false);
             queuelist.appendChild(img);
             console.log(song.track_name);
         });
@@ -168,7 +174,7 @@ function pausePlay() {
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname == "/") {
         var searchInput = document.getElementById('searchbar');
-        searchInput.textContent = '';
+        searchInput.textContent = "";
         searchInput.addEventListener('keyup', function(event) {
             clearTimeout(typingTimer); // Clear the previous timer
 
@@ -205,6 +211,11 @@ document.addEventListener('DOMContentLoaded', function() {
             var selectedColor = this.value;
             socket.emit('change_cat_color', selectedColor);
         });
+        document.getElementById('setVolumeBtn').addEventListener('click', function() {
+            var volumeLevel = document.getElementById('volumeSlider').value;
+            socket.emit('set_volume', {volume: volumeLevel});
+        });
+        
     }
 });
 

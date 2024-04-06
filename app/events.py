@@ -5,7 +5,7 @@ from flask_socketio import SocketIO, emit
 from app import socketio
 from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
-from app.utils.track_wrapper import formatTime
+import app.utils.track_wrapper as TrackWrapper
 from .util import csh_user_auth
 from flask import session
 isPlaying = False
@@ -45,7 +45,10 @@ def handle_add_song_to_queue(data):
         track_length = track_data.get('track_length', '')
         track_id = track_data.get('track_id', '')
         uri = track_data.get('uri', '')
-        bpm = track_data.get('bpm', 0)
+
+        token = get_token()
+        track_wrapper = TrackWrapper(track_data)
+        bpm = track_wrapper.getBPM(token)
         uid = session.get('uid') or session.get('preferred_username')
         song = Song(track_name=track_name, artist_name=artist_name, track_length=track_length, 
                     cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm, uid=uid)
