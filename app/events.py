@@ -6,7 +6,7 @@ from flask_socketio import SocketIO, emit
 from app import socketio
 from .models import db, Song, Queue
 from app.utils.main import get_token, search_for_tracks
-import app.utils.track_wrapper as TrackWrapper
+from app.utils.track_wrapper import TrackWrapper
 from .util import csh_user_auth
 from flask import session
 import paramiko
