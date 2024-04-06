@@ -138,12 +138,12 @@ input {
 }
 
 #dropdown {
-    display: none; /* keep this the same */
-    position: relative; /* keep this the same */
-    width: 50%; /* keep this the same */
-    margin-left: 25%; /* keep this the same */
-    max-height: 180px; /* adjust based on the size of your items */
-    overflow-y: auto; /* enables vertical scrollbar when content overflows */
+    display: none;
+    position: relative;
+    width: 50%;
+    margin-left: 25%; 
+    max-height: 180px;
+    overflow-y: auto; 
 }
 
 
@@ -230,7 +230,11 @@ input {
 #queuelist {
     display: flex;
     flex-direction: row;
-    width: 100%;
+    width: 80%;
+    height: auto;
+    margin: 0 auto;
+    overflow-x : auto;
+    white-space: nowrap;
     align-items: center;
     margin-left: 5%;
     margin-right: auto;
@@ -238,8 +242,9 @@ input {
     color: #BBBBBB;
 }
 #queuelist img {
-    width: 50px;
+    width: 10%;
     margin-right: 10px;
+    flex: 0 0 auto;
 }
 .sidebarbtn {
     background-color: #2F2F2F;
