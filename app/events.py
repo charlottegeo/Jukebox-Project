@@ -1,6 +1,7 @@
 #app/events.py
 
 import os
+from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from app import socketio
 from .models import db, Song, Queue
@@ -8,10 +9,13 @@ from app.utils.main import get_token, search_for_tracks
 import app.utils.track_wrapper as TrackWrapper
 from .util import csh_user_auth
 from flask import session
-isPlaying = False
-def set_brigtness(brightness):
-    os.system(f"xrandr --output eDP-1 --brightness {brightness}")
+import paramiko
 
+load_dotenv()
+isPlaying = False
+SSH_HOST = os.getenv('SSH_HOST')
+SSH_USER = os.getenv('SSH_USER')
+SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 
 @socketio.on('connect')
 def handle_connect():
@@ -180,3 +184,19 @@ def handle_change_cat_color(color):
     global selected_color
     selected_color = color
     emit('color_changed', {'color': color}, broadcast=True)
+
+
+@socketio.on('set_volume')
+def handle_set_volume(data):
+    volume = data['volume']
+
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(SSH_HOST, username=SSH_USER, password=SSH_PASSWORD)
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(f'amixer set Master {volume}%')
+        ssh.close()
+        emit('volume_set', {'volume': volume}, broadcast=True)
+    except Exception as e:
+        print(f"Error setting volume: {str(e)}")
+        emit('error', {'message': 'Failed to set volume.'})
