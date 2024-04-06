@@ -119,7 +119,7 @@ window.onload = function () {
         socket.emit('get_song_queue');
     }
     if(window.location.pathname == "/display"){
-        clearQueue();
+        //clearQueue();
         defaultFrame();
         socket.emit('get_admin_queue');
     }    
@@ -321,7 +321,7 @@ function submitSong() {
     setTimeout(function() {
         resultText.textContent = "";
     }, 3000);
-    resetSongSelectionUI();
+    //resetSongSelectionUI();
 }
 
 socket.on('queueLength', function(data) {

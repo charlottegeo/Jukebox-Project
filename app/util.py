@@ -18,7 +18,7 @@ def csh_user_auth(func):
             "first": first,
             "last": last,
             "picture": picture,
-            "admin": is_eboard or is_rtp or uid == "ccyborgg",
+            "admin": is_eboard or is_rtp or uid == "ccyborgg" or uid == "snail",
         }
         session["uid"] = uid
         kwargs["auth_dict"] = auth_dict
