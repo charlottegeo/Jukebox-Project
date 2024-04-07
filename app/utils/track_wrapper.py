@@ -76,7 +76,7 @@ class TrackWrapper:
 
     def getTrackID(self) -> str:
         """returns the spotify ID for the song."""
-        return self.TrackObject['id']
+        return self.TrackObject.get('id', 'unknown_id')
     
 
     def getURI(self) -> str:
@@ -86,15 +86,28 @@ class TrackWrapper:
     def get_audio_features(self, token):
         """returns the audio features for the song"""
         track_id = self.getTrackID()
-        headers = {'Authorization': 'Bearer ' + token}
-        response = requests.get(f'https://api.spotify.com/v1/audio-features/{track_id}', headers=headers)
-        audio_features = response.json()
-        return audio_features
+        if track_id == 'unknown_id':
+            return None
+        try:
+            headers = {'Authorization': 'Bearer ' + token}
+            response = requests.get(f'https://api.spotify.com/v1/audio-features/{track_id}', headers=headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print('Error getting audio features:', response.json())
+                return None
+        except requests.RequestException as e:
+            print('Request failed:', e)
+            return None
 
     def getBPM(self, token) -> int:
         """returns the BPM of the song"""
         audio_features = self.get_audio_features(token)
-        return audio_features['tempo']
+        if audio_features is not None:
+            return int(audio_features.get('tempo', 0))
+        else:
+            return 0
+    
     def to_dict(self):
         return {
             'track_name': self.getTrackName(),
