@@ -13,7 +13,6 @@ from flask import session
 import paramiko
 
 load_dotenv()
-token = get_token()
 isPlaying = False
 SSH_HOST = os.getenv('SSH_HOST')
 SSH_USER = os.getenv('SSH_USER')
@@ -34,7 +33,7 @@ def handle_ping():
 def handle_search_tracks(data):
     track_name = data.get('track_name')
     try:
-        
+        token = get_token()
         result_array = search_for_tracks(token, track_name, 5)
         search_results = [track.to_dict() for track in result_array]
         emit('message', {'action': 'searchResults', 'results': search_results})
@@ -55,7 +54,7 @@ def handle_add_song_to_queue(data):
         token = get_token()
         track_wrapper = TrackWrapper(track_data)
         bpm = track_wrapper.getBPM(token)
-        uid = session.get('uid')
+        uid = session.get('uid') or session.get('preferred_username')
         song = Song(track_name=track_name, artist_name=artist_name, track_length=track_length, 
                     cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm, uid=uid)
         db.session.add(song)
@@ -66,8 +65,8 @@ def handle_add_song_to_queue(data):
         db.session.commit()
         
         queue_length = len(get_queue())
-        emit('message', {'action' : 'queueLength', 'length': queue_length}, broadcast=True)
-        emit('message', {'action': 'queueUpdated'}, broadcast=True)
+        emit('queueLength', {'length': queue_length}, broadcast=True)
+        emit('queueUpdated', broadcast=True)
         emit('message', {'action': 'updateQueue', 'queue': get_queue()}, broadcast=True)   
 
         if queue_length == 1 and not isPlaying:

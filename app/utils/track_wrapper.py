@@ -106,7 +106,6 @@ class TrackWrapper:
         if audio_features is not None:
             return int(audio_features.get('tempo', 0))
         else:
-            print('Error getting audio features')
             return 0
     
     def to_dict(self):
@@ -117,4 +116,5 @@ class TrackWrapper:
             'track_length': self.getFormattedTrackLength(),
             'track_id': self.getTrackID(),
             'uri': self.getURI(),
+            'bpm': self.getBPM(token=SpotifyAPI.get_token()),
         }
