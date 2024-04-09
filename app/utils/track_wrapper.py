@@ -87,6 +87,7 @@ class TrackWrapper:
         """returns the audio features for the song"""
         track_id = self.getTrackID()
         if track_id == 'unknown_id':
+            print('Track ID is unknown')
             return None
         try:
             headers = {'Authorization': 'Bearer ' + token}
