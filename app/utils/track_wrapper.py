@@ -110,7 +110,7 @@ class TrackWrapper:
         if audio_features is not None:
             return int(audio_features['tempo'])
         else:
-            return 0
+            return 95
     
     def to_dict(self):
         return {
