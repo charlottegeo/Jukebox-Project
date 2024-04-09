@@ -91,8 +91,11 @@ class TrackWrapper:
         try:
             headers = {'Authorization': 'Bearer ' + token}
             response = requests.get(f'https://api.spotify.com/v1/audio-features/{track_id}', headers=headers)
+            print(f"Response Status Code: {response.status_code}")
             if response.status_code == 200:
-                return response.json()
+                audio_features = response.json()
+                print('Audio features:', audio_features)
+                return audio_features
             else:
                 print('Error getting audio features:', response.json())
                 return None
