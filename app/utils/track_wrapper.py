@@ -108,7 +108,7 @@ class TrackWrapper:
         """returns the BPM of the song"""
         audio_features = self.get_audio_features(token)
         if audio_features is not None:
-            return int(audio_features.get('tempo', 0))
+            return int(audio_features['tempo'])
         else:
             return 0
     
