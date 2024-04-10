@@ -1,16 +1,15 @@
 #app/models.py
-from app import db
-
-class Song(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    track_name = db.Column(db.String(255), nullable=False)
-    artist_name = db.Column(db.String(255), nullable=False)
-    track_length = db.Column(db.String(255), nullable=False)
-    cover_url = db.Column(db.String(255), nullable=False)
-    track_id = db.Column(db.String(255), nullable=False)
-    uri = db.Column(db.String(255), nullable=False)
-    bpm = db.Column(db.Integer, default=0)
-    uid = db.Column(db.String(255), nullable=False)
+class Song:
+    def __init__(self, id, track_name, artist_name, track_length, cover_url, track_id, uri, bpm, uid):
+        self.id = id
+        self.track_name = track_name
+        self.artist_name = artist_name
+        self.track_length = track_length
+        self.cover_url = cover_url
+        self.track_id = track_id
+        self.uri = uri
+        self.bpm = bpm
+        self.uid = uid
 
     def to_dict(self):
         return {
@@ -23,8 +22,3 @@ class Song(db.Model):
             'bpm': self.bpm,
             'uid': self.uid,
         }
-
-class Queue(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    song_id = db.Column(db.Integer, db.ForeignKey('song.id'), nullable=False)
-    song = db.relationship('Song', backref=db.backref('queue', lazy=True))

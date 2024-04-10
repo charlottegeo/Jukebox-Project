@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
             socket.emit('change_cat_color', selectedColor);
         });
         document.getElementById('setVolumeBtn').addEventListener('click', function() {
-            var volumeLevel = document.getElementById('volumeSlider').value;
+            var volumeLevel = document.getElementById('volumeSlider').value; //set this to a float
             socket.emit('set_volume', {volume: volumeLevel});
         });
         

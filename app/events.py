@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from app import socketio
-from .models import db, Song, Queue
+from .models import Song
 from app.utils.main import get_token, search_for_tracks
 from app.utils.track_wrapper import TrackWrapper, formatTime
 
@@ -18,13 +18,22 @@ SSH_HOST = os.getenv('SSH_HOST')
 SSH_USER = os.getenv('SSH_USER')
 SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 
+user_queues = {}
+user_order = []
+
 @socketio.on('connect')
 def handle_connect():
     emit('message', {'message': 'Connected to server'})
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    pass
+    uid = session.get('uid') or session.get('preferred_username')
+    if uid in user_queues:
+        del user_queues[uid]
+        if uid in user_order:
+            user_order.remove(uid)
+        #emit('queueUpdated', broadcast=True)
+
 @socketio.on('ping')
 def handle_ping():
     emit('pong')
@@ -43,6 +52,10 @@ def handle_search_tracks(data):
 @socketio.on('addSongToQueue')
 def handle_add_song_to_queue(data):
     track_data = data.get('track')
+    uid = session.get('uid') or session.get('preferred_username')
+    if track_data and uid:
+        add_song_to_user_queue(uid, track_data)
+        emit('queueUpdated', broadcast=True)
     if track_data:
         track_name = track_data.get('track_name', '')
         artist_name = track_data.get('artist_name', '')
@@ -57,12 +70,7 @@ def handle_add_song_to_queue(data):
         uid = session.get('uid') or session.get('preferred_username')
         song = Song(track_name=track_name, artist_name=artist_name, track_length=track_length, 
                     cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm, uid=uid)
-        db.session.add(song)
-        db.session.commit()
         
-        queue_item = Queue(song=song)
-        db.session.add(queue_item)
-        db.session.commit()
         
         queue_length = len(get_queue())
         emit('queueLength', {'length': queue_length}, broadcast=True)
@@ -90,9 +98,9 @@ def get_queue():
 
 
 def get_next_song():
-    next_song = Queue.query.first()
-    if next_song:
-        return next_song.song.to_dict()
+    next_user = get_next_user()
+    if next_user and user_queues[next_user]:
+        return user_queues[next_user].pop(0)
     return None
 
 @socketio.on('get_next_song')
@@ -201,3 +209,17 @@ def handle_set_volume(data):
     except Exception as e:
         print(f"Error setting volume: {str(e)}")
         emit('error', {'message': 'Failed to set volume.'})
+
+def get_next_user():
+    if user_order:
+        user_order.append(user_order.pop(0))
+        return user_order[0]
+    return None
+
+def add_song_to_user_queue(uid, song):
+    if uid not in user_queues:
+        user_queues[uid] = []
+        user_order.append(uid)
+    song = Song(track_name=song['track_name'], artist_name=song['artist_name'], track_length=song['track_length'], 
+                cover_url=song['cover_url'], track_id=song['track_id'], uri=song['uri'], bpm=song['bpm'], uid=uid)
+    user_queues[uid].append(song)
