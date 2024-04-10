@@ -419,7 +419,6 @@ progress[value]::-moz-progress-bar {
 .song-container img {
     width: 100%;
     display: block;
-    vertical-align: middle;
     margin: 0 auto;
 }
 
@@ -438,6 +437,12 @@ progress[value]::-moz-progress-bar {
     text-align: center;
     pointer-events: none;
     box-sizing: border-box;
+}
+
+.overlay .song-info {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .song-container:hover .overlay {
