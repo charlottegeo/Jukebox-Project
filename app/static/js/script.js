@@ -143,7 +143,6 @@ function updateQueue(queueData) {
             songcontainer.className = 'song-container';
             var img = document.createElement('img');
             img.src = song.cover_url;
-            img.style.width = '10%';
             songcontainer.appendChild(img);
             var overlay = document.createElement('div');
             overlay.className = 'overlay';
