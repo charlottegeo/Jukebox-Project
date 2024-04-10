@@ -242,7 +242,6 @@ input {
     color: #BBBBBB;
 }
 #queuelist img {
-    width: 10%;
     margin-right: 10px;
     flex: 0 0 auto;
 }
