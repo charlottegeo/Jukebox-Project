@@ -149,7 +149,7 @@ function updateQueue(queueData) {
             overlay.innerHTML = `
                 <div class="song-info">
                     ${song.track_name}<br>
-                    By: ${song.artist_name}    
+                    By: ${song.artist_name}<br>  
                     Submitted by: ${song.uid}   
                 </div>
             `;

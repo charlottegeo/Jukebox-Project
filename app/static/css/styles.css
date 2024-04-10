@@ -412,25 +412,32 @@ progress[value]::-moz-progress-bar {
     position: relative;
     display: inline-block;
     width: 10%;
+    margin: 0;
+    padding: 0;
 }
 
 .song-container img {
     width: 100%;
+    display: block;
     vertical-align: middle;
+    margin: 0 auto;
 }
 
-.overlay{
+.overlay {
     position: absolute;
     bottom: 0;
+    left: 0;
+    right: 0;
     background: rgba(0, 0, 0, 0.75);
     color: white;
     width: 100%;
     transition: .5s ease;
-    opacity:0;
+    opacity: 0;
     font-size: 90%;
     padding: 20px;
     text-align: center;
     pointer-events: none;
+    box-sizing: border-box;
 }
 
 .song-container:hover .overlay {
