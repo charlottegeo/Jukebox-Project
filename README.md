@@ -20,16 +20,22 @@ In your terminal, clone into the repo, set up your virtual environment, and then
 Make a new .env file that looks like this:
 
 ```
-DEBUG=True
-DATABASE_URL=""
+DEBUG=False
+SECRET_KEY=""
+CATJAM_DATABASE_URL = ""
 CLIENT_ID=""
 CLIENT_SECRET=""
-ADMIN_ID=""
-ADMIN_PW=""
+OIDC_CLIENT_ID=""
+OIDC_CLIENT_SECRET=""
+SSH_HOST=""
+SSH_USER=""
+SSH_PASSWORD=""
 ```
 
 Replace the `DATABASE_URL` value with `postgres://username:password@host:port/dbname` and replace the values in the link with the settings from your POSTGRES database.
 Example: `postgres://catjam:password@postgres.csh.rit.edu:5432/catjam`
+
+Reach out to an RTP to get OIDC credentials to enable CSH authentication, and either an RTP or a CatJam admin to get SSH creds for the PI hosting the display.
 
 Replace the `CLIENT_ID` and `CLIENT_SECRET` values with your Spotify client ID and secret.
 
