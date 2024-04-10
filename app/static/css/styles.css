@@ -439,11 +439,7 @@ progress[value]::-moz-progress-bar {
     box-sizing: border-box;
 }
 
-.overlay .song-info {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+
 
 .song-container:hover .overlay {
     opacity: 1;

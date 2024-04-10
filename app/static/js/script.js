@@ -155,6 +155,7 @@ function updateQueue(queueData) {
             `;
             songcontainer.appendChild(overlay);
             queuelist.appendChild(songcontainer);
+            adjustOverlayTextSize();
         });
     }
     if(window.location.pathname == "/display"){
@@ -179,20 +180,6 @@ function pausePlay() {
 }
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname == "/") {
-        const songContainers = document.querySelectorAll('.song-container');
-        songContainers.forEach(container => {
-            container.addEventListener('mouseenter', function() {
-                const overlayText = container.querySelector('.song-info');
-                if (isTextOverflowing(overlayText)) {
-                    applyMarqueeEffect(overlayText);
-                }
-            });
-
-            container.addEventListener('mouseleave', function() {
-                const overlayText = container.querySelector('.song-info');
-                resetMarqueeEffect(overlayText);
-            });
-        });
         var searchInput = document.getElementById('searchbar');
         searchInput.textContent = "";
         searchInput.addEventListener('keyup', function(event) {
@@ -518,21 +505,16 @@ function defaultFrame() {
     document.getElementById('catjam').src = frame1;
 }
 
-function isTextOverflowing(element) {
-    return element.scrollWidth > element.clientWidth;
+function adjustOverlayTextSize() {
+    const overlays = document.querySelectorAll('.overlay');
+
+    overlays.forEach(overlay => {
+        let fontSize = parseInt(window.getComputedStyle(overlay).fontSize);
+        while (overlay.scrollHeight > overlay.clientHeight && fontSize > 10) { // Minimum font size of 10px
+            fontSize--;
+            overlay.style.fontSize = `${fontSize}px`;
+        }
+    });
 }
 
-function applyMarqueeEffect(element) {
-    element.style.overflow = 'visible';
-    element.style.whiteSpace = 'normal';
-    element.innerHTML = `<marquee>${element.innerHTML}</marquee>`;
-}
-
-function resetMarqueeEffect(element) {
-    const marquee = element.querySelector('marquee');
-    if (marquee) {
-        element.innerHTML = marquee.textContent;
-        element.style.overflow = 'hidden';
-        element.style.whiteSpace = 'nowrap';
-    }
-}
+window.addEventListener('resize', adjustOverlayTextSize);
