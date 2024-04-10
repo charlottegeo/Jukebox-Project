@@ -396,15 +396,44 @@ progress[value]::-moz-progress-bar {
 @media (min-width: 1025px) {
     body,
     .container {
-        overflow: auto; /* Allow scrolling on larger screens */
+        overflow: auto;
     }
 }
 #artist_name, #song_title, #submitter_uid {
-    font-size: 20px; /* Adjust font size as needed */
-    font-weight: bold; /* Makes the text bolder */
-    white-space: nowrap; /* Keeps the text on a single line */
-    overflow: hidden; /* Hides overflow text */
-    text-overflow: ellipsis; /* Adds ellipsis to text that overflows */
-    max-width: 90%; /* Adjust based on your layout, ensures text does not cause expansion */
-    margin: auto; /* Centers the text if there's extra space */
+    font-size: 20px;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden; 
+    text-overflow: ellipsis;
+    max-width: 90%;
+    margin: auto;
+}
+
+.song-container {
+    position: relative;
+    display: inline-block;
+    width: 10%;
+}
+
+.song-container img {
+    width: 100%;
+    vertical-align: middle;
+}
+
+.overlay{
+    position: absolute;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    width: 100%;
+    transition: .5s ease;
+    opacity:0;
+    font-size: 90%;
+    padding: 20px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.song-container:hover .overlay {
+    opacity: 1;
 }

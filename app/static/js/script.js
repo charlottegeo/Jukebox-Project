@@ -117,6 +117,7 @@ window.onload = function () {
     //if the page is the main page, we want to get the queue from the server
     if (window.location.pathname == "/") {
         socket.emit('get_song_queue');
+        resetSongSelectionUI();
     }
     if(window.location.pathname == "/display"){
         //clearQueue();
@@ -138,17 +139,23 @@ function updateQueue(queueData) {
         queuelist.innerHTML = '';
         console.log("Queue Data:" + queueData);
         queueData.forEach(song => {
+            var songcontainer = document.createElement('div');
+            songcontainer.className = 'song-container';
             var img = document.createElement('img');
             img.src = song.cover_url;
             img.style.width = '10%';
-            //on hover
-            img.addEventListener('mouseover', function() {
-                //make it show info about the song by making the image darker and putting the text on top
-                //hide the text when the mouse leaves and make the image normal again
-
-            }, false);
-            queuelist.appendChild(img);
-            console.log(song.track_name);
+            songcontainer.appendChild(img);
+            var overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            overlay.innerHTML = `
+                <div class="song-info">
+                    ${song.track_name}<br>
+                    By: ${song.artist_name}    
+                    Submitted by: ${song.uid}   
+                </div>
+            `;
+            songcontainer.appendChild(overlay);
+            queuelist.appendChild(songcontainer);
         });
     }
     if(window.location.pathname == "/display"){
