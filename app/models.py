@@ -1,6 +1,6 @@
 #app/models.py
 class Song:
-    def __init__(self, id, track_name, artist_name, track_length, cover_url, track_id, uri, bpm, uid):
+    def __init__(self, track_name, artist_name, track_length, cover_url, track_id, uri, bpm, uid):
         self.track_name = track_name
         self.artist_name = artist_name
         self.track_length = track_length
