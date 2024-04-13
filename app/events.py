@@ -72,13 +72,13 @@ def handle_add_song_to_queue(data):
                     cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm, uid=uid)
         
         
-        queue_length = len(get_queue())
-        emit('queueLength', {'length': queue_length}, broadcast=True)
+        #queue_length = len(get_queue())
+        #emit('queueLength', {'length': queue_length}, broadcast=True)
         emit('queueUpdated', broadcast=True)
-        emit('message', {'action': 'updateQueue', 'queue': get_queue()}, broadcast=True)   
+        #emit('message', {'action': 'updateQueue', 'queue': get_queue()}, broadcast=True)   
 
-        if queue_length == 1 and not isPlaying:
-            emit('playQueue', broadcast=True)
+        #if queue_length == 1 and not isPlaying:
+            #emit('playQueue', broadcast=True)
     else:
         print('Invalid song data')
         emit('error', {'message': 'Invalid song data.'})
@@ -91,10 +91,13 @@ def handle_is_playing(data):
     if not isPlaying:
         print('Playing next song')
         
+'''
 def get_queue():
     queue = Queue.query.all()
     queue_data = [song.song.to_dict() for song in queue]
     return queue_data
+'''
+
 
 
 def get_next_song():
@@ -108,20 +111,22 @@ def handle_get_next_song():
     next_song = get_next_song()
     if next_song:
         emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
-        remove_first_song()
+        #remove_first_song()
     else:
         emit('message', {'action': 'queue_empty'}, broadcast=True)
 
 
-@socketio.on('get_song_queue')
+'''@socketio.on('get_song_queue')
 def handle_get_queue():
-    result = get_queue()
+    #result = get_queue()
     emit('message', {'action': 'updateQueue', 'queue': result}, broadcast=True)
+
 
 @socketio.on('get_admin_queue')
 def handle_get_admin_queue():
-    result = get_queue()
+    #result = get_queue()
     emit('message', {'action': 'updateAdminQueue', 'queue': result}, broadcast=True)
+
 
 
 @socketio.on('removeFirstSong')
@@ -151,7 +156,7 @@ def handle_clear_queue():
 def handle_get_queue_length():
     queue = get_queue()
     return {'length': len(queue)}
-
+'''
 @socketio.on('secondsToMinutes')
 def handle_seconds_to_minutes(data):
     formatted_time = formatTime(data.get('seconds'))
@@ -161,7 +166,7 @@ def handle_seconds_to_minutes(data):
 def handle_skip_song():
     next_song = get_next_song()
     if next_song:
-        remove_first_song()
+        #remove_first_song()
         emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
         
     else:

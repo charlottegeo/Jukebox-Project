@@ -46,6 +46,6 @@ The `ADMIN_ID` and `ADMIN_PW` values will be your admin login for the admin pane
 
 ## Usage
 
-To run the server locally, activate your virtual environment and then run `flask run`.
+To run the server locally, activate your virtual environment, and go to config.py, comment out `OIDC_REDIRECT_URI = "https://catjam.csh.rit.edu/oidc_callback"`, and uncomment `OIDC_REDIRECT_URI = "http://localhost:5000/oidc_callback"`. Then run `flask run`.
 
 The terminal will spit out a link to a local server that runs the website locally.
