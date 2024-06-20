@@ -1,4 +1,3 @@
-#app/util.py
 from functools import wraps
 from flask import session
 

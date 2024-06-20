@@ -1,10 +1,8 @@
-#app/events.py
-
 import os
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from app import socketio
-from .models import Song
+from app.models import Song, UserQueue
 from app.utils.main import get_token, search_for_tracks
 from app.utils.track_wrapper import TrackWrapper, formatTime
 
@@ -13,13 +11,16 @@ from flask import session
 import paramiko
 
 load_dotenv()
+token = get_token()
 isPlaying = False
 SSH_HOST = os.getenv('SSH_HOST')
 SSH_USER = os.getenv('SSH_USER')
 SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 
+#store queues in memory
 user_queues = {}
 user_order = []
+
 
 @socketio.on('connect')
 def handle_connect():
@@ -32,7 +33,6 @@ def handle_disconnect():
         del user_queues[uid]
         if uid in user_order:
             user_order.remove(uid)
-        #emit('queueUpdated', broadcast=True)
 
 @socketio.on('ping')
 def handle_ping():
@@ -42,7 +42,6 @@ def handle_ping():
 def handle_search_tracks(data):
     track_name = data.get('track_name')
     try:
-        token = get_token()
         result_array = search_for_tracks(token, track_name, 5)
         search_results = [track.to_dict() for track in result_array]
         emit('message', {'action': 'searchResults', 'results': search_results})
@@ -56,33 +55,16 @@ def handle_add_song_to_queue(data):
     if track_data and uid:
         add_song_to_user_queue(uid, track_data)
         emit('queueUpdated', broadcast=True)
-    if track_data:
-        track_name = track_data.get('track_name', '')
-        artist_name = track_data.get('artist_name', '')
-        cover_url = track_data.get('cover_url', '')
-        track_length = track_data.get('track_length', '')
-        track_id = track_data.get('track_id', '')
-        uri = track_data.get('uri', '')
-
-        token = get_token()
-        track_wrapper = TrackWrapper(track_data)
-        bpm = track_wrapper.getBPM(token)
-        uid = session.get('uid') or session.get('preferred_username')
-        song = Song(track_name=track_name, artist_name=artist_name, track_length=track_length, 
-                    cover_url=cover_url, track_id=track_id, uri=uri, bpm=bpm, uid=uid)
-        
-        
-        #queue_length = len(get_queue())
-        #emit('queueLength', {'length': queue_length}, broadcast=True)
-        emit('queueUpdated', broadcast=True)
-        #emit('message', {'action': 'updateQueue', 'queue': get_queue()}, broadcast=True)   
-
-        #if queue_length == 1 and not isPlaying:
-            #emit('playQueue', broadcast=True)
+        check_and_play_next_song()
     else:
         print('Invalid song data')
         emit('error', {'message': 'Invalid song data.'})
 
+@socketio.on('get_user_queue')
+def handle_get_user_queue():
+    uid = session.get('uid') or session.get('preferred_username')
+    if uid in user_queues:
+        emit('message', {'action': 'updateQueue', 'queue': user_queues[uid].get_queue()})
 @socketio.on('isPlaying')
 def handle_is_playing(data):
     global isPlaying
@@ -90,73 +72,21 @@ def handle_is_playing(data):
     print('Is playing:', isPlaying)
     if not isPlaying:
         print('Playing next song')
-        
-'''
-def get_queue():
-    queue = Queue.query.all()
-    queue_data = [song.song.to_dict() for song in queue]
-    return queue_data
-'''
+        play_next_song()
 
-
-
-def get_next_song():
-    next_user = get_next_user()
-    if next_user and user_queues[next_user]:
-        return user_queues[next_user].pop(0)
-    return None
 
 @socketio.on('get_next_song')
 def handle_get_next_song():
-    next_song = get_next_song()
-    if next_song:
-        emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
-        #remove_first_song()
-    else:
-        emit('message', {'action': 'queue_empty'}, broadcast=True)
+    play_next_song()
 
 
-'''@socketio.on('get_song_queue')
-def handle_get_queue():
-    #result = get_queue()
-    emit('message', {'action': 'updateQueue', 'queue': result}, broadcast=True)
-
-
-@socketio.on('get_admin_queue')
-def handle_get_admin_queue():
-    #result = get_queue()
-    emit('message', {'action': 'updateAdminQueue', 'queue': result}, broadcast=True)
-
-
-
-@socketio.on('removeFirstSong')
-def handle_remove_first_song():
-    first_song = Queue.query.first()
-    if first_song:
-        db.session.delete(first_song)
-        db.session.commit()
-        queue = get_queue()
-        emit('message', {'action': 'updateQueue', 'queue': queue}, broadcast=True)
-    else:
-        emit('message', {'action': 'error', 'error': 'Queue is empty'})
-
-def remove_first_song():
-    first_song = Queue.query.first()
-    if first_song:
-        db.session.delete(first_song)
-        db.session.commit()
-        
 @socketio.on('clearQueue')
 def handle_clear_queue():
-    Queue.query.delete()
-    db.session.commit()
-    emit('message', {'action': 'updateQueue', 'queue': []}, broadcast=True)
+    uid = session.get('uid') or session.get('preferred_username')
+    if uid in user_queues:
+        user_queues[uid].queue = []
+        emit('message', {'action': 'updateQueue', 'queue': []}, broadcast=True)
 
-@socketio.on('get_queue_length')
-def handle_get_queue_length():
-    queue = get_queue()
-    return {'length': len(queue)}
-'''
 @socketio.on('secondsToMinutes')
 def handle_seconds_to_minutes(data):
     formatted_time = formatTime(data.get('seconds'))
@@ -164,15 +94,7 @@ def handle_seconds_to_minutes(data):
 
 @socketio.on('skipSong')
 def handle_skip_song():
-    next_song = get_next_song()
-    if next_song:
-        #remove_first_song()
-        emit('message', {'action': 'next_song', 'nextSong': next_song}, broadcast=True)
-        
-    else:
-        emit('message', {'action': 'queue_empty'}, broadcast=True)
-        global isPlaying
-        isPlaying = False
+    play_next_song()
 
 @socketio.on('refreshDisplay')
 def handle_refresh_display():
@@ -215,16 +137,39 @@ def handle_set_volume(data):
         print(f"Error setting volume: {str(e)}")
         emit('error', {'message': 'Failed to set volume.'})
 
+def add_song_to_user_queue(uid, song):
+    if uid not in user_queues:
+        user_queues[uid] = UserQueue(uid)
+        user_order.append(uid)
+    user_queues[uid].add_song(Song(
+        track_name=song['track_name'],
+        artist_name=song['artist_name'],
+        track_length=song['track_length'],
+        cover_url=song['cover_url'],
+        track_id=song['track_id'],
+        uri=song['uri'],
+        bpm=song['bpm'],
+        uid=uid
+    ))
+
 def get_next_user():
     if user_order:
         user_order.append(user_order.pop(0))
         return user_order[0]
     return None
 
-def add_song_to_user_queue(uid, song):
-    if uid not in user_queues:
-        user_queues[uid] = []
-        user_order.append(uid)
-    song = Song(track_name=song['track_name'], artist_name=song['artist_name'], track_length=song['track_length'], 
-                cover_url=song['cover_url'], track_id=song['track_id'], uri=song['uri'], bpm=song['bpm'], uid=uid)
-    user_queues[uid].append(song)
+def play_next_song():
+    global isPlaying
+    next_user = get_next_user()
+    if next_user and user_queues[next_user].queue:
+        next_song = user_queues[next_user].remove_song()
+        emit('message', {'action': 'next_song', 'nextSong': next_song.to_dict()}, broadcast=True)
+        isPlaying = True
+    else:
+        emit('message', {'action': 'queue_empty'}, broadcast=True)
+        isPlaying = False
+
+def check_and_play_next_song():
+    if not isPlaying:
+        play_next_song()
+

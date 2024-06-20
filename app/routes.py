@@ -1,5 +1,3 @@
-#app/routes.py
-
 from flask import Blueprint, render_template, abort
 from app import auth
 from .util import csh_user_auth

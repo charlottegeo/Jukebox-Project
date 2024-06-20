@@ -1,4 +1,3 @@
-#config.py
 import os
 from os import environ as env
 class Config:

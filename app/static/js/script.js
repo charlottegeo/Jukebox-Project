@@ -21,19 +21,21 @@ socket.on('message', function(data) {
         case 'updateQueue':
             console.log("Updating queue");
             updateQueue(data.queue);
-            updateAdminQueue(data.queue);
+            updateUserQueue(data.queue);
+            //updateAdminQueue(data.queue);
             break;
         case 'searchResults':
             handleSearchResults(data.results);
             break;
+        /*
         case 'playSong':
             playSong();
             break;
         case 'updateAdminQueue':
             updateAdminQueue(data);
             break;
+        */
         case 'next_song':
-            console.log("Next song");
             playSong(data.nextSong);
             break;
             
@@ -44,7 +46,7 @@ socket.on('message', function(data) {
             break;
         case 'formattedTime':
             if (window.location.pathname === '/display') {
-            document.getElementById('progressTimestamp').innerText = data.time;
+                document.getElementById('progressTimestamp').innerText = data.time;
             }
             break;
         
@@ -116,7 +118,7 @@ window.onload = function () {
     //anything that should happen on page load goes here
     //if the page is the main page, we want to get the queue from the server
     if (window.location.pathname == "/") {
-        socket.emit('get_song_queue');
+        socket.emit('get_user_queue');
         resetSongSelectionUI();
     }
     if(window.location.pathname == "/display"){
@@ -342,6 +344,7 @@ function submitSong() {
     //resetSongSelectionUI();
 }
 
+
 socket.on('queueLength', function(data) {
     var queueLength = data.length;
     console.log('Queue length:', queueLength);
@@ -367,6 +370,32 @@ function resetSongSelectionUI() {
     searchbar.value = '';
 }
 
+function updateUserQueue(queueData) {
+    if (window.location.pathname == "/"){
+        var userQueue = document.getElementById('userQueue');
+        userQueue.innerHTML = '';
+        queueData.forEach(song => {
+            var songContainer = document.createElement('div');
+            songContainer.className = 'song-container';
+            var img = document.createElement('img');
+            img.src = song.cover_url;
+            songContainer.appendChild(img);
+            var overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            overlay.innerHTML = `
+                <div class="song-info">
+                    ${song.track_name}<br>
+                    By: ${song.artist_name}<br>  
+                    Submitted by: ${song.uid}   
+                </div>
+            `;
+            songContainer.appendChild(overlay);
+            userQueue.appendChild(songContainer);
+            adjustOverlayTextSize();
+        });
+    }
+    
+}
 
 /*Code for the player and admin panel*/
 
@@ -516,5 +545,6 @@ function adjustOverlayTextSize() {
         }
     });
 }
+
 
 window.addEventListener('resize', adjustOverlayTextSize);

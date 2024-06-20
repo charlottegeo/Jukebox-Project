@@ -1,4 +1,3 @@
-#app/models.py
 class Song:
     def __init__(self, track_name, artist_name, track_length, cover_url, track_id, uri, bpm, uid):
         self.track_name = track_name
@@ -21,3 +20,19 @@ class Song:
             'bpm': self.bpm,
             'uid': self.uid,
         }
+
+class UserQueue:
+    def __init__(self, uid):
+        self.uid = uid
+        self.queue = []
+
+    def add_song(self, song):
+        self.queue.append(song)
+
+    def remove_song(self):
+        if self.queue:
+            return self.queue.pop(0)
+        return None
+
+    def get_queue(self):
+        return [song.to_dict() for song in self.queue]

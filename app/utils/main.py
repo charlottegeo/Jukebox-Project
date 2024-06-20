@@ -1,4 +1,3 @@
-#app/utils/main.py
 import os, sys
 import base64
 from dotenv import load_dotenv
@@ -109,6 +108,9 @@ def search_for_tracks(
         return array
     except Exception as e:
         return None
+
+def search_youtube(query, max_results=5):
+    
 def get_song_queue(queue: SongQueue):
     """
     Returns the song queue
