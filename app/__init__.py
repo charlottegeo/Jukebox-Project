@@ -23,10 +23,12 @@ def create_app():
     )
     auth = OIDCAuthentication({"default": CSH_AUTH}, app)
 
-    from app.routes import create_main_blueprint
+    from app.routes import create_main_blueprint, oidc_callback
 
     main = create_main_blueprint(auth)
     app.register_blueprint(main)
+
+    auth.init_app(app)
 
     with app.app_context():
         from app import events

@@ -8,262 +8,262 @@ var EmbedController;
 var bpm;
 
 document.addEventListener('DOMContentLoaded', function() {
-    var authToken = document.querySelector('meta[name="token"]').getAttribute('content');
     if (!authToken) {
         console.error('Auth token is missing');
         alert('Authentication token is missing. Please login again.');
         window.location.href = '/';
-    }
-    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
-        query: { token: authToken }
-    });
+    } else {
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
+            query: { token: authToken }
+        });
 
-    socket.on('connect', function() {
-        console.log('Socket.IO connected');
-        if (window.location.pathname === '/') {
-            socket.emit('get_user_queue');
-        }
-    });
+        socket.on('connect', function() {
+            console.log('Socket.IO connected');
+            if (window.location.pathname === '/') {
+                socket.emit('get_user_queue');
+            }
+        });
 
-    socket.on('connect_error', (error) => {
-        console.error('Socket.IO connection error:', error);
-        if (error.message === 'jwt expired' || error.message === 'invalid token') {
-            alert('Session expired or invalid token. Please login again.');
-            window.location.href = '/'; // Redirect to home page
-        }
-    });
+        socket.on('connect_error', (error) => {
+            console.error('Socket.IO connection error:', error);
+            if (error.message === 'jwt expired' || error.message === 'invalid token') {
+                alert('Session expired or invalid token. Please login again.');
+                window.location.href = '/'; // Redirect to home page
+            }
+        });
 
-    socket.on('message', function(data) {
-        console.log('Received:', data);
-        switch(data.action) {
-            case 'updateQueue':
-                console.log("Updating queue");
-                updateQueue(data.queue);
-                break;
-            case 'searchResults':
-                handleSearchResults(data.results);
-                break;
-            case 'next_song':
-                playSong(data.nextSong);
-                break;
-            case 'queueUpdated':
-                if (!isPlaying) {
-                    socket.emit('get_next_song');
-                }
-                break;
-            case 'formattedTime':
-                if (window.location.pathname === '/display') {
-                    document.getElementById('progressTimestamp').innerText = data.time;
-                }
-                break;
-            case 'queueLength':
-                if (data.length == 1) {
-                    if (window.location.pathname === '/display') {
-                        document.getElementById('playQueue').click();
-                        console.log("Playing first song");
+        socket.on('message', function(data) {
+            console.log('Received:', data);
+            switch(data.action) {
+                case 'updateQueue':
+                    console.log("Updating queue");
+                    updateQueue(data.queue);
+                    break;
+                case 'searchResults':
+                    handleSearchResults(data.results);
+                    break;
+                case 'next_song':
+                    playSong(data.nextSong);
+                    break;
+                case 'queueUpdated':
+                    if (!isPlaying) {
+                        socket.emit('get_next_song');
                     }
+                    break;
+                case 'formattedTime':
+                    if (window.location.pathname === '/display') {
+                        document.getElementById('progressTimestamp').innerText = data.time;
+                    }
+                    break;
+                case 'queueLength':
+                    if (data.length == 1) {
+                        if (window.location.pathname === '/display') {
+                            document.getElementById('playQueue').click();
+                            console.log("Playing first song");
+                        }
+                    }
+                    break;
+                case 'checkIfPlaying':
+                    socket.emit('isPlaying', { isPlaying: isPlaying });
+                    break;
+                case 'queue_empty':
+                    console.log("Queue is empty");
+                    if (isPlaying) {
+                        resetPlayerUI();
+                        defaultFrame();
+                        clearInterval(animationInterval);
+                        EmbedController.pause();
+                        isPlaying = false;
+                    }
+                    updateQueue(data.queue);
+                    break;
+                case 'togglePlay':
+                    console.log("Toggling play");
+                    if (isPlaying) {
+                        EmbedController.pause();
+                        isPlaying = false;
+                    } else {
+                        EmbedController.togglePlay();
+                        isPlaying = true;
+                    }
+                    break;
+                case 'cat_colors':
+                    if (window.location.pathname === '/admin') {
+                        var dropdown = document.getElementById('catColorDropdown');
+                        dropdown.innerHTML = '';
+                        data.colors.forEach(color => {
+                            var option = document.createElement('option');
+                            option.value = color;
+                            option.innerText = color;
+                            dropdown.appendChild(option);
+                        });
+                    }
+                    break;
+                case 'color_changed':
+                    if (window.location.pathname === '/admin') {
+                        document.getElementById('catColorDropdown').value = data.color;
+                    }
+                    break;
+                case 'addYouTubeLinkToQueue':
+                    console.log('Adding YouTube link to queue');
+                    break;
+            }
+        });
+
+        socket.on('disconnect', function() {
+            console.log("Socket.IO disconnected");
+        });
+
+        socket.on('error', function(error) {
+            console.error('Socket.IO Error:', error);
+        });
+
+        socket.on('updateCurrentSong', function(song) {
+            const currentAlbumCover = document.getElementById('current-album-cover');
+            const currentArtistName = document.getElementById('current-artist-name');
+            const currentSongTitle = document.getElementById('current-song-title');
+
+            currentAlbumCover.src = song.cover_url;
+            currentArtistName.textContent = song.artist_name;
+            currentSongTitle.textContent = song.track_name;
+        });
+
+        socket.on('updateUserQueue', function(data) {
+            var userQueueList = document.getElementById('user-queue-list');
+            userQueueList.innerHTML = '';
+            data.queue.forEach((song, index) => {
+                var songContainer = document.createElement('div');
+                songContainer.className = 'song-container';
+                songContainer.setAttribute('data-index', index);
+                var img = document.createElement('img');
+                img.src = song.cover_url;
+                songContainer.appendChild(img);
+                var overlay = document.createElement('div');
+                overlay.className = 'overlay';
+                overlay.innerHTML = `
+                    <div class="song-info">
+                        ${song.track_name}<br>
+                        By: ${song.artist_name}<br>
+                        <button onclick="removeSongFromQueue(${index})">Remove</button>
+                    </div>
+                `;
+                songContainer.appendChild(overlay);
+                userQueueList.appendChild(songContainer);
+
+                // Add fade-in animation
+                songContainer.classList.add('added');
+                setTimeout(() => songContainer.classList.remove('added'), 500); // Remove class after animation
+            });
+
+            // Initialize Sortable.js
+            new Sortable(userQueueList, {
+                onEnd: function(evt) {
+                    let oldIndex = evt.oldIndex;
+                    let newIndex = evt.newIndex;
+                    socket.emit('reorderQueue', { oldIndex: oldIndex, newIndex: newIndex });
                 }
-                break;
-            case 'checkIfPlaying':
-                socket.emit('isPlaying', { isPlaying: isPlaying });
-                break;
-            case 'queue_empty':
-                console.log("Queue is empty");
-                if (isPlaying) {
-                    resetPlayerUI();
-                    defaultFrame();
-                    clearInterval(animationInterval);
-                    EmbedController.pause();
-                    isPlaying = false;
-                }
-                updateQueue(data.queue);
-                break;
-            case 'togglePlay':
-                console.log("Toggling play");
-                if (isPlaying) {
-                    EmbedController.pause();
-                    isPlaying = false;
+            });
+        });
+
+        function removeSongFromQueue(index) {
+            const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
+            if (songContainer) {
+                songContainer.classList.add('removed');
+                setTimeout(() => {
+                    socket.emit('removeSongFromQueue', { index: index });
+                }, 500); // Wait for animation to finish
+            }
+        }
+
+        if (window.location.pathname == "/") {
+            const searchSourceSelect = document.getElementById('search-source');
+            const searchBar = document.getElementById('searchbar');
+            const youtubeLinkInput = document.getElementById('youtube-link');
+            let searchSource = 'spotify';
+            const profilePic = document.getElementById('profile-pic');
+            const profileDropdown = document.querySelector('.profile-dropdown');
+            searchSourceSelect.addEventListener('change', function() {
+                searchSource = this.value;
+                if (this.value === 'youtube') {
+                    searchBar.style.display = 'none';
+                    youtubeLinkInput.style.display = 'block';
                 } else {
-                    EmbedController.togglePlay();
-                    isPlaying = true;
+                    searchBar.style.display = 'block';
+                    youtubeLinkInput.style.display = 'none';
                 }
-                break;
-            case 'cat_colors':
-                if (window.location.pathname === '/admin') {
-                    var dropdown = document.getElementById('catColorDropdown');
-                    dropdown.innerHTML = '';
-                    data.colors.forEach(color => {
-                        var option = document.createElement('option');
-                        option.value = color;
-                        option.innerText = color;
-                        dropdown.appendChild(option);
-                    });
+            });
+            searchBar.textContent = "";
+            youtubeLinkInput.textContent = "";
+            searchBar.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleInput(searchBar.value, searchSource);
                 }
-                break;
-            case 'color_changed':
-                if (window.location.pathname === '/admin') {
-                    document.getElementById('catColorDropdown').value = data.color;
+            });
+
+            youtubeLinkInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleInput(youtubeLinkInput.value, searchSource);
                 }
-                break;
-            case 'addYouTubeLinkToQueue':
-                console.log('Adding YouTube link to queue');
-                break;
+            });
+            profilePic.addEventListener('click', function() {
+                profileDropdown.classList.toggle('show');
+            });
+
         }
-    });
 
-    socket.on('disconnect', function() {
-        console.log("Socket.IO disconnected");
-    });
-
-    socket.on('error', function(error) {
-        console.error('Socket.IO Error:', error);
-    });
-
-    socket.on('updateCurrentSong', function(song) {
-        const currentAlbumCover = document.getElementById('current-album-cover');
-        const currentArtistName = document.getElementById('current-artist-name');
-        const currentSongTitle = document.getElementById('current-song-title');
-
-        currentAlbumCover.src = song.cover_url;
-        currentArtistName.textContent = song.artist_name;
-        currentSongTitle.textContent = song.track_name;
-    });
-
-    socket.on('updateUserQueue', function(data) {
-        var userQueueList = document.getElementById('user-queue-list');
-        userQueueList.innerHTML = '';
-        data.queue.forEach((song, index) => {
-            var songContainer = document.createElement('div');
-            songContainer.className = 'song-container';
-            songContainer.setAttribute('data-index', index);
-            var img = document.createElement('img');
-            img.src = song.cover_url;
-            songContainer.appendChild(img);
-            var overlay = document.createElement('div');
-            overlay.className = 'overlay';
-            overlay.innerHTML = `
-                <div class="song-info">
-                    ${song.track_name}<br>
-                    By: ${song.artist_name}<br>
-                    <button onclick="removeSongFromQueue(${index})">Remove</button>
-                </div>
-            `;
-            songContainer.appendChild(overlay);
-            userQueueList.appendChild(songContainer);
-
-            // Add fade-in animation
-            songContainer.classList.add('added');
-            setTimeout(() => songContainer.classList.remove('added'), 500); // Remove class after animation
-        });
-
-        // Initialize Sortable.js
-        new Sortable(userQueueList, {
-            onEnd: function(evt) {
-                let oldIndex = evt.oldIndex;
-                let newIndex = evt.newIndex;
-                socket.emit('reorderQueue', { oldIndex: oldIndex, newIndex: newIndex });
-            }
-        });
-    });
-
-    function removeSongFromQueue(index) {
-        const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
-        if (songContainer) {
-            songContainer.classList.add('removed');
-            setTimeout(() => {
-                socket.emit('removeSongFromQueue', { index: index });
-            }, 500); // Wait for animation to finish
+        if (window.location.pathname == "/display") {
+            document.getElementById('playQueue').addEventListener('click', startPlay);
+            var startButton = document.getElementById('startButton');
+            startButton.addEventListener('click', function() {
+                startButton.style.display = 'none';
+            });
         }
-    }
 
-    if (window.location.pathname == "/") {
-        const searchSourceSelect = document.getElementById('search-source');
-        const searchBar = document.getElementById('searchbar');
-        const youtubeLinkInput = document.getElementById('youtube-link');
-        let searchSource = 'spotify';
-        const profilePic = document.getElementById('profile-pic');
-        const profileDropdown = document.querySelector('.profile-dropdown');
-        searchSourceSelect.addEventListener('change', function() {
-            searchSource = this.value;
-            if (this.value === 'youtube') {
-                searchBar.style.display = 'none';
-                youtubeLinkInput.style.display = 'block';
-            } else {
-                searchBar.style.display = 'block';
-                youtubeLinkInput.style.display = 'none';
-            }
-        });
-        searchBar.textContent = "";
-        youtubeLinkInput.textContent = "";
-        searchBar.addEventListener('keyup', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                handleInput(searchBar.value, searchSource);
-            }
-        });
+        if (window.location.pathname == "/admin") {
+            const clearAllQueuesBtn = document.getElementById('clearAllQueuesBtn');
+            const clearSpecificQueueBtn = document.getElementById('clearSpecificQueueBtn');
+            const userIdInput = document.getElementById('user-id-input');
 
-        youtubeLinkInput.addEventListener('keyup', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                handleInput(youtubeLinkInput.value, searchSource);
-            }
-        });
-        profilePic.addEventListener('click', function() {
-            profileDropdown.classList.toggle('show');
-        });
+            clearAllQueuesBtn.addEventListener('click', function() {
+                socket.emit('clearAllQueues');
+            });
 
-    }
+            clearSpecificQueueBtn.addEventListener('click', function() {
+                const userId = userIdInput.value;
+                if (userId) {
+                    socket.emit('clearSpecificQueue', { uid: userId });
+                }
+            });
 
-    if (window.location.pathname == "/display") {
-        document.getElementById('playQueue').addEventListener('click', startPlay);
-        var startButton = document.getElementById('startButton');
-        startButton.addEventListener('click', function() {
-            startButton.style.display = 'none';
-        });
-    }
+            socket.on('queueUserCount', function(data) {
+                const countDisplay = document.getElementById('queue-user-count');
+                countDisplay.textContent = `Queues: ${data.queues}, Users: ${data.users}`;
+            });
 
-    if (window.location.pathname == "/admin") {
-        const clearAllQueuesBtn = document.getElementById('clearAllQueuesBtn');
-        const clearSpecificQueueBtn = document.getElementById('clearSpecificQueueBtn');
-        const userIdInput = document.getElementById('user-id-input');
-
-        clearAllQueuesBtn.addEventListener('click', function() {
-            socket.emit('clearAllQueues');
-        });
-
-        clearSpecificQueueBtn.addEventListener('click', function() {
-            const userId = userIdInput.value;
-            if (userId) {
-                socket.emit('clearSpecificQueue', { uid: userId });
-            }
-        });
-
-        socket.on('queueUserCount', function(data) {
-            const countDisplay = document.getElementById('queue-user-count');
-            countDisplay.textContent = `Queues: ${data.queues}, Users: ${data.users}`;
-        });
-
-        document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
-        document.getElementById('skipSongBtn').addEventListener('click', function() {
-            isPlaying = false;
-            socket.emit('skipSong');
-        });
-        document.getElementById('refreshDisplayBtn').addEventListener('click', function() {
-            socket.emit('refreshDisplay');
-        });
-        populateCatColorDropdown();
-        document.getElementById('catColorDropdown').addEventListener('change', function() {
-            var selectedColor = this.value;
-            socket.emit('change_cat_color', selectedColor);
-        });
-        document.getElementById('setVolumeBtn').addEventListener('click', function() {
-            var volumeLevel = document.getElementById('volumeSlider').value;
-            socket.emit('set_volume', { volume: volumeLevel });
-        });
-        document.getElementById('setSongLengthBtn').addEventListener('click', function() {
-            var songLengthLimit = document.getElementById('songLengthInput').value;
-            socket.emit('set_song_length_limit', { length: songLengthLimit });
-        });
+            document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
+            document.getElementById('skipSongBtn').addEventListener('click', function() {
+                isPlaying = false;
+                socket.emit('skipSong');
+            });
+            document.getElementById('refreshDisplayBtn').addEventListener('click', function() {
+                socket.emit('refreshDisplay');
+            });
+            populateCatColorDropdown();
+            document.getElementById('catColorDropdown').addEventListener('change', function() {
+                var selectedColor = this.value;
+                socket.emit('change_cat_color', selectedColor);
+            });
+            document.getElementById('setVolumeBtn').addEventListener('click', function() {
+                var volumeLevel = document.getElementById('volumeSlider').value;
+                socket.emit('set_volume', { volume: volumeLevel });
+            });
+            document.getElementById('setSongLengthBtn').addEventListener('click', function() {
+                var songLengthLimit = document.getElementById('songLengthInput').value;
+                socket.emit('set_song_length_limit', { length: songLengthLimit });
+            });
+        }
     }
 });
 

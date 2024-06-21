@@ -1,4 +1,4 @@
-from flask import Blueprint, redirect, render_template, abort, session
+from flask import Blueprint, redirect, render_template, abort, session, url_for
 from .util import csh_user_auth, generate_token
 
 def create_main_blueprint(auth):
@@ -29,6 +29,10 @@ def create_main_blueprint(auth):
     @main.route("/logout")
     @auth.oidc_logout
     def logout():
-        return redirect("/", 302)
+        return redirect(url_for('main.index'))
 
     return main
+
+def oidc_callback(auth_response):
+    session['jwt_token'] = generate_token(auth_response.user_id)
+    return redirect(url_for('main.index'))
