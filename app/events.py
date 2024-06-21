@@ -1,7 +1,7 @@
 import json
 import os
 from dotenv import load_dotenv
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, disconnect
 from app import socketio
 from app.models import Song, UserQueue
 from app.utils.main import get_token, search_for_tracks, get_spotify_playlist_tracks
@@ -59,9 +59,16 @@ EXAM_WEEKS = { # Exam weeks for the next few years
 def handle_connect():
     token = request.args.get('token')
     if not token or not validate_token(token):
+        disconnect()
         return False
-    
     emit('message', {'message': 'Connected to server'})
+
+def validate_token(token):
+    user_id = decode_token(token)
+    if user_id:
+        session['user_id'] = user_id
+        return True
+    return False
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -70,18 +77,6 @@ def handle_disconnect():
         del user_queues[uid]
         if uid in user_order:
             user_order.remove(uid)
-
-@socketio.on('ping')
-def handle_ping():
-    emit('pong')
-
-
-def validate_token(token):
-    user_id = decode_token(token)
-    if user_id:
-        session['user_id'] = user_id
-        return True
-    return False
 
 @socketio.on('searchTracks')
 def handle_search_tracks(data):

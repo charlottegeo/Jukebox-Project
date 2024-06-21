@@ -1,4 +1,3 @@
-# run.py
 from app import socketio
 from dotenv import load_dotenv
 

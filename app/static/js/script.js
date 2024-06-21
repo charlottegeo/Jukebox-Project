@@ -4,283 +4,178 @@ var animationInterval;
 var pingInterval = null;
 var typingTimer;
 var doneTypingInterval = 500;
-var authToken = localStorage.getItem('authToken');
-if (!authToken) {
-    console.error('Auth token is missing');
-    alert('Authentication token is missing. Please login again.');
-}
-var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
-    query: { token: authToken }
-});
 var EmbedController;
 var bpm;
 
-
-socket.on('connect', function() {
-    console.log('Socket.IO connected');
-    socket.emit('ping');
-    if(window.location.pathname === '/'){
-        socket.emit('get_user_queue');
+document.addEventListener('DOMContentLoaded', function() {
+    var authToken = document.querySelector('meta[name="token"]').getAttribute('content');
+    if (!authToken) {
+        console.error('Auth token is missing');
+        alert('Authentication token is missing. Please login again.');
+        window.location.href = '/';
     }
-    
-});
-socket.on('connect_error', (error) => {
-    console.error('Socket.IO connection error:', error);
-    if (error.message === 'jwt expired' || error.message === 'invalid token') {
-        alert('Session expired or invalid token. Please login again.');
-    }
-});
-socket.on('message', function(data) {
-    console.log('Received:', data);
-    switch(data.action) {
-        case 'updateQueue':
-            console.log("Updating queue");
-            updateQueue(data.queue);
-            //updateUserQueue(data.queue);
-            //updateAdminQueue(data.queue);
-            break;
-        case 'searchResults':
-            handleSearchResults(data.results);
-            break;
-        /*
-        case 'playSong':
-            playSong();
-            break;
-        case 'updateAdminQueue':
-            updateAdminQueue(data);
-            break;
-        */
-        case 'next_song':
-            playSong(data.nextSong);
-            break;
-        case 'queueUpdated':
-            if(!isPlaying){
-                socket.emit('get_next_song');
-            }
-            break;
-        case 'formattedTime':
-            if (window.location.pathname === '/display') {
-                document.getElementById('progressTimestamp').innerText = data.time;
-            }
-            break;
-        
-        case 'queueLength':
-            if (data.length == 1) {
-                if(window.location.pathname === '/display'){
-                    
-                    document.getElementById('playQueue').click();
-                    console.log("Playing first song");
-                }
-            }
-            break;
-        case 'checkIfPlaying':
-            socket.emit('isPlaying', {isPlaying: isPlaying});
-            break;
-        case 'queue_empty':
-            console.log("Queue is empty");
-            if (isPlaying) {
-                resetPlayerUI();
-                defaultFrame();
-                clearInterval(animationInterval);
-                EmbedController.pause();
-                isPlaying = false;
-            }
-            updateQueue(data.queue);
-            break;
-        case 'togglePlay':
-            console.log("Toggling play");
-            if (isPlaying) {
-                EmbedController.pause();
-                isPlaying = false;
-            } else {
-                EmbedController.togglePlay();
-                isPlaying = true;
-            }
-            break;
-        case 'cat_colors':
-            if(window.location.pathname === '/admin'){
-                var dropdown = document.getElementById('catColorDropdown');
-                dropdown.innerHTML = '';
-                data.colors.forEach(color => {
-                    var option = document.createElement('option');
-                    option.value = color;
-                    option.innerText = color;
-                    dropdown.appendChild(option);
-                });
-            }
-            break;
-        case 'color_changed':
-            if(window.location.pathname === '/admin'){
-                document.getElementById('catColorDropdown').value = data.color;
-            }
-            break;
-        case 'addYouTubeLinkToQueue':
-            console.log('Adding YouTube link to queue');
-            break;
-    }
-});
-
-socket.on('disconnect', function() {
-    console.log("Socket.IO disconnected");
-});
-
-socket.on('error', function(error) {
-    console.error('Socket.IO Error:', error);
-});
-
-socket.on('updateCurrentSong', function(song) {
-    const currentAlbumCover = document.getElementById('current-album-cover');
-    const currentArtistName = document.getElementById('current-artist-name');
-    const currentSongTitle = document.getElementById('current-song-title');
-
-    currentAlbumCover.src = song.cover_url;
-    currentArtistName.textContent = song.artist_name;
-    currentSongTitle.textContent = song.track_name;
-});
-
-socket.on('updateUserQueue', function(data) {
-    var userQueueList = document.getElementById('user-queue-list');
-    userQueueList.innerHTML = '';
-    data.queue.forEach((song, index) => {
-        var songContainer = document.createElement('div');
-        songContainer.className = 'song-container';
-        songContainer.setAttribute('data-index', index);
-        var img = document.createElement('img');
-        img.src = song.cover_url;
-        songContainer.appendChild(img);
-        var overlay = document.createElement('div');
-        overlay.className = 'overlay';
-        overlay.innerHTML = `
-            <div class="song-info">
-                ${song.track_name}<br>
-                By: ${song.artist_name}<br>
-                <button onclick="removeSongFromQueue(${index})">Remove</button>
-            </div>
-        `;
-        songContainer.appendChild(overlay);
-        userQueueList.appendChild(songContainer);
-
-        // Add fade-in animation
-        songContainer.classList.add('added');
-        setTimeout(() => songContainer.classList.remove('added'), 500); // Remove class after animation
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
+        query: { token: authToken }
     });
 
-    // Initialize Sortable.js
-    new Sortable(userQueueList, {
-        onEnd: function(evt) {
-            let oldIndex = evt.oldIndex;
-            let newIndex = evt.newIndex;
-            socket.emit('reorderQueue', { oldIndex: oldIndex, newIndex: newIndex });
+    socket.on('connect', function() {
+        console.log('Socket.IO connected');
+        if (window.location.pathname === '/') {
+            socket.emit('get_user_queue');
         }
     });
-});
 
-function removeSongFromQueue(index) {
-    const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
-    if (songContainer) {
-        songContainer.classList.add('removed');
-        setTimeout(() => {
-            socket.emit('removeSongFromQueue', { index: index });
-        }, 500); //Wait for animation to finish
-    }
-}
-
-
-/*Code for main/search page*/
-window.onload = function () {
-    //anything that should happen on page load goes here
-    //if the page is the main page, we want to get the queue from the server
-    if (window.location.pathname == "/") {
-        socket.emit('get_song_queue');
-        socket.emit('get_user_queue');
-        resetSongSelectionUI();
-    }
-    if(window.location.pathname == "/display"){
-        //clearQueue();
-        defaultFrame();
-        socket.emit('get_admin_queue');
-    }    
-
-    if(window.location.pathname == "/admin"){
-        document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
-    }
-};
-
-
-function updateUserQueue(queue) {
-    var userQueueList = document.getElementById('user-queue-list');
-    userQueueList.innerHTML = '';
-    queue.forEach(song => {
-        var songContainer = document.createElement('div');
-        songContainer.className = 'song-container';
-        var img = document.createElement('img');
-        img.src = song.cover_url;
-        songContainer.appendChild(img);
-        var overlay = document.createElement('div');
-        overlay.className = 'overlay';
-        overlay.innerHTML = `
-            <div class="song-info">
-                ${song.track_name}<br>
-                By: ${song.artist_name}<br>  
-            </div>
-        `;
-        songContainer.appendChild(overlay);
-        userQueueList.appendChild(songContainer);
+    socket.on('connect_error', (error) => {
+        console.error('Socket.IO connection error:', error);
+        if (error.message === 'jwt expired' || error.message === 'invalid token') {
+            alert('Session expired or invalid token. Please login again.');
+            window.location.href = '/'; // Redirect to home page
+        }
     });
-}
 
-function updateQueue(queueData) {
-    console.log(typeof(queueData));
-    console.log(queueData);
-    if (window.location.pathname == "/"){
-        var queuelist = document.getElementById('queuelist');
-        queuelist.innerHTML = '';
-        console.log("Queue Data:" + queueData);
-        queueData.forEach(song => {
-            var songcontainer = document.createElement('div');
-            songcontainer.className = 'song-container';
+    socket.on('message', function(data) {
+        console.log('Received:', data);
+        switch(data.action) {
+            case 'updateQueue':
+                console.log("Updating queue");
+                updateQueue(data.queue);
+                break;
+            case 'searchResults':
+                handleSearchResults(data.results);
+                break;
+            case 'next_song':
+                playSong(data.nextSong);
+                break;
+            case 'queueUpdated':
+                if (!isPlaying) {
+                    socket.emit('get_next_song');
+                }
+                break;
+            case 'formattedTime':
+                if (window.location.pathname === '/display') {
+                    document.getElementById('progressTimestamp').innerText = data.time;
+                }
+                break;
+            case 'queueLength':
+                if (data.length == 1) {
+                    if (window.location.pathname === '/display') {
+                        document.getElementById('playQueue').click();
+                        console.log("Playing first song");
+                    }
+                }
+                break;
+            case 'checkIfPlaying':
+                socket.emit('isPlaying', { isPlaying: isPlaying });
+                break;
+            case 'queue_empty':
+                console.log("Queue is empty");
+                if (isPlaying) {
+                    resetPlayerUI();
+                    defaultFrame();
+                    clearInterval(animationInterval);
+                    EmbedController.pause();
+                    isPlaying = false;
+                }
+                updateQueue(data.queue);
+                break;
+            case 'togglePlay':
+                console.log("Toggling play");
+                if (isPlaying) {
+                    EmbedController.pause();
+                    isPlaying = false;
+                } else {
+                    EmbedController.togglePlay();
+                    isPlaying = true;
+                }
+                break;
+            case 'cat_colors':
+                if (window.location.pathname === '/admin') {
+                    var dropdown = document.getElementById('catColorDropdown');
+                    dropdown.innerHTML = '';
+                    data.colors.forEach(color => {
+                        var option = document.createElement('option');
+                        option.value = color;
+                        option.innerText = color;
+                        dropdown.appendChild(option);
+                    });
+                }
+                break;
+            case 'color_changed':
+                if (window.location.pathname === '/admin') {
+                    document.getElementById('catColorDropdown').value = data.color;
+                }
+                break;
+            case 'addYouTubeLinkToQueue':
+                console.log('Adding YouTube link to queue');
+                break;
+        }
+    });
+
+    socket.on('disconnect', function() {
+        console.log("Socket.IO disconnected");
+    });
+
+    socket.on('error', function(error) {
+        console.error('Socket.IO Error:', error);
+    });
+
+    socket.on('updateCurrentSong', function(song) {
+        const currentAlbumCover = document.getElementById('current-album-cover');
+        const currentArtistName = document.getElementById('current-artist-name');
+        const currentSongTitle = document.getElementById('current-song-title');
+
+        currentAlbumCover.src = song.cover_url;
+        currentArtistName.textContent = song.artist_name;
+        currentSongTitle.textContent = song.track_name;
+    });
+
+    socket.on('updateUserQueue', function(data) {
+        var userQueueList = document.getElementById('user-queue-list');
+        userQueueList.innerHTML = '';
+        data.queue.forEach((song, index) => {
+            var songContainer = document.createElement('div');
+            songContainer.className = 'song-container';
+            songContainer.setAttribute('data-index', index);
             var img = document.createElement('img');
             img.src = song.cover_url;
-            songcontainer.appendChild(img);
+            songContainer.appendChild(img);
             var overlay = document.createElement('div');
             overlay.className = 'overlay';
             overlay.innerHTML = `
                 <div class="song-info">
                     ${song.track_name}<br>
-                    By: ${song.artist_name}<br>  
-                    Submitted by: ${song.uid}   
+                    By: ${song.artist_name}<br>
+                    <button onclick="removeSongFromQueue(${index})">Remove</button>
                 </div>
             `;
-            songcontainer.appendChild(overlay);
-            queuelist.appendChild(songcontainer);
-            adjustOverlayTextSize();
-        });
-    }
-    /*
-    if(window.location.pathname == "/display"){
-        var queuelist = document.getElementById('song-list');
-        queuelist.innerHTML = '';
-        queueData.forEach(song => { 
-            var img = document.createElement('img');
-            img.src = song.cover_url;
-            img.style.width = '100px';
-            queuelist.appendChild(img);
-        });
-    }
-    */
-}
+            songContainer.appendChild(overlay);
+            userQueueList.appendChild(songContainer);
 
+            // Add fade-in animation
+            songContainer.classList.add('added');
+            setTimeout(() => songContainer.classList.remove('added'), 500); // Remove class after animation
+        });
 
-function pausePlay() {
-    console.log('pausePlayBtn clicked');
-    socket.emit('message', { action: 'togglePlay' }); // Emit 'togglePlay' action
-    if(isPaused) {
-        document.getElementById('pausePlayBtn').innerHTML = 'Pause';
-    } else {
-        document.getElementById('pausePlayBtn').innerHTML = 'Play';
+        // Initialize Sortable.js
+        new Sortable(userQueueList, {
+            onEnd: function(evt) {
+                let oldIndex = evt.oldIndex;
+                let newIndex = evt.newIndex;
+                socket.emit('reorderQueue', { oldIndex: oldIndex, newIndex: newIndex });
+            }
+        });
+    });
+
+    function removeSongFromQueue(index) {
+        const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
+        if (songContainer) {
+            songContainer.classList.add('removed');
+            setTimeout(() => {
+                socket.emit('removeSongFromQueue', { index: index });
+            }, 500); // Wait for animation to finish
+        }
     }
-}
-document.addEventListener('DOMContentLoaded', function() {
+
     if (window.location.pathname == "/") {
         const searchSourceSelect = document.getElementById('search-source');
         const searchBar = document.getElementById('searchbar');
@@ -306,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 handleInput(searchBar.value, searchSource);
             }
         });
-    
+
         youtubeLinkInput.addEventListener('keyup', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -318,13 +213,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
     }
-    if (window.location.pathname == '/display') {
+
+    if (window.location.pathname == "/display") {
         document.getElementById('playQueue').addEventListener('click', startPlay);
         var startButton = document.getElementById('startButton');
         startButton.addEventListener('click', function() {
             startButton.style.display = 'none';
         });
     }
+
     if (window.location.pathname == "/admin") {
         const clearAllQueuesBtn = document.getElementById('clearAllQueuesBtn');
         const clearSpecificQueueBtn = document.getElementById('clearSpecificQueueBtn');
@@ -340,10 +237,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 socket.emit('clearSpecificQueue', { uid: userId });
             }
         });
+
         socket.on('queueUserCount', function(data) {
             const countDisplay = document.getElementById('queue-user-count');
             countDisplay.textContent = `Queues: ${data.queues}, Users: ${data.users}`;
         });
+
         document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
         document.getElementById('skipSongBtn').addEventListener('click', function() {
             isPlaying = false;
@@ -359,11 +258,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         document.getElementById('setVolumeBtn').addEventListener('click', function() {
             var volumeLevel = document.getElementById('volumeSlider').value;
-            socket.emit('set_volume', {volume: volumeLevel});
+            socket.emit('set_volume', { volume: volumeLevel });
         });
         document.getElementById('setSongLengthBtn').addEventListener('click', function() {
             var songLengthLimit = document.getElementById('songLengthInput').value;
-            socket.emit('set_song_length_limit', {length: songLengthLimit});
+            socket.emit('set_song_length_limit', { length: songLengthLimit });
         });
     }
 });
@@ -480,7 +379,6 @@ function createTrackItem(track) {
     return item;
 }
 
-
 function setText() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
@@ -505,7 +403,6 @@ function setText() {
     }
 }
 
-
 function submitSong() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
@@ -519,7 +416,6 @@ function submitSong() {
         resultText.textContent = "";
     }, 3000);
 }
-
 
 socket.on('queueLength', function(data) {
     var queueLength = data.length;
@@ -555,9 +451,8 @@ function resetSongSelectionUI() {
     searchbar.value = '';
 }
 
-function startPlay(){
+function startPlay() {
     socket.emit('get_next_song');
-    
 }
 
 function updateAdminQueue(data) {
@@ -569,14 +464,12 @@ function updateAdminQueue(data) {
     console.log('Queue data:', queue);
 }
 
-
 function clearQueue() {
     socket.emit('clearQueue');
 }
 
-
 function playSong(song) {
-    if (!song || Object.keys(song).length === 0){
+    if (!song || Object.keys(song).length === 0) {
         console.log('Queue is empty');
         resetPlayerUI();
         defaultFrame();
@@ -585,7 +478,7 @@ function playSong(song) {
     }
     console.log('Playing:', song.track_name, 'by', song.artist_name);
     if (window.location.pathname === '/display') {
-        if(song.source == 'spotify'){
+        if (song.source == 'spotify') {
             EmbedController.uri = song.uri;
             EmbedController.loadUri(song.uri);
             console.log('Playback started');

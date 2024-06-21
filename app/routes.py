@@ -1,5 +1,5 @@
-from flask import Blueprint, redirect, render_template, abort
-from .util import csh_user_auth
+from flask import Blueprint, redirect, render_template, abort, session
+from .util import csh_user_auth, generate_token
 
 def create_main_blueprint(auth):
     main = Blueprint('main', __name__)
@@ -10,7 +10,8 @@ def create_main_blueprint(auth):
     def index(auth_dict=None):
         if auth_dict is None:
             return "Something went wrong with the authentication, please try to login again.", 400
-        return render_template('search.html', auth_dict=auth_dict)
+        token = generate_token(session["uid"])
+        return render_template('search.html', auth_dict=auth_dict, token=token)
     
     @main.route('/display')
     def display():
@@ -22,7 +23,8 @@ def create_main_blueprint(auth):
     def admin(auth_dict=None):
         if not auth_dict['admin']:
             abort(403)
-        return render_template('admin.html', auth_dict=auth_dict)
+        token = generate_token(session["uid"])
+        return render_template('admin.html', auth_dict=auth_dict, token=token)
     
     @main.route("/logout")
     @auth.oidc_logout
