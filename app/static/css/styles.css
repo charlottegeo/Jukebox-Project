@@ -452,13 +452,6 @@ progress[value]::-moz-progress-bar {
     text-align: center;
 }
 
-.profile img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
 .profile-dropdown {
     display: none;
     position: absolute;
@@ -470,8 +463,15 @@ progress[value]::-moz-progress-bar {
     z-index: 1;
 }
 
-.profile:hover .profile-dropdown {
+.profile-dropdown.show {
     display: block;
+}
+
+.profile img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
 }
 
 .profile-dropdown button {

@@ -5,6 +5,7 @@ from requests import post, get
 import json
 import typing
 from app.utils.track_wrapper import *
+from flask import current_app
 
 load_dotenv()  # this should bring the environment variable 
 
@@ -54,9 +55,15 @@ class SongQueue:
 
 def get_token():
     """
-    Gets the API token for a spotify account(Currently uses Charlotte's account)
+    Gets the API token for a Spotify account(Currently uses Charlotte's account)
     """
-        
+    cli_id = os.getenv("CLIENT_ID")
+    cli_secret = os.getenv("CLIENT_SECRET")
+    
+    if not cli_id or not cli_secret:
+        current_app.logger.error("CLIENT_ID or CLIENT_SECRET not found in environment variables.")
+        return None
+    
     auth_string = cli_id + ":" + cli_secret
     auth_bytes = auth_string.encode("utf-8")
     auth_base64 = str(base64.b64encode(auth_bytes), "utf-8")
@@ -67,12 +74,31 @@ def get_token():
         "Content-Type": "application/x-www-form-urlencoded"
     }
     data = {"grant_type": "client_credentials"}
-    result = post(url, headers=headers, data=data)
-    json_result = json.loads(result.content)
-    token = json_result["access_token"]
+    
+    try:
+        result = post(url, headers=headers, data=data)
+        current_app.logger.debug(f"Spotify API request headers: {headers}")
+        current_app.logger.debug(f"Spotify API request payload: {data}")
+        current_app.logger.debug(f"Spotify API response status code: {result.status_code}")
+        current_app.logger.debug(f"Spotify API response body: {result.text}")
 
-    #pusay made an appearance here. pusay is graciously giving you a token. say thank you.
-    return token
+        if result.status_code != 200:
+            current_app.logger.error(f"Failed to obtain token: {result.status_code}, {result.text}")
+            return None
+        
+        json_result = json.loads(result.content)
+        if "access_token" not in json_result:
+            current_app.logger.error(f"Response does not contain access_token: {json_result}")
+            return None
+        
+        token = json_result["access_token"]
+        #pusay made an appearance here. pusay is graciously giving you a token. say thank you.
+
+        return token
+
+    except Exception as e:
+        current_app.logger.error(f"Exception occurred while getting token: {str(e)}")
+        return None
 
 
 def get_auth_header(token):

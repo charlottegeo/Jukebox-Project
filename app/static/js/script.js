@@ -5,11 +5,16 @@ var pingInterval = null;
 var typingTimer;
 var doneTypingInterval = 500;
 var authToken = localStorage.getItem('authToken');
+if (!authToken) {
+    console.error('Auth token is missing');
+    alert('Authentication token is missing. Please login again.');
+}
 var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
     query: { token: authToken }
 });
 var EmbedController;
 var bpm;
+
 
 socket.on('connect', function() {
     console.log('Socket.IO connected');
@@ -17,8 +22,14 @@ socket.on('connect', function() {
     if(window.location.pathname === '/'){
         socket.emit('get_user_queue');
     }
+    
 });
-
+socket.on('connect_error', (error) => {
+    console.error('Socket.IO connection error:', error);
+    if (error.message === 'jwt expired' || error.message === 'invalid token') {
+        alert('Session expired or invalid token. Please login again.');
+    }
+});
 socket.on('message', function(data) {
     console.log('Received:', data);
     switch(data.action) {
@@ -275,7 +286,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchBar = document.getElementById('searchbar');
         const youtubeLinkInput = document.getElementById('youtube-link');
         let searchSource = 'spotify';
-        const logoutButton = document.getElementById('logout-button');
+        const profilePic = document.getElementById('profile-pic');
+        const profileDropdown = document.querySelector('.profile-dropdown');
         searchSourceSelect.addEventListener('change', function() {
             searchSource = this.value;
             if (this.value === 'youtube') {
@@ -301,8 +313,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 handleInput(youtubeLinkInput.value, searchSource);
             }
         });
-        logoutButton.addEventListener('click', function() {
-            window.location.href = '/logout';
+        profilePic.addEventListener('click', function() {
+            profileDropdown.classList.toggle('show');
         });
 
     }

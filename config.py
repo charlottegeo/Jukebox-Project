@@ -1,11 +1,11 @@
 import os
-from os import environ as env
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a-very-secret-key'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('CATJAM_DATABASE_URL')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    OIDC_ISSUER = env.get("OIDC_ISSUER", "https://sso.csh.rit.edu/auth/realms/csh")
-    OIDC_CLIENT_ID = env.get("OIDC_CLIENT_ID", "deadass")
-    OIDC_CLIENT_SECRET = env.get("OIDC_CLIENT_SECRET", "NOT-A-SECRET")
-    OIDC_REDIRECT_URI = "http://localhost:5000/oidc_callback"
-    #OIDC_REDIRECT_URI = "https://catjam.csh.rit.edu/oidc_callback"
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 't')
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    OIDC_ISSUER = os.environ.get("OIDC_ISSUER", "https://sso.csh.rit.edu/auth/realms/csh")
+    OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "catjam-app")
+    OIDC_CLIENT_SECRET = os.environ.get("OIDC_CLIENT_SECRET", "NOT-A-SECRET")
+    OIDC_REDIRECT_URI = os.environ.get("OIDC_REDIRECT_URI", "http://localhost:5000/oidc_callback")

@@ -19,7 +19,7 @@ def decode_token(token):
         return None
     except jwt.InvalidTokenError:
         return None
-    
+
 def csh_user_auth(func):
     @wraps(func)
     def wrapped_function(*args, **kwargs):

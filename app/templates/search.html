@@ -16,9 +16,9 @@
         <header style="display: flex; justify-content: space-between; align-items: center;">
             <h1>CatJam</h1>
             <div class="profile">
-                <img id="profile-pic" src="{{ auth_dict['picture'] }}" alt="Profile Picture" style="width: 50px; height: 50px; border-radius: 50%; cursor: pointer;">
+                <img id="profile-pic" src="{{ auth_dict['picture'] }}" alt="Profile Picture">
                 <div class="profile-dropdown">
-                    <button id="logout-button">Log Out</button>
+                    <a class="dropdown-item" href="/logout">Logout</a>
                 </div>
             </div>
         </header>

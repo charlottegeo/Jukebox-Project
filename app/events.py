@@ -13,7 +13,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 import datetime
-from datetime import time
+import time
 import threading
 
 load_dotenv()
