@@ -1,4 +1,4 @@
-
+<!-- Inside admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,8 +16,8 @@
         <h1>Admin Panel</h1>
         <button id="clearQueueBtn" class="clear-queue-button">Clear Queue</button>
         <button id="pausePlayBtn" class="pause-play-button">Pause</button>
-        <button id="skipSongBtn" class="skip-song-button">Skip Song</button>           
-        <button id="refreshDisplayBtn" class="refresh-display-button">Refresh Display</button>   
+        <button id="skipSongBtn" class="skip-song-button">Skip Song</button>
+        <button id="refreshDisplayBtn" class="refresh-display-button">Refresh Display</button>
         <select id="catColorDropdown">
             <!-- Options will be dynamically added here -->
         </select>
@@ -25,7 +25,12 @@
             <label for="volumeSlider">Volume:</label>
             <input type="range" id="volumeSlider" min="0" max="100" value="50">
             <button id="setVolumeBtn">Set Volume</button>
-        </div>               
+        </div>
+        <div class="song-length-limit">
+            <label for="songLengthInput">Song Length Limit (in M:SS or H:MM:SS):</label>
+            <input type="text" id="songLengthInput" placeholder="MM:SS or HH:MM:SS">
+            <button id="setSongLengthBtn">Set Song Length Limit</button>
+        </div>
     </div>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

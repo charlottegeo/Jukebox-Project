@@ -110,6 +110,7 @@ def search_for_tracks(
         return None
 
 def search_youtube(query, max_results=5):
+    pass
     
 def get_song_queue(queue: SongQueue):
     """

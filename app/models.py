@@ -1,5 +1,5 @@
 class Song:
-    def __init__(self, track_name, artist_name, track_length, cover_url, track_id, uri, bpm, uid):
+    def __init__(self, track_name, artist_name, track_length, cover_url, track_id, uri, bpm, uid, source):
         self.track_name = track_name
         self.artist_name = artist_name
         self.track_length = track_length
@@ -8,6 +8,7 @@ class Song:
         self.uri = uri
         self.bpm = bpm
         self.uid = uid
+        self.source = source
 
     def to_dict(self):
         return {
@@ -19,6 +20,7 @@ class Song:
             'uri': self.uri,
             'bpm': self.bpm,
             'uid': self.uid,
+            'source': self.source
         }
 
 class UserQueue:

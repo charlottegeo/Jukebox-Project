@@ -1,13 +1,16 @@
-//script.js
 var isPlaying = false;
 var isPaused = false;
 var animationInterval;
 var pingInterval = null;
 var typingTimer;
 var doneTypingInterval = 500;
-var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+var authToken = localStorage.getItem('authToken');
+var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
+    query: { token: authToken }
+});
 var EmbedController;
 var bpm;
+
 socket.on('connect', function() {
     console.log('Socket.IO connected');
     socket.emit('ping');
@@ -15,13 +18,11 @@ socket.on('connect', function() {
 
 socket.on('message', function(data) {
     console.log('Received:', data);
-    //console.log(isPlaying);
-
     switch(data.action) {
         case 'updateQueue':
             console.log("Updating queue");
             updateQueue(data.queue);
-            updateUserQueue(data.queue);
+            //updateUserQueue(data.queue);
             //updateAdminQueue(data.queue);
             break;
         case 'searchResults':
@@ -38,7 +39,6 @@ socket.on('message', function(data) {
         case 'next_song':
             playSong(data.nextSong);
             break;
-            
         case 'queueUpdated':
             if(!isPlaying){
                 socket.emit('get_next_song');
@@ -99,6 +99,10 @@ socket.on('message', function(data) {
             if(window.location.pathname === '/admin'){
                 document.getElementById('catColorDropdown').value = data.color;
             }
+            break;
+        case 'addYouTubeLinkToQueue':
+            console.log('Adding YouTube link to queue');
+            break;
     }
 });
 
@@ -110,7 +114,37 @@ socket.on('error', function(error) {
     console.error('Socket.IO Error:', error);
 });
 
+socket.on('updateCurrentSong', function(song) {
+    const currentAlbumCover = document.getElementById('current-album-cover');
+    const currentArtistName = document.getElementById('current-artist-name');
+    const currentSongTitle = document.getElementById('current-song-title');
 
+    currentAlbumCover.src = song.cover_url;
+    currentArtistName.textContent = song.artist_name;
+    currentSongTitle.textContent = song.track_name;
+});
+
+socket.on('updateUserQueue', function(data) {
+    var userQueueList = document.getElementById('user-queue-list');
+    userQueueList.innerHTML = '';
+    data.queue.forEach(song => {
+        var songContainer = document.createElement('div');
+        songContainer.className = 'song-container';
+        var img = document.createElement('img');
+        img.src = song.cover_url;
+        songContainer.appendChild(img);
+        var overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        overlay.innerHTML = `
+            <div class="song-info">
+                ${song.track_name}<br>
+                By: ${song.artist_name}<br>  
+            </div>
+        `;
+        songContainer.appendChild(overlay);
+        userQueueList.appendChild(songContainer);
+    });
+});
 
 
 /*Code for main/search page*/
@@ -118,6 +152,7 @@ window.onload = function () {
     //anything that should happen on page load goes here
     //if the page is the main page, we want to get the queue from the server
     if (window.location.pathname == "/") {
+        socket.emit('get_song_queue');
         socket.emit('get_user_queue');
         resetSongSelectionUI();
     }
@@ -132,6 +167,28 @@ window.onload = function () {
     }
 };
 
+
+function updateUserQueue(queue) {
+    var userQueueList = document.getElementById('user-queue-list');
+    userQueueList.innerHTML = '';
+    queue.forEach(song => {
+        var songContainer = document.createElement('div');
+        songContainer.className = 'song-container';
+        var img = document.createElement('img');
+        img.src = song.cover_url;
+        songContainer.appendChild(img);
+        var overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        overlay.innerHTML = `
+            <div class="song-info">
+                ${song.track_name}<br>
+                By: ${song.artist_name}<br>  
+            </div>
+        `;
+        songContainer.appendChild(overlay);
+        userQueueList.appendChild(songContainer);
+    });
+}
 
 function updateQueue(queueData) {
     console.log(typeof(queueData));
@@ -160,17 +217,21 @@ function updateQueue(queueData) {
             adjustOverlayTextSize();
         });
     }
+    /*
     if(window.location.pathname == "/display"){
         var queuelist = document.getElementById('song-list');
         queuelist.innerHTML = '';
-        queueData.forEach(song => { // Start from the second song
+        queueData.forEach(song => { 
             var img = document.createElement('img');
             img.src = song.cover_url;
             img.style.width = '100px';
             queuelist.appendChild(img);
         });
     }
+    */
 }
+
+
 function pausePlay() {
     console.log('pausePlayBtn clicked');
     socket.emit('message', { action: 'togglePlay' }); // Emit 'togglePlay' action
@@ -182,11 +243,23 @@ function pausePlay() {
 }
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname == "/") {
-        var searchInput = document.getElementById('searchbar');
+        const searchSourceSelect = document.getElementById('search-source');
+        const searchBar = document.getElementById('searchbar');
+        const youtubeLinkInput = document.getElementById('youtube-link');
+        const logoutButton = document.getElementById('logout-button');
+        searchSourceSelect.addEventListener('change', function() {
+            if (this.value === 'youtube') {
+                searchBar.style.display = 'none';
+                youtubeLinkInput.style.display = 'block';
+            } else {
+                searchBar.style.display = 'block';
+                youtubeLinkInput.style.display = 'none';
+            }
+        });
         searchInput.textContent = "";
+        youtubeLinkInput.textContent = "";
         searchInput.addEventListener('keyup', function(event) {
-            clearTimeout(typingTimer); // Clear the previous timer
-
+            clearTimeout(typingTimer);
             if (event.key === "Enter") {
                 event.preventDefault();
                 searchTracks();
@@ -194,6 +267,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 typingTimer = setTimeout(searchTracks, doneTypingInterval);
             }
         });
+        youtubeLinkInput.addEventListener('keyup', function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                submitYouTubeLink();
+            }
+        });
+        logoutButton.addEventListener('click', function() {
+            window.location.href = '/logout';
+        });
+
     }
     if (window.location.pathname == '/display') {
         document.getElementById('playQueue').addEventListener('click', startPlay);
@@ -201,18 +284,15 @@ document.addEventListener('DOMContentLoaded', function() {
         startButton.addEventListener('click', function() {
             startButton.style.display = 'none';
         });
-        
-    
     }
     if (window.location.pathname == "/admin") {
+        document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
+        document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
         document.getElementById('skipSongBtn').addEventListener('click', function() {
             isPlaying = false;
             socket.emit('skipSong');
         });
-        document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
-        document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
-        var refreshDisplayBtn = document.getElementById('refreshDisplayBtn');
-        refreshDisplayBtn.addEventListener('click', function() {
+        document.getElementById('refreshDisplayBtn').addEventListener('click', function() {
             socket.emit('refreshDisplay');
         });
         populateCatColorDropdown();
@@ -221,36 +301,49 @@ document.addEventListener('DOMContentLoaded', function() {
             socket.emit('change_cat_color', selectedColor);
         });
         document.getElementById('setVolumeBtn').addEventListener('click', function() {
-            var volumeLevel = document.getElementById('volumeSlider').value; //set this to a float
+            var volumeLevel = document.getElementById('volumeSlider').value;
             socket.emit('set_volume', {volume: volumeLevel});
         });
-        
+        document.getElementById('setSongLengthBtn').addEventListener('click', function() {
+            var songLengthLimit = document.getElementById('songLengthInput').value;
+            socket.emit('set_song_length_limit', {length: songLengthLimit});
+        });
     }
 });
 
 function populateCatColorDropdown() {
     socket.emit('get_cat_colors');
 }
+
+
 function searchTracks() {
     var searchText = document.getElementById('searchbar').value;
-    socket.emit('searchTracks', {
-        track_name: searchText
-    });
+    var source = document.getElementById('search-source').value;
+    var data = {
+        track_name: searchText,
+        source: source
+    };
+    socket.emit('searchTracks', data);
 }
-//Has been changed to websocket
+
+function submitYouTubeLink() {
+    var youtubeLink = document.getElementById('youtube-link').value;
+    var data = {
+        youtube_link: youtubeLink
+    };
+    socket.emit('addYouTubeLinkToQueue', data);
+}
+
 function handleSearchResults(data) {
     var dropdown = document.getElementById('dropdown');
     dropdown.innerHTML = '';
-
     data.forEach(track => {
         var item = createTrackItem(track);
         dropdown.appendChild(item);
     });
-
     dropdown.style.display = 'block';
 }
 
-//Has been changed to websocket
 function createTrackItem(track) {
     var item = document.createElement('div');
     item.className = 'item';
@@ -269,42 +362,33 @@ function createTrackItem(track) {
     trackName.textContent = track.track_name;
     trackName.style.fontWeight = 'bold';
 
-    // Create the artist name element
     var artistName = document.createElement('div');
     artistName.textContent = track.artist_name;
 
-    // Append the track name and artist name to the text wrapper
     textWrapper.appendChild(trackName);
     textWrapper.appendChild(artistName);
 
-    // Create the track length element
     var trackLength = document.createElement('div');
     trackLength.textContent = track.track_length;
-    trackLength.style.marginLeft = 'auto'; // Push the track length to the right
+    trackLength.style.marginLeft = 'auto';
 
-    // Append image and text wrapper to the item
     item.appendChild(img);
     item.appendChild(textWrapper);
     item.appendChild(trackLength);
 
-    // Set onclick function for item
     item.onclick = function() {
         console.log('Track clicked:', track.track_name);
         var selectedItem = document.getElementById('selected-item');
         selectedItem.dataset.track = JSON.stringify(track);
         setText();
     };
-
     return item;
 }
-
 
 
 function setText() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
-    /*Print all data in track*/
-    var displayStyle = window.getComputedStyle(selectedItem).display;
     selectedItem.style.display = 'block';
     var infoText = document.getElementById('info-text');
     if (infoText.value == null) {
@@ -321,42 +405,38 @@ function setText() {
     sArtistName.textContent = track.artist_name;
     sTrackLength.textContent = track.track_length;
     var addButton = document.getElementById('add-button');
-    var btnDisplayStyle = window.getComputedStyle(addButton).display;
-    if (btnDisplayStyle == 'none') {
+    if (window.getComputedStyle(addButton).display == 'none') {
         addButton.style.display = 'block';
     }
 }
 
+
 function submitSong() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
-    
     socket.emit('addSongToQueue', {
         track: track
     });
     socket.emit('get_queue_length');
-    //Consider removing the result text if the song shows up in the queue right away
     var resultText = document.getElementById('resulttext');
     resultText.textContent = "Song added to queue!";
     setTimeout(function() {
         resultText.textContent = "";
     }, 3000);
-    //resetSongSelectionUI();
 }
 
 
 socket.on('queueLength', function(data) {
     var queueLength = data.length;
     console.log('Queue length:', queueLength);
-
-    // Check if the queue was previously empty
     if (queueLength === 1) {
         if (!isPlaying) {
-            document.getElementById('playQueue').click(); // Automatically click the play queue button
+            document.getElementById('playQueue').click();
             console.log("Playing first song");
         }
     }
 });
+
 function resetSongSelectionUI() {
     var dropdown = document.getElementById('dropdown');
     dropdown.innerHTML = '';
@@ -370,42 +450,11 @@ function resetSongSelectionUI() {
     searchbar.value = '';
 }
 
-function updateUserQueue(queueData) {
-    if (window.location.pathname == "/"){
-        var userQueue = document.getElementById('userQueue');
-        userQueue.innerHTML = '';
-        queueData.forEach(song => {
-            var songContainer = document.createElement('div');
-            songContainer.className = 'song-container';
-            var img = document.createElement('img');
-            img.src = song.cover_url;
-            songContainer.appendChild(img);
-            var overlay = document.createElement('div');
-            overlay.className = 'overlay';
-            overlay.innerHTML = `
-                <div class="song-info">
-                    ${song.track_name}<br>
-                    By: ${song.artist_name}<br>  
-                    Submitted by: ${song.uid}   
-                </div>
-            `;
-            songContainer.appendChild(overlay);
-            userQueue.appendChild(songContainer);
-            adjustOverlayTextSize();
-        });
-    }
-    
-}
-
-/*Code for the player and admin panel*/
-
 function startPlay(){
     socket.emit('get_next_song');
     
 }
 
-
-//Has been changed to websocket
 function updateAdminQueue(data) {
     var queue = data.queue;
     if (!queue || queue.length === 0) {
@@ -413,17 +462,17 @@ function updateAdminQueue(data) {
         return;
     }
     console.log('Queue data:', queue);
+    /*
     var queuelist = document.getElementById('song-list');
-    queuelist.innerHTML = '';  // clear the queuelist
+    queuelist.innerHTML = '';
     queue.forEach(song => {
         var img = document.createElement('img');
         img.src = song.cover_url;
         img.style.width = '10%';
         queuelist.appendChild(img);
     });
+    */
 }
-
-
 
 
 function clearQueue() {
@@ -437,8 +486,6 @@ function clearQueue() {
     }
 }
 
-
-
 function playSong(song) {
     if (!song || Object.keys(song).length === 0){
         console.log('Queue is empty');
@@ -447,26 +494,23 @@ function playSong(song) {
         clearInterval(animationInterval);
         return;
     }
-
     console.log('Playing:', song.track_name, 'by', song.artist_name);
-    
-
-    //check if the website is the display page
     if (window.location.pathname === '/display') {
-        EmbedController.uri = song.uri;
-        EmbedController.loadUri(song.uri);
-        console.log('Playback started');
-
-        // Update the UI with the song details
+        if(song.source == 'spotify'){
+            EmbedController.uri = song.uri;
+            EmbedController.loadUri(song.uri);
+            console.log('Playback started');
+            EmbedController.play();
+            EmbedController.on('error', (error) => {
+                console.error("Playback error:", error);
+            });
+        } else if (song.source == 'youtube') {
+            document.getElementById('spotify-player').style.display = 'none';
+            var youtubePlayer = document.getElementById('youtube-player');
+            youtubePlayer.src = `https://www.youtube.com/embed/${song.track_id}?autoplay=1`;
+            youtubePlayer.style.display = 'block';
+        }
         setCurrentSongUI(song);
-        // Play the song
-        EmbedController.play();
-
-        // Listen for playback errors
-        EmbedController.on('error', (error) => {
-            console.error("Playback error:", error);
-        });
-
         isPlaying = true;
         updatePlayerProgress(song.track_length);
         bpm = song.bpm;
@@ -500,29 +544,22 @@ function calculateFrameDuration(bpm) {
 
 function animateFrames(bpm) {
     if (animationInterval) {
-        clearInterval(animationInterval); // Clear existing interval
+        clearInterval(animationInterval);
     }
-
     var frames = [frame0, frame1, frame2];
     var frameIndex = 0;
     var frameDuration = calculateFrameDuration(bpm);
-    var increment = true; // Variable to track whether to increment or decrement
-
+    var increment = true;
     animationInterval = setInterval(function() {
         document.getElementById('catjam').src = frames[frameIndex];
-
         if (increment) {
             frameIndex++;
         } else {
             frameIndex--;
         }
-
-        // If we've reached the end of the array, start decrementing
         if (frameIndex === frames.length - 1) {
             increment = false;
         }
-
-        // If we've reached the start of the array, start incrementing
         if (frameIndex === 0) {
             increment = true;
         }
@@ -536,15 +573,13 @@ function defaultFrame() {
 
 function adjustOverlayTextSize() {
     const overlays = document.querySelectorAll('.overlay');
-
     overlays.forEach(overlay => {
         let fontSize = parseInt(window.getComputedStyle(overlay).fontSize);
-        while (overlay.scrollHeight > overlay.clientHeight && fontSize > 10) { // Minimum font size of 10px
+        while (overlay.scrollHeight > overlay.clientHeight && fontSize > 10) {
             fontSize--;
             overlay.style.fontSize = `${fontSize}px`;
         }
     });
 }
-
 
 window.addEventListener('resize', adjustOverlayTextSize);

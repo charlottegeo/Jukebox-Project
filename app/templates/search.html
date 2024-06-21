@@ -1,8 +1,5 @@
-<!--app/templates/search.html-->
 <!DOCTYPE html>
-
 <html>
-
 <head>
     <title>CatJam</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -13,41 +10,59 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
     <link rel="manifest" href="/static/img/site.webmanifest">
 </head>
-
 <body>
-    <div style="display: flex; align-items: center;">
-        <h1>CatJam</h1>
-        <div id="profilePicContainer">
-            <img id="profilePic" src="{{ auth_dict['picture'] }}" alt="Profile Picture" style="border-radius: 50%; width: 50px; height: 50px;">
-        </div>
-    </div>
-    <div class="queue-header">
-        <h2>Your Queue</h2>
-    </div>
-    <div class="queue">
-        <div id="userQueue"></div>
-    </div>
-    <div class="search">
-        <input type="text" id="searchbar" name="song" placeholder="Search for a song here (Press enter to search):">
-    </div>
-    <div id="dropdown" aria-labelledby="searchbar"></div>
-    <div class="selected" aria-labelledby="searchbar">
-        <div id="info-text"></div>
-        <div id="selected-song">
-            <div id="selected-item">
-                <div id="selected-imgtext">
-                    <img id="selected-img">
-                    <div id="selected-text">
-                        <div id="selected-track-name"></div>
-                        <div id="selected-artist-name"></div>
+    <div class="container">
+        <header style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>CatJam</h1>
+            <div class="profile">
+                <img id="profile-pic" src="{{ auth_dict['picture'] }}" alt="Profile Picture" style="width: 50px; height: 50px; border-radius: 50%; cursor: pointer;">
+                <div class="profile-dropdown">
+                    <button id="logout-button">Log Out</button>
+                </div>
+            </div>
+        </header>
+        <section>
+            <div class="search-source">
+                <select id="search-source">
+                    <option value="spotify">Spotify</option>
+                    <option value="youtube">YouTube</option>
+                </select>
+            </div>
+            <div class="search">
+                <input type="text" id="searchbar" name="song" placeholder="Search for a song here (Press enter to search)">
+                <input type="text" id="youtube-link" name="youtube-link" placeholder="Enter YouTube link here" style="display:none;">
+            </div>
+            <div id="dropdown" aria-labelledby="searchbar"></div>
+            <div class="selected" aria-labelledby="searchbar">
+                <div id="info-text"></div>
+                <div id="selected-song">
+                    <div id="selected-item">
+                        <div id="selected-imgtext">
+                            <img id="selected-img">
+                            <div id="selected-text">
+                                <div id="selected-track-name"></div>
+                                <div id="selected-artist-name"></div>
+                            </div>
+                        </div>
+                        <div id="selected-track-length"></div>
                     </div>
                 </div>
-                <div id="selected-track-length"></div>
+                <button id="add-button" onclick="submitSong()">Add to Queue</button>
             </div>
-        </div>
-        <button id="add-button" onclick="submitSong()">Add to Queue</button>
+            <div id="resulttext"></div>
+        </section>
+        <section class="user-queue">
+            <h2>Your Queue</h2>
+            <div id="user-queue-list"></div>
+        </section>
+        <section class="current-song">
+            <h2>Currently Playing</h2>
+            <div id="current-song-info">
+                <img id="current-album-cover" src="">
+                <div id="current-artist-name"></div>
+                <div id="current-song-title"></div>
+            </div>
+        </section>
     </div>
-    <div id="resulttext"></div>
 </body>
-
 </html>

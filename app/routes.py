@@ -21,3 +21,8 @@ def admin(auth_dict=None):
     if not auth_dict['admin']:
         abort(403)
     return render_template('admin.html')
+
+@main.route('/logout')
+def logout():
+    session.clear()
+    return redirect(auth.oidc_client_provider.logout())
