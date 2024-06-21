@@ -6,14 +6,19 @@ var typingTimer;
 var doneTypingInterval = 500;
 var EmbedController;
 var bpm;
+var authToken;
+var socket;
+
 
 document.addEventListener('DOMContentLoaded', function() {
+    authToken = localStorage.getItem('authToken');
+
     if (!authToken) {
         console.error('Auth token is missing');
         alert('Authentication token is missing. Please login again.');
         window.location.href = '/';
     } else {
-        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
+        socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
             query: { token: authToken }
         });
 
@@ -128,6 +133,23 @@ document.addEventListener('DOMContentLoaded', function() {
             currentSongTitle.textContent = song.track_name;
         });
 
+        socket.on('queueLength', function(data) {
+            var queueLength = data.length;
+            console.log('Queue length:', queueLength);
+            if (queueLength === 1) {
+                if (!isPlaying) {
+                    document.getElementById('playQueue').click();
+                    console.log("Playing first song");
+                }
+            }
+        });
+        
+        socket.on('vote_count', function(data) {
+            const voteCount = data.votes;
+            const voteThreshold = data.threshold;
+            console.log(`Vote count: ${voteCount}/${voteThreshold}`);
+        });
+        
         socket.on('updateUserQueue', function(data) {
             var userQueueList = document.getElementById('user-queue-list');
             userQueueList.innerHTML = '';
@@ -417,22 +439,7 @@ function submitSong() {
     }, 3000);
 }
 
-socket.on('queueLength', function(data) {
-    var queueLength = data.length;
-    console.log('Queue length:', queueLength);
-    if (queueLength === 1) {
-        if (!isPlaying) {
-            document.getElementById('playQueue').click();
-            console.log("Playing first song");
-        }
-    }
-});
 
-socket.on('vote_count', function(data) {
-    const voteCount = data.votes;
-    const voteThreshold = data.threshold;
-    console.log(`Vote count: ${voteCount}/${voteThreshold}`);
-});
 
 function getQueueUserCount() {
     socket.emit('getQueueUserCount');
