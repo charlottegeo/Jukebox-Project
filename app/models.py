@@ -31,10 +31,14 @@ class UserQueue:
     def add_song(self, song):
         self.queue.append(song)
 
-    def remove_song(self):
+    def remove_song(self, index=0):
         if self.queue:
-            return self.queue.pop(0)
+            return self.queue.pop(index)
         return None
 
     def get_queue(self):
         return [song.to_dict() for song in self.queue]
+
+    def reorder_queue(self, old_index, new_index):
+        if 0 <= old_index < len(self.queue) and 0 <= new_index < len(self.queue):
+            self.queue.insert(new_index, self.queue.pop(old_index))

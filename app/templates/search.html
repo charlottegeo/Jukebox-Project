@@ -4,6 +4,7 @@
     <title>CatJam</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
@@ -51,6 +52,7 @@
             </div>
             <div id="resulttext"></div>
         </section>
+        
         <section class="user-queue">
             <h2>Your Queue</h2>
             <div id="user-queue-list"></div>
@@ -63,6 +65,10 @@
                 <div id="current-song-title"></div>
             </div>
         </section>
+        <section class="vote-skip">
+            <button onclick="voteToSkip()">Vote to Skip</button>
+        </section>
+        
     </div>
 </body>
 </html>

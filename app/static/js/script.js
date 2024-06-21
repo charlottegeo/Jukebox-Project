@@ -14,6 +14,9 @@ var bpm;
 socket.on('connect', function() {
     console.log('Socket.IO connected');
     socket.emit('ping');
+    if(window.location.pathname === '/'){
+        socket.emit('get_user_queue');
+    }
 });
 
 socket.on('message', function(data) {
@@ -127,7 +130,7 @@ socket.on('updateCurrentSong', function(song) {
 socket.on('updateUserQueue', function(data) {
     var userQueueList = document.getElementById('user-queue-list');
     userQueueList.innerHTML = '';
-    data.queue.forEach(song => {
+    data.queue.forEach((song, index) => {
         var songContainer = document.createElement('div');
         songContainer.className = 'song-container';
         var img = document.createElement('img');
@@ -138,11 +141,19 @@ socket.on('updateUserQueue', function(data) {
         overlay.innerHTML = `
             <div class="song-info">
                 ${song.track_name}<br>
-                By: ${song.artist_name}<br>  
+                By: ${song.artist_name}<br>
+                <button onclick="removeSongFromQueue(${index})">Remove</button>
             </div>
         `;
         songContainer.appendChild(overlay);
         userQueueList.appendChild(songContainer);
+    });
+    new Sortable(userQueueList, {
+        onEnd: function(evt) {
+            let oldIndex = evt.oldIndex;
+            let newIndex = evt.newIndex;
+            socket.emit('reorderQueue', { oldIndex: oldIndex, newIndex: newIndex });
+        }
     });
 });
 
@@ -334,6 +345,15 @@ function submitYouTubeLink() {
     socket.emit('addYouTubeLinkToQueue', data);
 }
 
+function submitSong() {
+    const track = JSON.parse(document.getElementById('selected-item').dataset.track);
+    socket.emit('addSongToQueue', { track: track });
+}
+
+function removeSongFromQueue(index) {
+    socket.emit('removeSongFromQueue', { index: index });
+}
+
 function handleSearchResults(data) {
     var dropdown = document.getElementById('dropdown');
     dropdown.innerHTML = '';
@@ -437,6 +457,12 @@ socket.on('queueLength', function(data) {
     }
 });
 
+socket.on('vote_count', function(data) {
+    const voteCount = data.votes;
+    const voteThreshold = data.threshold;
+    console.log(`Vote count: ${voteCount}/${voteThreshold}`);
+});
+
 function resetSongSelectionUI() {
     var dropdown = document.getElementById('dropdown');
     dropdown.innerHTML = '';
@@ -535,6 +561,10 @@ function resetPlayerUI() {
 function updatePlayerProgress(trackLength) {
     document.getElementById('progressBar').max = 100;
     document.getElementById('duration').innerHTML = trackLength;
+}
+
+function voteToSkip() {
+    socket.emit('vote_to_skip');
 }
 
 function calculateFrameDuration(bpm) {

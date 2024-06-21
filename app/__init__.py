@@ -5,7 +5,8 @@ from flask_migrate import Migrate
 from flask_pyoidc.flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMetadata
 from config import Config
-
+from app import models, events
+import threading
 
 db = SQLAlchemy()
 socketio = SocketIO()
@@ -31,3 +32,4 @@ from app.routes import main as main_blueprint
 from app import models, events
 
 app.register_blueprint(main_blueprint)
+threading.Thread(target=events.check_quiet_hours).start()

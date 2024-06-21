@@ -11,6 +11,9 @@ import paramiko
 import re
 from bs4 import BeautifulSoup
 import requests
+import datetime
+from datetime import time
+import threading
 
 load_dotenv()
 token = get_token()
@@ -23,7 +26,33 @@ SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 user_queues = {} #to store user queues
 user_order = [] #to store the order of users in the queue
 
+skip_votes = {}
+
 song_length_limit = None
+
+QUIET_HOURS = {
+    "Sunday": (23, 7),     # 11 PM to 7 AM
+    "Monday": (23, 7),
+    "Tuesday": (23, 7),
+    "Wednesday": (23, 7),
+    "Thursday": (23, 7),
+    "Friday": (1, 7),      # 1 AM to 7 AM
+    "Saturday": (1, 7)
+}
+
+EXAM_WEEKS = { # Exam weeks for the next few years
+    #ok surely there's a better way to do this but I'm too lazy to figure it out
+    2024: [(datetime.date(2024, 12, 11), datetime.date(2024, 12, 18)),
+           (datetime.date(2025, 4, 30), datetime.date(2025, 5, 7)),
+           (datetime.date(2025, 8, 8), datetime.date(2025, 8, 12))],
+    2025: [(datetime.date(2025, 12, 10), datetime.date(2025, 12, 17)),
+           (datetime.date(2026, 4, 29), datetime.date(2026, 5, 6)),
+           (datetime.date(2026, 8, 7), datetime.date(2026, 8, 11))],
+    2026: [(datetime.date(2026, 12, 9), datetime.date(2026, 12, 16)),
+           (datetime.date(2027, 4, 28), datetime.date(2027, 5, 5)),
+           (datetime.date(2027, 8, 6), datetime.date(2027, 8, 10))]
+}
+
 
 @socketio.on('connect')
 def handle_connect():
@@ -74,11 +103,36 @@ def handle_add_song_to_queue(data):
     else:
         emit('error', {'message': 'Invalid song data.'})
 
+@socketio.on('removeSongFromQueue')
+def handle_remove_song_from_queue(data):
+    song_index = data.get('index')
+    uid = session.get('uid') or session.get('preferred_username')
+    if uid in user_queues:
+        user_queues[uid].remove_song(song_index)
+        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+
 @socketio.on('get_user_queue')
 def handle_get_user_queue():
     uid = session.get('uid') or session.get('preferred_username')
     if uid in user_queues:
         emit('updateUserQueue', {'queue': user_queues[uid].get_queue()})
+    else:
+        emit('updateUserQueue', {'queue': []})
+
+@socketio.on('vote_to_skip')
+def handle_vote_to_skip():
+    uid = session.get('uid') or session.get('preferred_username')
+    if uid not in skip_votes:
+        skip_votes[uid] = True
+        active_users = len(user_queues)
+        skip_threshold = active_users // 2 + 1  # Majority vote required to skip
+
+        if len(skip_votes) >= skip_threshold:
+            play_next_song()
+            skip_votes.clear()
+            emit('message', {'action': 'skipSong'}, broadcast=True)
+        else:
+            emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, broadcast=True)
 
 @socketio.on('isPlaying')
 def handle_is_playing(data):
@@ -95,12 +149,14 @@ def handle_get_next_song():
     play_next_song()
 
 
+
 @socketio.on('clearQueue')
 def handle_clear_queue():
     uid = session.get('uid') or session.get('preferred_username')
     if uid in user_queues:
         user_queues[uid].queue = []
-        emit('message', {'action': 'updateQueue', 'queue': []}, broadcast=True)
+        emit('updateUserQueue', {'queue': []}, room=request.sid)
+        emit('queueUpdated', broadcast=True)
 
 @socketio.on('secondsToMinutes')
 def handle_seconds_to_minutes(data):
@@ -136,13 +192,42 @@ def handle_change_cat_color(color):
     selected_color = color
     emit('color_changed', {'color': color}, broadcast=True)
 
+def is_exam_week():
+    current_date = datetime.datetime.now().date()
+    current_year = current_date.year
+    for start_date, end_date in EXAM_WEEKS.get(current_year, []):
+        if start_date <= current_date <= end_date:
+            return True
+    return False
+
+def is_quiet_hours():
+    if is_exam_week():
+        return True
+
+    current_day = datetime.datetime.now().strftime("%A")
+    current_hour = datetime.datetime.now().hour
+    start, end = QUIET_HOURS[current_day]
+
+    if start < end:
+        return start <= current_hour < end
+    else:
+        return current_hour >= start or current_hour < end
+
+def set_quiet_hours_volume():
+    if is_quiet_hours():
+        handle_set_volume({'volume': 60})  #this is a placeholder value
+        #TODO: limit max volume during quiet hours
+
+def check_quiet_hours():
+    while True:
+        set_quiet_hours_volume()
+        time.sleep(3600)  # Check every hour
 
 @socketio.on('set_volume')
 def handle_set_volume(data):
-    volume = data.get('volume')
-
-    if not isinstance(volume, int) or not (0 <= volume <= 100):
-        emit('error', {'message': 'Invalid volume level.'})
+    volume = sanitize_volume_input(data['volume'])
+    if volume is None:
+        emit('error', {'message': 'Invalid volume input.'})
         return
 
     try:
@@ -155,6 +240,16 @@ def handle_set_volume(data):
     except Exception as e:
         print(f"Error setting volume: {str(e)}")
         emit('error', {'message': 'Failed to set volume.'})
+
+def sanitize_volume_input(volume):
+    try:
+        volume = int(volume)
+        if 0 <= volume <= 100:
+            return volume
+        else:
+            return None
+    except ValueError:
+        return None
 
 def add_song_to_user_queue(uid, song):
     global song_length_limit
@@ -181,6 +276,15 @@ def clear_user_queue(uid):
     if uid in user_queues:
         user_queues[uid].queue = []
 
+@socketio.on('reorderQueue')
+def handle_reorder_queue(data):
+    old_index = data.get('oldIndex')
+    new_index = data.get('newIndex')
+    uid = session.get('uid') or session.get('preferred_username')
+
+    if uid in user_queues and old_index is not None and new_index is not None:
+        user_queues[uid].reorder_queue(old_index, new_index)
+        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 def get_next_user():
     if user_order:
