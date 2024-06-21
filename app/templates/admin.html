@@ -14,7 +14,12 @@
 <body>
     <div class="admin-container">
         <h1>Admin Panel</h1>
-        <button id="clearQueueBtn" class="clear-queue-button">Clear Queue</button>
+        <button id="clearAllQueuesBtn" class="clear-all-queues-button">Clear All Queues</button>
+        <div id="specific-queue-controls">
+            <input type="text" id="user-id-input" placeholder="Enter user ID">
+            <button id="clearSpecificQueueBtn">Clear Specific Queue</button>
+        </div>
+
         <button id="pausePlayBtn" class="pause-play-button">Pause</button>
         <button id="skipSongBtn" class="skip-song-button">Skip Song</button>
         <button id="refreshDisplayBtn" class="refresh-display-button">Refresh Display</button>
@@ -31,6 +36,11 @@
             <input type="text" id="songLengthInput" placeholder="MM:SS or HH:MM:SS">
             <button id="setSongLengthBtn">Set Song Length Limit</button>
         </div>
+        <section class="queue-user-count">
+            <h2>Queue/User Count</h2>
+            <button onclick="getQueueUserCount()">Refresh Count</button>
+            <div id="queue-user-count"></div>
+        </section>        
     </div>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

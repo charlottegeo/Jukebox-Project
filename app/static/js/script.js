@@ -133,6 +133,7 @@ socket.on('updateUserQueue', function(data) {
     data.queue.forEach((song, index) => {
         var songContainer = document.createElement('div');
         songContainer.className = 'song-container';
+        songContainer.setAttribute('data-index', index);
         var img = document.createElement('img');
         img.src = song.cover_url;
         songContainer.appendChild(img);
@@ -147,7 +148,13 @@ socket.on('updateUserQueue', function(data) {
         `;
         songContainer.appendChild(overlay);
         userQueueList.appendChild(songContainer);
+
+        // Add fade-in animation
+        songContainer.classList.add('added');
+        setTimeout(() => songContainer.classList.remove('added'), 500); // Remove class after animation
     });
+
+    // Initialize Sortable.js
     new Sortable(userQueueList, {
         onEnd: function(evt) {
             let oldIndex = evt.oldIndex;
@@ -156,6 +163,16 @@ socket.on('updateUserQueue', function(data) {
         }
     });
 });
+
+function removeSongFromQueue(index) {
+    const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
+    if (songContainer) {
+        songContainer.classList.add('removed');
+        setTimeout(() => {
+            socket.emit('removeSongFromQueue', { index: index });
+        }, 500); //Wait for animation to finish
+    }
+}
 
 
 /*Code for main/search page*/
@@ -257,8 +274,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchSourceSelect = document.getElementById('search-source');
         const searchBar = document.getElementById('searchbar');
         const youtubeLinkInput = document.getElementById('youtube-link');
+        let searchSource = 'spotify';
         const logoutButton = document.getElementById('logout-button');
         searchSourceSelect.addEventListener('change', function() {
+            searchSource = this.value;
             if (this.value === 'youtube') {
                 searchBar.style.display = 'none';
                 youtubeLinkInput.style.display = 'block';
@@ -267,21 +286,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 youtubeLinkInput.style.display = 'none';
             }
         });
-        searchInput.textContent = "";
+        searchBar.textContent = "";
         youtubeLinkInput.textContent = "";
-        searchInput.addEventListener('keyup', function(event) {
-            clearTimeout(typingTimer);
-            if (event.key === "Enter") {
+        searchBar.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
                 event.preventDefault();
-                searchTracks();
-            } else {
-                typingTimer = setTimeout(searchTracks, doneTypingInterval);
+                handleInput(searchBar.value, searchSource);
             }
         });
+    
         youtubeLinkInput.addEventListener('keyup', function(event) {
-            if (event.key === "Enter") {
+            if (event.key === 'Enter') {
                 event.preventDefault();
-                submitYouTubeLink();
+                handleInput(youtubeLinkInput.value, searchSource);
             }
         });
         logoutButton.addEventListener('click', function() {
@@ -297,7 +314,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     if (window.location.pathname == "/admin") {
-        document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
+        const clearAllQueuesBtn = document.getElementById('clearAllQueuesBtn');
+        const clearSpecificQueueBtn = document.getElementById('clearSpecificQueueBtn');
+        const userIdInput = document.getElementById('user-id-input');
+
+        clearAllQueuesBtn.addEventListener('click', function() {
+            socket.emit('clearAllQueues');
+        });
+
+        clearSpecificQueueBtn.addEventListener('click', function() {
+            const userId = userIdInput.value;
+            if (userId) {
+                socket.emit('clearSpecificQueue', { uid: userId });
+            }
+        });
+        socket.on('queueUserCount', function(data) {
+            const countDisplay = document.getElementById('queue-user-count');
+            countDisplay.textContent = `Queues: ${data.queues}, Users: ${data.users}`;
+        });
         document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
         document.getElementById('skipSongBtn').addEventListener('click', function() {
             isPlaying = false;
@@ -326,6 +360,29 @@ function populateCatColorDropdown() {
     socket.emit('get_cat_colors');
 }
 
+function handleInput(input, source) {
+    if (source === 'spotify') {
+        if (isSpotifyPlaylist(input)) {
+            socket.emit('addPlaylistToQueue', { link: input, source: 'spotify' });
+        } else {
+            socket.emit('searchTracks', { track_name: input });
+        }
+    } else if (source === 'youtube') {
+        if (isYouTubePlaylist(input)) {
+            socket.emit('addPlaylistToQueue', { link: input, source: 'youtube' });
+        } else {
+            socket.emit('addYoutubeLinkToQueue', { youtube_link: input });
+        }
+    }
+}
+
+function isSpotifyPlaylist(link) {
+    return link.includes('playlist');
+}
+
+function isYouTubePlaylist(link) {
+    return link.includes('playlist');
+}
 
 function searchTracks() {
     var searchText = document.getElementById('searchbar').value;
@@ -351,7 +408,13 @@ function submitSong() {
 }
 
 function removeSongFromQueue(index) {
-    socket.emit('removeSongFromQueue', { index: index });
+    const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
+    if (songContainer) {
+        songContainer.classList.add('removed');
+        setTimeout(() => {
+            socket.emit('removeSongFromQueue', { index: index });
+        }, 500); // Wait for animation to finish
+    }
 }
 
 function handleSearchResults(data) {
@@ -463,6 +526,10 @@ socket.on('vote_count', function(data) {
     console.log(`Vote count: ${voteCount}/${voteThreshold}`);
 });
 
+function getQueueUserCount() {
+    socket.emit('getQueueUserCount');
+}
+
 function resetSongSelectionUI() {
     var dropdown = document.getElementById('dropdown');
     dropdown.innerHTML = '';
@@ -488,29 +555,13 @@ function updateAdminQueue(data) {
         return;
     }
     console.log('Queue data:', queue);
-    /*
-    var queuelist = document.getElementById('song-list');
-    queuelist.innerHTML = '';
-    queue.forEach(song => {
-        var img = document.createElement('img');
-        img.src = song.cover_url;
-        img.style.width = '10%';
-        queuelist.appendChild(img);
-    });
-    */
 }
 
 
 function clearQueue() {
     socket.emit('clearQueue');
-    if (window.location.pathname === '/display') {
-        document.getElementById('song-list').innerHTML = '';
-        resetPlayerUI();
-        EmbedController.pause();
-        defaultFrame();
-        clearInterval(animationInterval);
-    }
 }
+
 
 function playSong(song) {
     if (!song || Object.keys(song).length === 0){

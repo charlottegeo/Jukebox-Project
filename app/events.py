@@ -1,9 +1,10 @@
+import json
 import os
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from app import socketio
 from app.models import Song, UserQueue
-from app.utils.main import get_token, search_for_tracks
+from app.utils.main import get_token, search_for_tracks, get_spotify_playlist_tracks
 from app.utils.track_wrapper import TrackWrapper, formatTime
 from .util import csh_user_auth, decode_token
 from flask import session, request, current_app
@@ -28,7 +29,7 @@ user_order = [] #to store the order of users in the queue
 
 skip_votes = {}
 
-song_length_limit = None
+MAX_SONG_LENGTH = 10 * 60  # 10 minutes
 
 QUIET_HOURS = {
     "Sunday": (23, 7),     # 11 PM to 7 AM
@@ -97,11 +98,35 @@ def handle_add_song_to_queue(data):
     track_data = data.get('track')
     uid = session.get('uid') or session.get('preferred_username')
     if track_data and uid:
-        add_song_to_user_queue(uid, track_data)
-        emit('queueUpdated', broadcast=True)
-        check_and_play_next_song()
+        track_length = track_data.get('track_length')
+        if track_length > MAX_SONG_LENGTH:
+            emit('error', {'message': 'Song length exceeds the maximum allowed duration.'})
+        else:
+            add_song_to_user_queue(uid, track_data)
+            emit('queueUpdated', broadcast=True)
+            check_and_play_next_song()
     else:
         emit('error', {'message': 'Invalid song data.'})
+
+@socketio.on('addPlaylistToQueue')
+def handle_add_playlist_to_queue(data):
+    link = data.get('link')
+    source = data.get('source')
+    uid = session.get('uid') or session.get('preferred_username')
+    
+    if source == 'spotify':
+        tracks = get_spotify_playlist_tracks(link)
+    elif source == 'youtube':
+        tracks = get_youtube_playlist_tracks(link)
+    else:
+        tracks = []
+
+    for track in tracks:
+        add_song_to_user_queue(uid, track)
+
+    emit('queueUpdated', broadcast=True)
+    check_and_play_next_song()
+
 
 @socketio.on('removeSongFromQueue')
 def handle_remove_song_from_queue(data):
@@ -252,10 +277,6 @@ def sanitize_volume_input(volume):
         return None
 
 def add_song_to_user_queue(uid, song):
-    global song_length_limit
-    if song_length_limit is not None and parse_duration_in_seconds(song['track_length']) > parse_duration_in_seconds(song_length_limit):
-        emit('error', {'message': 'Song length exceeds the limit.'})
-        return
     if uid not in user_queues:
         user_queues[uid] = UserQueue(uid)
         user_order.append(uid)
@@ -276,6 +297,20 @@ def clear_user_queue(uid):
     if uid in user_queues:
         user_queues[uid].queue = []
 
+@socketio.on('clearSpecificQueue')
+def handle_clear_specific_queue(data):
+    uid = data.get('uid')
+    if uid in user_queues:
+        user_queues[uid].queue = []
+        emit('updateUserQueue', {'queue': []}, room=request.sid)
+        emit('queueUpdated', broadcast=True)
+
+@socketio.on('clearAllQueues')
+def handle_clear_all_queues():
+    for uid in user_queues:
+        user_queues[uid].queue = []
+    emit('queueUpdated', broadcast=True)
+
 @socketio.on('reorderQueue')
 def handle_reorder_queue(data):
     old_index = data.get('oldIndex')
@@ -285,6 +320,12 @@ def handle_reorder_queue(data):
     if uid in user_queues and old_index is not None and new_index is not None:
         user_queues[uid].reorder_queue(old_index, new_index)
         emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+
+@socketio.on('getQueueUserCount')
+def handle_get_queue_user_count():
+    queue_count = len(user_queues)
+    user_count = len(set(user_queues.keys()))
+    emit('queueUserCount', {'queues': queue_count, 'users': user_count})
 
 def get_next_user():
     if user_order:
@@ -358,6 +399,52 @@ def parse_youtube_link(youtube_link):
         print(f"Error parsing YouTube link: {e}")
         return None
     
+def get_youtube_playlist_tracks(link):
+    try:
+        response = requests.get(link)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        scripts = soup.find_all('script')
+
+        tracks = []
+        for script in scripts:
+            if 'ytInitialData' in script.text:
+                initial_data = script.string
+                break
+        else:
+            raise ValueError("ytInitialData not found in page scripts")
+
+        playlist_info = re.search(r'ytInitialData\s*=\s*(\{.*?\});', initial_data)
+        if not playlist_info:
+            raise ValueError("Playlist info not found in ytInitialData")
+
+        playlist_json = json.loads(playlist_info.group(1))
+        playlist_items = playlist_json['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
+
+        for item in playlist_items:
+            video_info = item['playlistVideoRenderer']
+            video_id = video_info['videoId']
+            track_name = video_info['title']['simpleText']
+            artist_name = video_info['shortBylineText']['runs'][0]['text']
+            duration_text = video_info['lengthText']['simpleText']
+            track_length = parse_duration_in_seconds(duration_text)
+
+            tracks.append({
+                'track_name': track_name,
+                'artist_name': artist_name,
+                'track_length': track_length,
+                'cover_url': f'https://img.youtube.com/vi/{video_id}/0.jpg',
+                'track_id': video_id,
+                'uri': f'https://www.youtube.com/watch?v={video_id}',
+                'bpm': 'Unknown',
+                'source': 'youtube'
+            })
+
+        return tracks
+
+    except Exception as e:
+        print(f"Error parsing YouTube playlist link: {e}")
+        return []
+    
 def parse_duration(duration_str):
     match = re.match(r'PT(?:(\d+)M)?(?:(\d+)S)?', duration_str)
     if match:
@@ -367,18 +454,10 @@ def parse_duration(duration_str):
     return 'Unknown'
 
 def parse_duration_in_seconds(duration_str):
-    import re
-    pattern = re.compile(r'(?:(\d+):)?(\d+):(\d+)')
-    match = pattern.match(duration_str)
+    match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
     if match:
         hours = int(match.group(1)) if match.group(1) else 0
-        minutes = int(match.group(2))
-        seconds = int(match.group(3))
+        minutes = int(match.group(2)) if match.group(2) else 0
+        seconds = int(match.group(3)) if match.group(3) else 0
         return hours * 3600 + minutes * 60 + seconds
-    pattern = re.compile(r'(\d+):(\d+)')
-    match = pattern.match(duration_str)
-    if match:
-        minutes = int(match.group(1))
-        seconds = int(match.group(2))
-        return minutes * 60 + seconds
     return 0

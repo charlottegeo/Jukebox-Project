@@ -519,3 +519,22 @@ progress[value]::-moz-progress-bar {
         width: 100%;
     }
 }
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.song-container.added {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.song-container.removed {
+    animation: fadeOut 0.5s ease-in-out;
+    display: none; 
+}

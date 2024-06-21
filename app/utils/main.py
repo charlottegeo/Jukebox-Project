@@ -108,9 +108,15 @@ def search_for_tracks(
         return array
     except Exception as e:
         return None
-
-def search_youtube(query, max_results=5):
-    pass
+    
+def get_spotify_playlist_tracks(link):
+    playlist_id = link.split('/')[-1].split('?')[0]
+    token = get_token()
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+    headers = get_auth_header(token)
+    response = requests.get(url, headers=headers)
+    tracks = response.json().get('items', [])
+    return [TrackWrapper(track['track']).to_dict() for track in tracks]
     
 def get_song_queue(queue: SongQueue):
     """
