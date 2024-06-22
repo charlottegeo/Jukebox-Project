@@ -1,87 +1,93 @@
-<!--display.html-->
 <!DOCTYPE html>
-<!--https://www.w3schools.com/html/default.asp-->
-<!--https://www.w3schools.com/css/default.asp-->
-
 <html>
+<head>
+    <title>CatJam Display</title>
+    <!-- Corrected script tag for Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        var frame0 = "/static/img/cats/White/PusayLeft.png";
+        var frame1 = "/static/img/cats/White/PusayCenter.png";
+        var frame2 = "/static/img/cats/White/PusayRight.png";
+        var song_placeholder = "/static/img/song_placeholder.png";
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
 
-    <head>
-        <title>CatJam Display</title>
-        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-        <script src="https://www.youtube.com/iframe_api"></script>
-        <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-        <script>
-            var frame0 = "/static/img/cats/White/PusayLeft.png";
-            var frame1 = "/static/img/cats/White/PusayCenter.png";
-            var frame2 = "/static/img/cats/White/PusayRight.png";
-            var song_placeholder = "/static/img/song_placeholder.png";
-            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-            socket.on('color_changed', function(data) {
-                console.log('Color changed to: ' + data.color);
-                var newColor = data.color;
-                frame0 = "/static/img/cats/" + newColor + "/PusayLeft.png";
-                frame1 = "/static/img/cats/" + newColor + "/PusayCenter.png";
-                frame2 = "/static/img/cats/" + newColor + "/PusayRight.png";
-                defaultFrame();
-                if(isPlaying){
-                    animateFrames(bpm);
+        socket.on('color_changed', function(data) {
+            console.log('Color changed to: ' + data.color);
+            var newColor = data.color;
+            frame0 = "/static/img/cats/" + newColor + "/PusayLeft.png";
+            frame1 = "/static/img/cats/" + newColor + "/PusayCenter.png";
+            frame2 = "/static/img/cats/" + newColor + "/PusayRight.png";
+            defaultFrame();
+            if (isPlaying) {
+                animateFrames(bpm);
+            }
+        });
+
+        function defaultFrame() {
+            document.getElementById('catjam').src = frame1;
+        }
+
+        function onYouTubeIframeAPIReady() {
+            ytPlayer = new YT.Player('youtube-player', {
+                height: '0',
+                width: '0',
+                videoId: '',  // Placeholder video ID, set it dynamically when needed
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
                 }
             });
-            function defaultFrame() {
-                document.getElementById('catjam').src = frame1;
-            }
-        </script>
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-        
-        <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
-        
-        <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
-        <link rel="manifest" href="/static/img/site.webmanifest">
-        </head>
-    <body>
-        <div class="container">
-            <header>
-
-                <div id="flexbox-middle">
-                    <div id="flexbox-middle-left">
-                        <h2>Now Playing</h2>
-                        <img id="album-cover" src="/static/img/song_placeholder.png" width="250" height="250">
-                        <div id="artist_name">Artist Name</div>
-                        <div id="song_title">Song Title</div>
-                        <div id="submitter_uid">Submitted By: -</div>
-                        <div id="progress">
-                            <div id="progressTimestamp" class="timeText">0:00</div>
-                            <progress id="progressBar" value="0" max="100"></progress>
-                            <div id="duration" class="timeText">0:00</div>
-                        </div>
-                    </div>
-                    <div id="flexbox-middle-right">
-                        <img id="catjam" src="/static/img/cats/White/frame1.png" width="250" height="250">
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
+    <link rel="manifest" href="/static/img/site.webmanifest">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div id="flexbox-middle">
+                <div id="flexbox-middle-left">
+                    <h2>Now Playing</h2>
+                    <img id="album-cover" src="/static/img/song_placeholder.png" width="250" height="250">
+                    <div id="artist_name">Artist Name</div>
+                    <div id="song_title">Song Title</div>
+                    <div id="submitter_uid">Submitted By: -</div>
+                    <div id="progress">
+                        <div id="progressTimestamp" class="timeText">0:00</div>
+                        <progress id="progressBar" value="0" max="100"></progress>
+                        <div id="duration" class="timeText">0:00</div>
                     </div>
                 </div>
-            </header>
-           
-            <div class="container">
-                <div class="section">
-                    <div class="song">
-                        <iframe id="youtube-player" style="display:none;" width="0" height="0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-                        <div id="spotify-player-wrapper">
-                            <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
-                            <script>
-                                var EmbedController;
-                                window.onSpotifyIframeApiReady = (IFrameAPI) => {
-                                    let element = document.getElementById('spotify-player');
-                                    let options = {
-                                        width: 0,
-                                        height: 0,
-                                        uri: null,
-                                    };
-                                    let callback = (controller) => {
-                                        EmbedController = controller;
-                                    };
-                                    IFrameAPI.createController(element, options, callback);
+                <div id="flexbox-middle-right">
+                    <img id="catjam" src="/static/img/cats/White/frame1.png" width="250" height="250">
+                </div>
+            </div>
+        </header>
+        <div class="container">
+            <div class="section">
+                <div class="song">
+                    <div id="youtube-player-wrapper">
+                        <div id="youtube-player" style="display:none;"></div>
+                    </div>
+                    <div id="spotify-player-wrapper">
+                        <iframe id="spotify-player" src="" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
+                        <script>
+                            var EmbedController;
+                            window.onSpotifyIframeApiReady = (IFrameAPI) => {
+                                let element = document.getElementById('spotify-player');
+                                let options = {
+                                    width: 0,
+                                    height: 0,
+                                    uri: null,
+                                };
+                                let callback = (controller) => {
+                                    EmbedController = controller;
                                     EmbedController.addListener('playback_update', e => {
                                         socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
                                         if (e.data.position == e.data.duration && e.data.duration != 0) {
@@ -98,23 +104,17 @@
                                         document.getElementById('progressBar').value = progress;
                                     });
                                 };
-                            </script>
-                            <script>
-                                socket.on('reloadPage', function() {
-                                    location.reload();
-                                });
-                            </script>
-                        </div>
-                        <section class="admin">
-                            <button id="startButton" class="start-button">Start</button>
-                            <button id="playQueue" class="play-queue-button">Play Queue</button>                        
-                        </section>
+                                IFrameAPI.createController(element, options, callback);
+                            };
+                        </script>
                     </div>
-                    
+                    <section class="admin">
+                        <button id="startButton" class="start-button">Start</button>
+                        <button id="playQueue" class="play-queue-button">Play Queue</button>                        
+                    </section>
                 </div>
             </div>
         </div>
-        
-    </body>
+    </div>
+</body>
 </html>
-
