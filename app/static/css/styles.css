@@ -540,3 +540,4 @@ progress[value]::-moz-progress-bar {
     animation: fadeOut 0.5s ease-in-out;
     display: none; 
 }
+

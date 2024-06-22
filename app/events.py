@@ -63,6 +63,8 @@ def handle_connect():
     uid = session.get('uid') or session.get('preferred_username')
     if uid not in user_queues:
         user_queues[uid] = UserQueue(uid)
+    if uid not in user_order:
+        user_order.append(uid)
     emit('message', {'message': 'Connected to server'})
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
@@ -108,18 +110,28 @@ def handle_add_song_to_queue(data):
                 emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'})
                 return
 
-            track['source'] = data.get('source', 'spotify')  #TODO: properly differentiate between sources
+            track['source'] = data.get('source', 'spotify')  # TODO: properly differentiate between sources
             
             add_song_to_user_queue(uid, track)
             emit('songAdded', {'message': 'Song added to queue', 'track': track})
+            print(f"Song added to queue: {track}")
 
             if uid in user_queues:
+                print(f"Current queue for {uid}: {user_queues[uid].get_queue()}")
                 emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+            
+            # Check if a song is currently playing. If not, play the next song.
+            if not isPlaying:
+                check_and_play_next_song()
         else:
             emit('error', {'message': 'Track length not provided'})
     else:
         emit('error', {'message': 'Track data not provided'})
 
+@socketio.on('youtubePlayerReady')
+def handle_youtube_player_ready():
+    emit('youtubePlayerIsReady', broadcast=True)
+    
 @socketio.on('addPlaylistToQueue')
 def handle_add_playlist_to_queue(data):
     link = data.get('link')
@@ -309,7 +321,8 @@ def sanitize_volume_input(volume):
 def add_song_to_user_queue(uid, song):
     if uid not in user_queues:
         user_queues[uid] = UserQueue(uid)
-        user_order.append(uid)
+    if uid not in user_order:
+        user_order.append(uid)  # Ensure the user is added to the order list
     user_queues[uid].add_song(Song(
         track_name=song['track_name'],
         artist_name=song['artist_name'],
@@ -321,6 +334,9 @@ def add_song_to_user_queue(uid, song):
         uid=uid,
         source=song['source']
     ))
+    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+
+
 
 
 @socketio.on('clearSpecificQueue')
@@ -355,24 +371,38 @@ def handle_get_queue_user_count():
 
 def get_next_user():
     if user_order:
-        user_order.append(user_order.pop(0))
+        user_order.append(user_order.pop(0))  # Rotate the order
         return user_order[0]
     return None
+
+
+def check_and_play_next_song():
+    global isPlaying
+    if not isPlaying:
+        play_next_song()
 
 def play_next_song():
     global isPlaying
     next_user = get_next_user()
-    if next_user and user_queues[next_user].queue:
-        next_song = user_queues[next_user].remove_song()
-        emit('message', {'action': 'next_song', 'nextSong': next_song.to_dict()}, broadcast=True)
-        isPlaying = True
+    print(f"Next user: {next_user}")
+    if next_user and next_user in user_queues:
+        user_queue = user_queues[next_user]
+        print(f"{next_user}'s queue: {user_queue.get_queue()}")
+        if user_queue.queue:
+            next_song = user_queue.remove_song()
+            print(f"Next song to play for user {next_user}: {next_song.to_dict()}")
+            emit('message', {'action': 'next_song', 'nextSong': next_song.to_dict()}, broadcast=True)
+            isPlaying = True
+        else:
+            print(f"User {next_user}'s queue is empty.")
+            emit('message', {'action': 'queue_empty'}, broadcast=True)
+            isPlaying = False
     else:
+        print("No next user found or user queue is empty.")
         emit('message', {'action': 'queue_empty'}, broadcast=True)
         isPlaying = False
 
-def check_and_play_next_song():
-    if not isPlaying:
-        play_next_song()
+
 
 @socketio.on('set_song_length_limit')
 def handle_set_song_length_limit(data):
