@@ -149,42 +149,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const voteThreshold = data.threshold;
             console.log(`Vote count: ${voteCount}/${voteThreshold}`);
         });
-        
+
         socket.on('updateUserQueue', function(data) {
-            var userQueueList = document.getElementById('user-queue-list');
-            userQueueList.innerHTML = '';
-            data.queue.forEach((song, index) => {
-                var songContainer = document.createElement('div');
-                songContainer.className = 'song-container';
-                songContainer.setAttribute('data-index', index);
-                var img = document.createElement('img');
-                img.src = song.cover_url;
-                songContainer.appendChild(img);
-                var overlay = document.createElement('div');
-                overlay.className = 'overlay';
-                overlay.innerHTML = `
-                    <div class="song-info">
-                        ${song.track_name}<br>
-                        By: ${song.artist_name}<br>
-                        <button onclick="removeSongFromQueue(${index})">Remove</button>
-                    </div>
-                `;
-                songContainer.appendChild(overlay);
-                userQueueList.appendChild(songContainer);
-
-                // Add fade-in animation
-                songContainer.classList.add('added');
-                setTimeout(() => songContainer.classList.remove('added'), 500); // Remove class after animation
-            });
-
-            // Initialize Sortable.js
-            new Sortable(userQueueList, {
-                onEnd: function(evt) {
-                    let oldIndex = evt.oldIndex;
-                    let newIndex = evt.newIndex;
-                    socket.emit('reorderQueue', { oldIndex: oldIndex, newIndex: newIndex });
-                }
-            });
+            updateUserQueueDisplay(data.queue);
         });
 
         function removeSongFromQueue(index) {
@@ -198,12 +165,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (window.location.pathname == "/") {
+            
             const searchSourceSelect = document.getElementById('search-source');
             const searchBar = document.getElementById('searchbar');
             const youtubeLinkInput = document.getElementById('youtube-link');
             let searchSource = 'spotify';
             const profilePic = document.getElementById('profile-pic');
             const profileDropdown = document.querySelector('.profile-dropdown');
+            searchBar.textContent = "";
+            youtubeLinkInput.textContent = "";
             searchSourceSelect.addEventListener('change', function() {
                 searchSource = this.value;
                 if (this.value === 'youtube') {
@@ -214,8 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     youtubeLinkInput.style.display = 'none';
                 }
             });
-            searchBar.textContent = "";
-            youtubeLinkInput.textContent = "";
             searchBar.addEventListener('keyup', function(event) {
                 if (event.key === 'Enter') {
                     event.preventDefault();
@@ -289,6 +257,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+function updateUserQueueDisplay(queue) {
+    var userQueueList = document.getElementById('user-queue-list');
+    userQueueList.innerHTML = '';  // Clear the existing queue
+
+    queue.forEach((song, index) => {
+        var songContainer = document.createElement('div');
+        songContainer.className = 'song-container';
+        songContainer.setAttribute('data-index', index);
+
+        var img = document.createElement('img');
+        img.src = song.cover_url;
+        songContainer.appendChild(img);
+
+        var overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        overlay.innerHTML = `
+            <div class="song-info">
+                ${song.track_name}<br>
+                By: ${song.artist_name}<br>
+                <button onclick="removeSongFromQueue(${index})">Remove</button>
+            </div>
+        `;
+        songContainer.appendChild(overlay);
+        userQueueList.appendChild(songContainer);
+
+        // Add fade-in animation
+        songContainer.classList.add('added');
+        setTimeout(() => songContainer.classList.remove('added'), 500);  // Remove class after animation
+    });
+
+    // Initialize Sortable.js
+    new Sortable(userQueueList, {
+        onEnd: function(evt) {
+            let oldIndex = evt.oldIndex;
+            let newIndex = evt.newIndex;
+            socket.emit('reorderQueue', { oldIndex: oldIndex, newIndex: newIndex });
+        }
+    });
+}
+
 function populateCatColorDropdown() {
     socket.emit('get_cat_colors');
 }
@@ -298,16 +306,17 @@ function handleInput(input, source) {
         if (isSpotifyPlaylist(input)) {
             socket.emit('addPlaylistToQueue', { link: input, source: 'spotify' });
         } else {
-            socket.emit('searchTracks', { track_name: input });
+            socket.emit('searchTracks', { track_name: input, source: 'spotify' });
         }
     } else if (source === 'youtube') {
         if (isYouTubePlaylist(input)) {
             socket.emit('addPlaylistToQueue', { link: input, source: 'youtube' });
         } else {
-            socket.emit('addYoutubeLinkToQueue', { youtube_link: input });
+            socket.emit('addYoutubeLinkToQueue', { youtube_link: input, source: 'youtube' });
         }
     }
 }
+
 
 function isSpotifyPlaylist(link) {
     return link.includes('playlist');
@@ -346,7 +355,7 @@ function removeSongFromQueue(index) {
         songContainer.classList.add('removed');
         setTimeout(() => {
             socket.emit('removeSongFromQueue', { index: index });
-        }, 500); // Wait for animation to finish
+        }, 500);  // Wait for animation to finish
     }
 }
 
@@ -359,6 +368,8 @@ function handleSearchResults(data) {
     });
     dropdown.style.display = 'block';
 }
+
+// static/js/script.js
 
 function createTrackItem(track) {
     var item = document.createElement('div');
@@ -428,6 +439,7 @@ function setText() {
 function submitSong() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
+    track.track_length = parseInt(track.track_length); // Convert track_length to integer
     socket.emit('addSongToQueue', {
         track: track
     });
@@ -438,6 +450,7 @@ function submitSong() {
         resultText.textContent = "";
     }, 3000);
 }
+
 
 
 
