@@ -165,23 +165,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (window.location.pathname == "/") {
-            
             const searchSourceSelect = document.getElementById('search-source');
             const searchBar = document.getElementById('searchbar');
             const youtubeLinkInput = document.getElementById('youtube-link');
             let searchSource = 'spotify';
             const profilePic = document.getElementById('profile-pic');
             const profileDropdown = document.querySelector('.profile-dropdown');
-            searchBar.textContent = "";
-            youtubeLinkInput.textContent = "";
+            searchBar.value = "";
+            youtubeLinkInput.value = "";
             searchSourceSelect.addEventListener('change', function() {
                 searchSource = this.value;
                 if (this.value === 'youtube') {
                     searchBar.style.display = 'none';
+                    searchBar.value = '';
                     youtubeLinkInput.style.display = 'block';
                 } else {
                     searchBar.style.display = 'block';
                     youtubeLinkInput.style.display = 'none';
+                    youtubeLinkInput.value = '';
                 }
             });
             searchBar.addEventListener('keyup', function(event) {
@@ -190,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     handleInput(searchBar.value, searchSource);
                 }
             });
-
+        
             youtubeLinkInput.addEventListener('keyup', function(event) {
                 if (event.key === 'Enter') {
                     event.preventDefault();
@@ -316,7 +317,6 @@ function handleInput(input, source) {
         }
     }
 }
-
 
 function isSpotifyPlaylist(link) {
     return link.includes('playlist');
