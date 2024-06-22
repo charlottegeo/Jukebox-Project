@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Socket.IO connection error:', error);
             if (error.message === 'jwt expired' || error.message === 'invalid token') {
                 alert('Session expired or invalid token. Please login again.');
-                window.location.href = '/'; // Redirect to home page
+                window.location.href = '/';
             }
         });
 
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function updateUserQueueDisplay(queue) {
     var userQueueList = document.getElementById('user-queue-list');
-    userQueueList.innerHTML = '';  // Clear the existing queue
+    userQueueList.innerHTML = '';
 
     queue.forEach((song, index) => {
         var songContainer = document.createElement('div');
@@ -275,12 +275,11 @@ function updateUserQueueDisplay(queue) {
         songContainer.appendChild(overlay);
         userQueueList.appendChild(songContainer);
 
-        // Add fade-in animation
         songContainer.classList.add('added');
-        setTimeout(() => songContainer.classList.remove('added'), 500);  // Remove class after animation
+        setTimeout(() => songContainer.classList.remove('added'), 500);
     });
 
-    // Initialize Sortable.js
+    //This lets the user drag and drop the songs in the queue
     new Sortable(userQueueList, {
         onEnd: function(evt) {
             let oldIndex = evt.oldIndex;
@@ -291,13 +290,13 @@ function updateUserQueueDisplay(queue) {
 }
 
 function removeSongFromQueue(index) {
-    console.log('Removing song at index:', index); // Add this line to verify function call
+    console.log('Removing song at index:', index);
     const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
     if (songContainer) {
         songContainer.classList.add('removed');
         setTimeout(() => {
             socket.emit('removeSongFromQueue', { index: index });
-        }, 500);  // Wait for animation to finish
+        }, 500);
     }
 }
 
@@ -363,7 +362,6 @@ function handleSearchResults(data) {
     dropdown.style.display = 'block';
 }
 
-// static/js/script.js
 
 function createTrackItem(track) {
     var item = document.createElement('div');
@@ -433,7 +431,7 @@ function setText() {
 function submitSong() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
-    track.track_length = parseInt(track.track_length); // Convert track_length to integer
+    track.track_length = parseInt(track.track_length);
     socket.emit('addSongToQueue', {
         track: track
     });
@@ -539,7 +537,7 @@ function voteToSkip() {
 
 function calculateFrameDuration(bpm) {
     var bps = bpm / 60;
-    return 1 / (2 * bps); // Duration of each frame in seconds
+    return 1 / (2 * bps);
 }
 
 function animateFrames(bpm) {

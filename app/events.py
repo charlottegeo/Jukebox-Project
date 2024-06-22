@@ -99,7 +99,7 @@ def handle_add_song_to_queue(data):
         track_length = track.get('track_length')
         if track_length:
             try:
-                track_length = int(track_length)  # Convert track_length to integer
+                track_length = int(track_length)
             except ValueError:
                 emit('error', {'message': 'Invalid track length'})
                 return
@@ -108,13 +108,11 @@ def handle_add_song_to_queue(data):
                 emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'})
                 return
 
-            # Ensure 'source' key is present
-            track['source'] = data.get('source', 'spotify')  # Default to 'spotify' if not provided
+            track['source'] = data.get('source', 'spotify')  #TODO: properly differentiate between sources
             
             add_song_to_user_queue(uid, track)
             emit('songAdded', {'message': 'Song added to queue', 'track': track})
 
-            # Emit an event to update the user queue
             if uid in user_queues:
                 emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
         else:

@@ -81,7 +81,7 @@
                     query: { token: token }
                 });
 
-                socket.emit('get_user_queue'); // Request the queue when connected
+                socket.emit('get_user_queue');
 
                 socket.on('updateUserQueue', function(data) {
                     updateUserQueueDisplay(data.queue);
