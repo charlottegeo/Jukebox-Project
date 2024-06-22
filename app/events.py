@@ -81,27 +81,44 @@ def handle_disconnect():
 @socketio.on('searchTracks')
 def handle_search_tracks(data):
     track_name = data.get('track_name')
+    source = data.get('source', 'spotify')  # Default to 'spotify' if not provided
     try:
         result_array = search_for_tracks(token, track_name, 5)
-        search_results = [track.to_dict() for track in result_array]
+        search_results = [track.to_dict(source=source) for track in result_array]
         emit('message', {'action': 'searchResults', 'results': search_results})
     except Exception as e:
         emit('message', {'action': 'error', 'error': str(e)})
 
 @socketio.on('addSongToQueue')
 def handle_add_song_to_queue(data):
-    track_data = data.get('track')
+    track = data.get('track')
     uid = session.get('uid') or session.get('preferred_username')
-    if track_data and uid:
-        track_length = track_data.get('track_length')
-        if track_length > MAX_SONG_LENGTH:
-            emit('error', {'message': 'Song length exceeds the maximum allowed duration.'})
+    if track:
+        track_length = track.get('track_length')
+        if track_length:
+            try:
+                track_length = int(track_length)  # Convert track_length to integer
+            except ValueError:
+                emit('error', {'message': 'Invalid track length'})
+                return
+            
+            if track_length > MAX_SONG_LENGTH:
+                emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'})
+                return
+
+            # Ensure 'source' key is present
+            track['source'] = data.get('source', 'spotify')  # Default to 'spotify' if not provided
+            
+            add_song_to_user_queue(uid, track)
+            emit('songAdded', {'message': 'Song added to queue', 'track': track})
+
+            # Emit an event to update the user queue
+            if uid in user_queues:
+                emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
         else:
-            add_song_to_user_queue(uid, track_data)
-            emit('queueUpdated', broadcast=True)
-            check_and_play_next_song()
+            emit('error', {'message': 'Track length not provided'})
     else:
-        emit('error', {'message': 'Invalid song data.'})
+        emit('error', {'message': 'Track data not provided'})
 
 @socketio.on('addPlaylistToQueue')
 def handle_add_playlist_to_queue(data):

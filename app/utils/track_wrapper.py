@@ -116,7 +116,7 @@ class TrackWrapper:
         else:
             return 95
     
-    def to_dict(self):
+    def to_dict(self, source='spotify'):
         return {
             'track_name': self.getTrackName(),
             'artist_name': self.getArtistNames(),
@@ -125,4 +125,5 @@ class TrackWrapper:
             'track_id': self.getTrackID(),
             'uri': self.getURI(),
             'bpm': self.getBPM(token=SpotifyAPI.get_token()),
+            'source': source,
         }
