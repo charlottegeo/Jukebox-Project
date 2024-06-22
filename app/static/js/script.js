@@ -154,15 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateUserQueueDisplay(data.queue);
         });
 
-        function removeSongFromQueue(index) {
-            const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
-            if (songContainer) {
-                songContainer.classList.add('removed');
-                setTimeout(() => {
-                    socket.emit('removeSongFromQueue', { index: index });
-                }, 500); // Wait for animation to finish
-            }
-        }
+        
 
         if (window.location.pathname == "/") {
             const searchSourceSelect = document.getElementById('search-source');
@@ -298,6 +290,17 @@ function updateUserQueueDisplay(queue) {
     });
 }
 
+function removeSongFromQueue(index) {
+    console.log('Removing song at index:', index); // Add this line to verify function call
+    const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
+    if (songContainer) {
+        songContainer.classList.add('removed');
+        setTimeout(() => {
+            socket.emit('removeSongFromQueue', { index: index });
+        }, 500);  // Wait for animation to finish
+    }
+}
+
 function populateCatColorDropdown() {
     socket.emit('get_cat_colors');
 }
@@ -349,15 +352,6 @@ function submitSong() {
     socket.emit('addSongToQueue', { track: track });
 }
 
-function removeSongFromQueue(index) {
-    const songContainer = document.querySelector(`.song-container[data-index='${index}']`);
-    if (songContainer) {
-        songContainer.classList.add('removed');
-        setTimeout(() => {
-            socket.emit('removeSongFromQueue', { index: index });
-        }, 500);  // Wait for animation to finish
-    }
-}
 
 function handleSearchResults(data) {
     var dropdown = document.getElementById('dropdown');
@@ -485,7 +479,7 @@ function updateAdminQueue(data) {
 }
 
 function clearQueue() {
-    socket.emit('clearQueue');
+    socket.emit('clearQueueForUser');
 }
 
 function playSong(song) {

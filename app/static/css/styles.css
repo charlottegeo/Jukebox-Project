@@ -439,7 +439,9 @@ progress[value]::-moz-progress-bar {
     box-sizing: border-box;
 }
 
-
+.overlay .song-info button {
+    pointer-events: auto;
+}
 
 .song-container:hover .overlay {
     opacity: 1;
