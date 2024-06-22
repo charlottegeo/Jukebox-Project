@@ -12,6 +12,11 @@ var ytPlayerReady = false;
 var ytPlayer;
 var pendingSong = null;
 
+var frame0 = "/static/img/cats/White/PusayLeft.png";
+var frame1 = "/static/img/cats/White/PusayCenter.png";
+var frame2 = "/static/img/cats/White/PusayRight.png";
+var song_placeholder = "/static/img/song_placeholder.png";
+
 function onYouTubeIframeAPIReady() {
     ytPlayer = new YT.Player('youtube-player', {
         height: '0',
@@ -208,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         socket.on('updateCurrentSong', function(song) {
-            updateCurrentSong(song);  // Call the function to update the UI with the current song details
+            updateCurrentSong(song);
         });
 
         socket.on('queueLength', function(data) {
@@ -230,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         socket.on('updateUserQueue', function(data) {
             if (window.location.pathname === '/' && document.getElementById('user-queue-list')) {
-                updateUserQueueDisplay(data.queue); // Call the function to update the user queue
+                updateUserQueueDisplay(data.queue);
             }
         });
 
@@ -334,8 +339,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+function defaultFrame() {
+    clearInterval(animationInterval);
+    document.getElementById('catjam').src = frame1;
+}
 
-// Define the updateCurrentSong function here
 function updateCurrentSong(song) {
     const currentAlbumCover = document.getElementById('current-album-cover');
     const currentArtistName = document.getElementById('current-artist-name');
@@ -346,7 +354,6 @@ function updateCurrentSong(song) {
     if (currentSongTitle) currentSongTitle.textContent = song.track_name;
 }
 
-// Define the updateUserQueueDisplay function here
 function updateUserQueueDisplay(queue) {
     var userQueueList = document.getElementById('user-queue-list');
     if (!userQueueList) return;
@@ -695,13 +702,21 @@ function updatePlayerProgress(trackLength) {
         document.getElementById('progressBar').value = progress;
         document.getElementById('duration').innerHTML = formatTime(duration);
         document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime);
-    } else if (EmbedController) {
-        // Handle Spotify progress if needed
+    } else if (EmbedController && EmbedController.getPlaybackState().playing) {
+        EmbedController.getCurrentState().then(state => {
+            var duration = state.duration;
+            var currentTime = state.position;
+            var progress = (currentTime / duration) * 100;
+            document.getElementById('progressBar').value = progress;
+            document.getElementById('duration').innerHTML = formatTime(duration / 1000); // Convert ms to s
+            document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime / 1000); // Convert ms to s
+        });
     } else {
         document.getElementById('progressBar').max = 100;
         document.getElementById('duration').innerHTML = trackLength;
     }
 }
+
 
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
@@ -740,11 +755,6 @@ function animateFrames(bpm) {
             increment = true;
         }
     }, frameDuration * 1000);
-}
-
-function defaultFrame() {
-    clearInterval(animationInterval);
-    document.getElementById('catjam').src = frame1;
 }
 
 function adjustOverlayTextSize() {
