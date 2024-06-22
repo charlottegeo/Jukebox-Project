@@ -143,7 +143,24 @@ def get_spotify_playlist_tracks(link):
     response = requests.get(url, headers=headers)
     tracks = response.json().get('items', [])
     return [TrackWrapper(track['track']).to_dict() for track in tracks]
+
+def get_spotify_album_tracks(link):
+    album_id = link.split('/')[-1].split('?')[0]
+    token = get_token()
+    headers = get_auth_header(token)
     
+    tracks_url = f"https://api.spotify.com/v1/albums/{album_id}/tracks"
+    response = requests.get(tracks_url, headers=headers)
+    tracks = response.json().get('items', [])
+    
+    album_url = f"https://api.spotify.com/v1/albums/{album_id}"
+    album_response = requests.get(album_url, headers=headers)
+    album_details = album_response.json()
+    album_cover_url = album_details['images'][0]['url'] if 'images' in album_details else None
+    
+    return [TrackWrapper(track, album_cover_url).to_dict() for track in tracks]
+
+
 def get_song_queue(queue: SongQueue):
     """
     Returns the song queue

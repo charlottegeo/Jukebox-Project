@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit, disconnect
 from app import socketio
 from app.models import Song, UserQueue
-from app.utils.main import get_token, search_for_tracks, get_spotify_playlist_tracks
+from app.utils.main import get_token, search_for_tracks, get_spotify_playlist_tracks, get_spotify_album_tracks
 from app.utils.track_wrapper import TrackWrapper, formatTime
 from .util import csh_user_auth, decode_token
 from flask import session, request, current_app
@@ -136,7 +136,24 @@ def handle_add_playlist_to_queue(data):
     for track in tracks:
         add_song_to_user_queue(uid, track)
 
-    emit('queueUpdated', broadcast=True)
+    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+    check_and_play_next_song()
+
+@socketio.on('addAlbumToQueue')
+def handle_add_album_to_queue(data):
+    link = data.get('link')
+    source = data.get('source')
+    uid = session.get('uid') or session.get('preferred_username')
+    
+    if source == 'spotify':
+        tracks = get_spotify_album_tracks(link)
+    else:
+        tracks = []
+
+    for track in tracks:
+        add_song_to_user_queue(uid, track)
+
+    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
 
 
@@ -368,33 +385,34 @@ def handle_add_youtube_link_to_queue(data):
     youtube_link = data.get('youtube_link')
     uid = session.get('uid') or session.get('preferred_username')
     if youtube_link and uid:
-        track_data = parse_youtube_link(youtube_link)
-        if track_data:
-            add_song_to_user_queue(uid, track_data)
-            emit('queueUpdated', broadcast=True)
-            check_and_play_next_song()
-        else:
-            emit('error', {'message': 'Failed to parse YouTube link.'})
+        try:
+            track_data = parse_youtube_link(youtube_link, emit, request.sid)
+            if track_data:
+                add_song_to_user_queue(uid, track_data)
+                emit('queueUpdated', broadcast=True)
+                check_and_play_next_song()
+        except Exception as e:
+            emit('error', {'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
     else:
-        emit('error', {'message': 'Invalid YouTube link or user not authenticated.'})
+        emit('error', {'message': 'Invalid YouTube link or user not authenticated.'}, room=request.sid)
 
-def parse_youtube_link(youtube_link):
+def parse_youtube_link(youtube_link, emit_func, sid):
     try:
         response = requests.get(youtube_link)
+        if response.status_code != 200:
+            return None
         soup = BeautifulSoup(response.text, 'html.parser')
 
         title_tag = soup.find('meta', {'name': 'title'})
         track_name = title_tag['content'] if title_tag else 'YouTube Video'
-
         channel_tag = soup.find('link', {'itemprop': 'name'})
         artist_name = channel_tag['content'] if channel_tag else 'Unknown Artist'
-
         duration_tag = soup.find('meta', {'itemprop': 'duration'})
         track_length = parse_duration(duration_tag['content']) if duration_tag else 'Unknown'
 
         video_id = youtube_link.split('v=')[1].split('&')[0]
 
-        return {
+        track_data = {
             'track_name': track_name,
             'artist_name': artist_name,
             'track_length': track_length,
@@ -404,9 +422,12 @@ def parse_youtube_link(youtube_link):
             'bpm': 'Unknown',
             'source': 'youtube'
         }
+
+        return track_data
     except Exception as e:
-        print(f"Error parsing YouTube link: {e}")
         return None
+
+
 
 def get_youtube_playlist_tracks(link):
     try:
@@ -430,11 +451,11 @@ def get_youtube_playlist_tracks(link):
         playlist_items = playlist_json['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
 
         for item in playlist_items:
-            video_info = item['playlistVideoRenderer']
-            video_id = video_info['videoId']
-            track_name = video_info['title']['simpleText']
-            artist_name = video_info['shortBylineText']['runs'][0]['text']
-            duration_text = video_info['lengthText']['simpleText']
+            video_info = item.get('playlistVideoRenderer', {})
+            video_id = video_info.get('videoId')
+            track_name = video_info.get('title', {}).get('runs', [{}])[0].get('text', 'Unknown Title')
+            artist_name = video_info.get('shortBylineText', {}).get('runs', [{}])[0].get('text', 'Unknown Artist')
+            duration_text = video_info.get('lengthText', {}).get('simpleText', '0:00')
             track_length = parse_duration_in_seconds(duration_text)
 
             tracks.append({
@@ -463,7 +484,7 @@ def parse_duration(duration_str):
     return 'Unknown'
 
 def parse_duration_in_seconds(duration_str):
-    match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
+    match = re.match(r'(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
     if match:
         hours = int(match.group(1)) if match.group(1) else 0
         minutes = int(match.group(2)) if match.group(2) else 0

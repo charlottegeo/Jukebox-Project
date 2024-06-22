@@ -154,19 +154,24 @@ document.addEventListener('DOMContentLoaded', function() {
             updateUserQueueDisplay(data.queue);
         });
 
-        
 
         if (window.location.pathname == "/") {
             const searchSourceSelect = document.getElementById('search-source');
             const searchBar = document.getElementById('searchbar');
             const youtubeLinkInput = document.getElementById('youtube-link');
-            let searchSource = 'spotify';
+            let searchSource = localStorage.getItem('searchSource') || 'spotify'; // Default to 'spotify'
             const profilePic = document.getElementById('profile-pic');
             const profileDropdown = document.querySelector('.profile-dropdown');
             searchBar.value = "";
             youtubeLinkInput.value = "";
+            searchSourceSelect.value = searchSource;
+            if (searchSource === 'youtube') {
+                searchBar.style.display = 'none';
+                youtubeLinkInput.style.display = 'block';
+            }
             searchSourceSelect.addEventListener('change', function() {
                 searchSource = this.value;
+                localStorage.setItem('searchSource', searchSource);
                 if (this.value === 'youtube') {
                     searchBar.style.display = 'none';
                     searchBar.value = '';
@@ -308,8 +313,13 @@ function handleInput(input, source) {
     if (source === 'spotify') {
         if (isSpotifyPlaylist(input)) {
             socket.emit('addPlaylistToQueue', { link: input, source: 'spotify' });
+            document.getElementById('searchbar').value = '';
+        } else if (isSpotifyAlbum(input)) {
+            socket.emit('addAlbumToQueue', { link: input, source: 'spotify' });
+            document.getElementById('searchbar').value = '';
         } else {
             socket.emit('searchTracks', { track_name: input, source: 'spotify' });
+            return;
         }
     } else if (source === 'youtube') {
         if (isYouTubePlaylist(input)) {
@@ -317,7 +327,13 @@ function handleInput(input, source) {
         } else {
             socket.emit('addYoutubeLinkToQueue', { youtube_link: input, source: 'youtube' });
         }
+        document.getElementById('youtube-link').value = '';
     }
+    document.getElementById('searchbar').value = '';
+}
+
+function isSpotifyAlbum(link) {
+    return link.includes('album');
 }
 
 function isSpotifyPlaylist(link) {
@@ -327,6 +343,7 @@ function isSpotifyPlaylist(link) {
 function isYouTubePlaylist(link) {
     return link.includes('playlist');
 }
+
 
 function searchTracks() {
     var searchText = document.getElementById('searchbar').value;
@@ -343,8 +360,12 @@ function submitYouTubeLink() {
     var data = {
         youtube_link: youtubeLink
     };
+    
     socket.emit('addYouTubeLinkToQueue', data);
+    document.getElementById('youtube-link').value = '';
 }
+
+
 
 function submitSong() {
     const track = JSON.parse(document.getElementById('selected-item').dataset.track);

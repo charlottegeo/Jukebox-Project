@@ -28,8 +28,9 @@ class TrackWrapper:
         return super().__new__(cls)
 
 
-    def __init__(self, TrackObject: dict):
+    def __init__(self, TrackObject: dict, album_cover_url=None):
         self.TrackObject = TrackObject
+        self.album_cover_url = album_cover_url
 
     
     def getTrackName(self) -> str:
@@ -57,10 +58,14 @@ class TrackWrapper:
 
         
     def getAlbumCoverURL(self) -> str:
-        """
-        return the URL of the first album cover image
-        """
-        return self.TrackObject['album']['images'][0]['url'] # the first image url
+        if self.album_cover_url:
+            return self.album_cover_url
+        if 'album' in self.TrackObject:
+            return self.TrackObject['album']['images'][0]['url']
+        elif 'images' in self.TrackObject:
+            return self.TrackObject['images'][0]['url']
+        else:
+            return None
     
 
     def getTrackLength(self) -> float:
