@@ -189,13 +189,14 @@ def handle_get_next_song():
 
 
 
-@socketio.on('clearQueue')
-def handle_clear_queue():
+@socketio.on('clearQueueForUser')
+def handle_clear_queue_for_user():
     uid = session.get('uid') or session.get('preferred_username')
     if uid in user_queues:
         user_queues[uid].queue = []
         emit('updateUserQueue', {'queue': []}, room=request.sid)
         emit('queueUpdated', broadcast=True)
+
 
 @socketio.on('secondsToMinutes')
 def handle_seconds_to_minutes(data):
@@ -307,10 +308,6 @@ def add_song_to_user_queue(uid, song):
     ))
 
 
-def clear_user_queue(uid):
-    if uid in user_queues:
-        user_queues[uid].queue = []
-
 @socketio.on('clearSpecificQueue')
 def handle_clear_specific_queue(data):
     uid = data.get('uid')
@@ -412,7 +409,7 @@ def parse_youtube_link(youtube_link):
     except Exception as e:
         print(f"Error parsing YouTube link: {e}")
         return None
-    
+
 def get_youtube_playlist_tracks(link):
     try:
         response = requests.get(link)
