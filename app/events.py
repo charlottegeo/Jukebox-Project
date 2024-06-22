@@ -2,12 +2,7 @@ import json
 import os
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit, disconnect
-from app import socketio
-from app.models import Song, UserQueue
-from app.utils.main import get_token, search_for_tracks, get_spotify_playlist_tracks, get_spotify_album_tracks
-from app.utils.track_wrapper import TrackWrapper, formatTime
-from .util import csh_user_auth, decode_token
-from flask import session, request, current_app
+from flask import session, request
 import paramiko
 import re
 from bs4 import BeautifulSoup
@@ -16,33 +11,32 @@ import datetime
 import time
 import threading
 
+from app import socketio
+from app.models import Song, UserQueue
+from app.utils.main import get_token, search_for_tracks, get_spotify_playlist_tracks, get_spotify_album_tracks
+from app.utils.track_wrapper import TrackWrapper, formatTime
+from .util import csh_user_auth, decode_token
+
+# Load environment variables
 load_dotenv()
 token = get_token()
+
+# Configuration variables
 isPlaying = False
 SSH_HOST = os.getenv('SSH_HOST')
 SSH_USER = os.getenv('SSH_USER')
 SSH_PASSWORD = os.getenv('SSH_PASSWORD')
-
-#store queues in memory
-user_queues = {} #to store user queues
-user_order = [] #to store the order of users in the queue
-
-skip_votes = {}
-
 MAX_SONG_LENGTH = 10 * 60  # 10 minutes
-
 QUIET_HOURS = {
-    "Sunday": (23, 7),     # 11 PM to 7 AM
+    "Sunday": (23, 7),
     "Monday": (23, 7),
     "Tuesday": (23, 7),
     "Wednesday": (23, 7),
     "Thursday": (23, 7),
-    "Friday": (1, 7),      # 1 AM to 7 AM
+    "Friday": (1, 7),
     "Saturday": (1, 7)
 }
-
-EXAM_WEEKS = { # Exam weeks for the next few years
-    #ok surely there's a better way to do this but I'm too lazy to figure it out
+EXAM_WEEKS = {
     2024: [(datetime.date(2024, 12, 11), datetime.date(2024, 12, 18)),
            (datetime.date(2025, 4, 30), datetime.date(2025, 5, 7)),
            (datetime.date(2025, 8, 8), datetime.date(2025, 8, 12))],
@@ -54,6 +48,13 @@ EXAM_WEEKS = { # Exam weeks for the next few years
            (datetime.date(2027, 8, 6), datetime.date(2027, 8, 10))]
 }
 
+# In-memory storage
+user_queues = {}
+user_order = []
+skip_votes = {}
+selected_color = "White"  # Default color
+
+# Event handlers
 @socketio.on('connect')
 def handle_connect():
     token = request.args.get('token')
@@ -66,15 +67,7 @@ def handle_connect():
     if uid not in user_order:
         user_order.append(uid)
     emit('message', {'message': 'Connected to server'})
-    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
-
-
-def validate_token(token):
-    user_id = decode_token(token)
-    if user_id:
-        session['user_id'] = user_id
-        return True
-    return False
+    emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -85,7 +78,7 @@ def handle_disconnect():
 @socketio.on('searchTracks')
 def handle_search_tracks(data):
     track_name = data.get('track_name')
-    source = data.get('source', 'spotify') #TODO: properly differentiate between sources
+    source = data.get('source', 'spotify')
     try:
         result_array = search_for_tracks(token, track_name, 5)
         search_results = [track.to_dict(source=source) for track in result_array]
@@ -110,17 +103,13 @@ def handle_add_song_to_queue(data):
                 emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'})
                 return
 
-            track['source'] = data.get('source', 'spotify')  # TODO: properly differentiate between sources
-            
+            track['source'] = data.get('source', 'spotify')
             add_song_to_user_queue(uid, track)
             emit('songAdded', {'message': 'Song added to queue', 'track': track})
-            print(f"Song added to queue: {track}")
 
             if uid in user_queues:
-                print(f"Current queue for {uid}: {user_queues[uid].get_queue()}")
-                emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+                emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
             
-            # Check if a song is currently playing. If not, play the next song.
             if not isPlaying:
                 check_and_play_next_song()
         else:
@@ -131,7 +120,7 @@ def handle_add_song_to_queue(data):
 @socketio.on('youtubePlayerReady')
 def handle_youtube_player_ready():
     emit('youtubePlayerIsReady', broadcast=True)
-    
+
 @socketio.on('addPlaylistToQueue')
 def handle_add_playlist_to_queue(data):
     link = data.get('link')
@@ -148,7 +137,7 @@ def handle_add_playlist_to_queue(data):
     for track in tracks:
         add_song_to_user_queue(uid, track)
 
-    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+    emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
 
 @socketio.on('addAlbumToQueue')
@@ -165,9 +154,8 @@ def handle_add_album_to_queue(data):
     for track in tracks:
         add_song_to_user_queue(uid, track)
 
-    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+    emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
-
 
 @socketio.on('removeSongFromQueue')
 def handle_remove_song_from_queue(data):
@@ -175,15 +163,15 @@ def handle_remove_song_from_queue(data):
     uid = session.get('uid') or session.get('preferred_username')
     if uid in user_queues:
         user_queues[uid].remove_song(song_index)
-        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+        emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 @socketio.on('get_user_queue')
 def handle_get_user_queue():
     uid = session.get('uid') or session.get('preferred_username')
     if uid in user_queues:
-        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()})
+        emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()})
     else:
-        emit('updateUserQueue', {'queue': []})
+        emit('updateUserQueueDisplay', {'queue': []})
 
 @socketio.on('vote_to_skip')
 def handle_vote_to_skip():
@@ -191,7 +179,7 @@ def handle_vote_to_skip():
     if uid not in skip_votes:
         skip_votes[uid] = True
         active_users = len(user_queues)
-        skip_threshold = active_users // 2 + 1  # Majority vote required to skip
+        skip_threshold = active_users // 2 + 1
 
         if len(skip_votes) >= skip_threshold:
             play_next_song()
@@ -204,26 +192,20 @@ def handle_vote_to_skip():
 def handle_is_playing(data):
     global isPlaying
     isPlaying = data.get('isPlaying')
-    print('Is playing:', isPlaying)
     if not isPlaying:
-        print('Playing next song')
         play_next_song()
-
 
 @socketio.on('get_next_song')
 def handle_get_next_song():
     play_next_song()
-
-
 
 @socketio.on('clearQueueForUser')
 def handle_clear_queue_for_user():
     uid = session.get('uid') or session.get('preferred_username')
     if uid in user_queues:
         user_queues[uid].queue = []
-        emit('updateUserQueue', {'queue': []}, room=request.sid)
+        emit('updateUserQueueDisplay', {'queue': []}, room=request.sid)
         emit('queueUpdated', broadcast=True)
-
 
 @socketio.on('secondsToMinutes')
 def handle_seconds_to_minutes(data):
@@ -238,57 +220,16 @@ def handle_skip_song():
 def handle_refresh_display():
     emit('reloadPage', broadcast=True)
 
-def get_cat_colors():
-    base_path = os.path.join('app', 'static', 'img', 'cats')
-    if not os.path.exists(base_path):
-        return []
-    dirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
-    return dirs
-
-
 @socketio.on('get_cat_colors')
 def handle_get_cat_colors():
     colors = get_cat_colors()
     emit('message', {'action': 'cat_colors', 'colors': colors}, broadcast=True)
-
-selected_color = "White"  # Default color
 
 @socketio.on('change_cat_color')
 def handle_change_cat_color(color):
     global selected_color
     selected_color = color
     emit('color_changed', {'color': color}, broadcast=True)
-
-def is_exam_week():
-    current_date = datetime.datetime.now().date()
-    current_year = current_date.year
-    for start_date, end_date in EXAM_WEEKS.get(current_year, []):
-        if start_date <= current_date <= end_date:
-            return True
-    return False
-
-def is_quiet_hours():
-    if is_exam_week():
-        return True
-
-    current_day = datetime.datetime.now().strftime("%A")
-    current_hour = datetime.datetime.now().hour
-    start, end = QUIET_HOURS[current_day]
-
-    if start < end:
-        return start <= current_hour < end
-    else:
-        return current_hour >= start or current_hour < end
-
-def set_quiet_hours_volume():
-    if is_quiet_hours():
-        handle_set_volume({'volume': 60})  #this is a placeholder value
-        #TODO: limit max volume during quiet hours
-
-def check_quiet_hours():
-    while True:
-        set_quiet_hours_volume()
-        time.sleep(3600)  # Check every hour
 
 @socketio.on('set_volume')
 def handle_set_volume(data):
@@ -305,46 +246,14 @@ def handle_set_volume(data):
         ssh.close()
         emit('volume_set', {'volume': volume}, broadcast=True)
     except Exception as e:
-        print(f"Error setting volume: {str(e)}")
         emit('error', {'message': 'Failed to set volume.'})
-
-def sanitize_volume_input(volume):
-    try:
-        volume = int(volume)
-        if 0 <= volume <= 100:
-            return volume
-        else:
-            return None
-    except ValueError:
-        return None
-
-def add_song_to_user_queue(uid, song):
-    if uid not in user_queues:
-        user_queues[uid] = UserQueue(uid)
-    if uid not in user_order:
-        user_order.append(uid)  # Ensure the user is added to the order list
-    user_queues[uid].add_song(Song(
-        track_name=song['track_name'],
-        artist_name=song['artist_name'],
-        track_length=song['track_length'],
-        cover_url=song['cover_url'],
-        track_id=song['track_id'],
-        uri=song['uri'],
-        bpm=song['bpm'],
-        uid=uid,
-        source=song['source']
-    ))
-    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
-
-
-
 
 @socketio.on('clearSpecificQueue')
 def handle_clear_specific_queue(data):
     uid = data.get('uid')
     if uid in user_queues:
         user_queues[uid].queue = []
-        emit('updateUserQueue', {'queue': []}, room=request.sid)
+        emit('updateUserQueueDisplay', {'queue': []}, room=request.sid)
         emit('queueUpdated', broadcast=True)
 
 @socketio.on('clearAllQueues')
@@ -361,48 +270,13 @@ def handle_reorder_queue(data):
 
     if uid in user_queues and old_index is not None and new_index is not None:
         user_queues[uid].reorder_queue(old_index, new_index)
-        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+        emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 @socketio.on('getQueueUserCount')
 def handle_get_queue_user_count():
     queue_count = len(user_queues)
     user_count = len(set(user_queues.keys()))
     emit('queueUserCount', {'queues': queue_count, 'users': user_count})
-
-def get_next_user():
-    if user_order:
-        user_order.append(user_order.pop(0))  # Rotate the order
-        return user_order[0]
-    return None
-
-
-def check_and_play_next_song():
-    global isPlaying
-    if not isPlaying:
-        play_next_song()
-
-def play_next_song():
-    global isPlaying
-    next_user = get_next_user()
-    print(f"Next user: {next_user}")
-    if next_user and next_user in user_queues:
-        user_queue = user_queues[next_user]
-        print(f"{next_user}'s queue: {user_queue.get_queue()}")
-        if user_queue.queue:
-            next_song = user_queue.remove_song()
-            print(f"Next song to play for user {next_user}: {next_song.to_dict()}")
-            emit('message', {'action': 'next_song', 'nextSong': next_song.to_dict()}, broadcast=True)
-            isPlaying = True
-        else:
-            print(f"User {next_user}'s queue is empty.")
-            emit('message', {'action': 'queue_empty'}, broadcast=True)
-            isPlaying = False
-    else:
-        print("No next user found or user queue is empty.")
-        emit('message', {'action': 'queue_empty'}, broadcast=True)
-        isPlaying = False
-
-
 
 @socketio.on('set_song_length_limit')
 def handle_set_song_length_limit(data):
@@ -425,6 +299,76 @@ def handle_add_youtube_link_to_queue(data):
             emit('error', {'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
     else:
         emit('error', {'message': 'Invalid YouTube link or user not authenticated.'}, room=request.sid)
+
+# Helper functions
+def validate_token(token):
+    user_id = decode_token(token)
+    if user_id:
+        session['user_id'] = user_id
+        return True
+    return False
+
+def add_song_to_user_queue(uid, song):
+    if uid not in user_queues:
+        user_queues[uid] = UserQueue(uid)
+    if uid not in user_order:
+        user_order.append(uid)
+    user_queues[uid].add_song(Song(
+        track_name=song['track_name'],
+        artist_name=song['artist_name'],
+        track_length=song['track_length'],
+        cover_url=song['cover_url'],
+        track_id=song['track_id'],
+        uri=song['uri'],
+        bpm=song['bpm'],
+        uid=uid,
+        source=song['source']
+    ))
+    emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+
+def get_next_user():
+    if user_order:
+        user_order.append(user_order.pop(0))
+        return user_order[0]
+    return None
+
+def check_and_play_next_song():
+    global isPlaying
+    if not isPlaying:
+        play_next_song()
+
+def play_next_song():
+    global isPlaying
+    next_user = get_next_user()
+    if next_user and next_user in user_queues:
+        user_queue = user_queues[next_user]
+        if user_queue.queue:
+            next_song = user_queue.remove_song()
+            emit('message', {'action': 'next_song', 'nextSong': next_song.to_dict()}, broadcast=True)
+            isPlaying = True
+        else:
+            emit('message', {'action': 'queue_empty'}, broadcast=True)
+            isPlaying = False
+    else:
+        emit('message', {'action': 'queue_empty'}, broadcast=True)
+        isPlaying = False
+
+def get_cat_colors():
+    base_path = os.path.join('app', 'static', 'img', 'cats')
+    if not os.path.exists(base_path):
+        return []
+    dirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+    return dirs
+
+def sanitize_volume_input(volume):
+    try:
+        volume = int(volume)
+        if 0 <= volume <= 100:
+            return volume
+        else:
+            return None
+    except ValueError:
+        return None
 
 def parse_youtube_link(youtube_link, emit_func, sid):
     try:
@@ -456,8 +400,6 @@ def parse_youtube_link(youtube_link, emit_func, sid):
         return track_data
     except Exception as e:
         return None
-
-
 
 def get_youtube_playlist_tracks(link):
     try:
@@ -502,9 +444,8 @@ def get_youtube_playlist_tracks(link):
         return tracks
 
     except Exception as e:
-        print(f"Error parsing YouTube playlist link: {e}")
         return []
-    
+
 def parse_duration(duration_str):
     match = re.match(r'PT(?:(\d+)M)?(?:(\d+)S)?', duration_str)
     if match:
@@ -521,3 +462,34 @@ def parse_duration_in_seconds(duration_str):
         seconds = int(match.group(3)) if match.group(3) else 0
         return hours * 3600 + minutes * 60 + seconds
     return 0
+
+# Quiet hours handling
+def is_exam_week():
+    current_date = datetime.datetime.now().date()
+    current_year = current_date.year
+    for start_date, end_date in EXAM_WEEKS.get(current_year, []):
+        if start_date <= current_date <= end_date:
+            return True
+    return False
+
+def is_quiet_hours():
+    if is_exam_week():
+        return True
+
+    current_day = datetime.datetime.now().strftime("%A")
+    current_hour = datetime.datetime.now().hour
+    start, end = QUIET_HOURS[current_day]
+
+    if start < end:
+        return start <= current_hour < end
+    else:
+        return current_hour >= start or current_hour < end
+
+def set_quiet_hours_volume():
+    if is_quiet_hours():
+        handle_set_volume({'volume': 60})
+
+def check_quiet_hours():
+    while True:
+        set_quiet_hours_volume()
+        time.sleep(3600)
