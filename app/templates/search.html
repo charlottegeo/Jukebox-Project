@@ -16,13 +16,18 @@
             const token = document.querySelector('meta[name="token"]').content;
             if (token) {
                 localStorage.setItem('authToken', token);
+                socket.emit('get_user_queue'); // Request the queue when connected
             } else {
                 console.error('Token not found in session.');
                 alert('Authentication token is missing. Please login again.');
                 window.location.href = '/';
             }
         });
-    </script>
+    
+        socket.on('updateUserQueue', function(data) {
+            updateUserQueueDisplay(data.queue);
+        });
+    </script>    
 </head>
 <body>
     <div class="container">

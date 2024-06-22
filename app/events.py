@@ -54,14 +54,18 @@ EXAM_WEEKS = { # Exam weeks for the next few years
            (datetime.date(2027, 8, 6), datetime.date(2027, 8, 10))]
 }
 
-
 @socketio.on('connect')
 def handle_connect():
     token = request.args.get('token')
     if not token or not validate_token(token):
         disconnect()
         return False
+    uid = session.get('uid') or session.get('preferred_username')
+    if uid not in user_queues:
+        user_queues[uid] = UserQueue(uid)
     emit('message', {'message': 'Connected to server'})
+    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+
 
 def validate_token(token):
     user_id = decode_token(token)
@@ -73,15 +77,13 @@ def validate_token(token):
 @socketio.on('disconnect')
 def handle_disconnect():
     uid = session.get('uid') or session.get('preferred_username')
-    if uid in user_queues:
-        del user_queues[uid]
-        if uid in user_order:
-            user_order.remove(uid)
+    if uid in user_order:
+        user_order.remove(uid)
 
 @socketio.on('searchTracks')
 def handle_search_tracks(data):
     track_name = data.get('track_name')
-    source = data.get('source', 'spotify')  # Default to 'spotify' if not provided
+    source = data.get('source', 'spotify') #TODO: properly differentiate between sources
     try:
         result_array = search_for_tracks(token, track_name, 5)
         search_results = [track.to_dict(source=source) for track in result_array]
