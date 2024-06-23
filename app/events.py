@@ -92,7 +92,7 @@ def handle_add_song_to_queue(data):
     uid = session.get('uid') or session.get('preferred_username')
     if track:
         track_length = track.get('track_length')
-        if track_length:
+        if track_length is not None:
             try:
                 track_length = int(track_length)
             except ValueError:

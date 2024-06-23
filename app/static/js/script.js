@@ -4,8 +4,6 @@ var animationInterval;
 var pingInterval = null;
 var typingTimer;
 var doneTypingInterval = 500;
-var EmbedController;
-var bpm;
 var authToken;
 var socket;
 var ytPlayerReady = false;
@@ -45,12 +43,26 @@ function onPlayerStateChange(event) {
         socket.emit('removeFirstSong');
         socket.emit('get_next_song');
         document.getElementById('playQueue').click();
+    } else if (event.data == YT.PlayerState.PLAYING) {
+        updateYouTubeProgress();
+        setInterval(updateYouTubeProgress, 1000);
     }
 }
 
 function validateYouTubeTrackID(track_id) {
     const regex = /^[a-zA-Z0-9_-]{11}$/;
     return regex.test(track_id);
+}
+
+function updateYouTubeProgress() {
+    if (ytPlayerReady && ytPlayer.getPlayerState() == YT.PlayerState.PLAYING) {
+        var duration = ytPlayer.getDuration();
+        var currentTime = ytPlayer.getCurrentTime();
+        var progress = (currentTime / duration) * 100;
+        document.getElementById('progressBar').value = progress;
+        document.getElementById('duration').innerHTML = formatTime(duration);
+        document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -94,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Failed to load YouTube video:', error);
                 }
             }
-        });   
+        });
 
         socket.on('message', function(data) {
             console.log('Received:', data);
@@ -106,7 +118,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.nextSong.source === 'spotify') {
                         let track_id = data.nextSong.track_id;
                         if (track_id) {
-                            document.getElementById('spotify-player').src = "https://open.spotify.com/embed/track/" + track_id;
+                            const spotifyWrapper = document.getElementById('spotify-player-wrapper');
+                            if (spotifyWrapper) {
+                                const spotifyURI = `spotify:track:${track_id}`;
+                                if (EmbedController && typeof EmbedController.loadUri === 'function' && typeof EmbedController.play === 'function') {
+                                    EmbedController.loadUri(spotifyURI);
+                                    EmbedController.play();
+                                    spotifyWrapper.style.display = 'block';
+                                } else {
+                                    console.error('EmbedController methods are not available');
+                                }
+                            } else {
+                                console.error('Spotify player wrapper not found');
+                            }
                         } else {
                             console.error('Invalid Spotify track ID');
                         }
@@ -170,7 +194,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         isPlaying = false;
                     }
                     break;
-                    
                 case 'togglePlay':
                     console.log("Toggling play");
                     if (isPlaying) {
@@ -226,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
+
         socket.on('vote_count', function(data) {
             const voteCount = data.votes;
             const voteThreshold = data.threshold;
@@ -272,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     handleInput(searchBar.value, searchSource);
                 }
             });
-        
+
             youtubeLinkInput.addEventListener('keyup', function(event) {
                 if (event.key === 'Enter') {
                     event.preventDefault();
@@ -282,7 +305,6 @@ document.addEventListener('DOMContentLoaded', function() {
             profilePic.addEventListener('click', function() {
                 profileDropdown.classList.toggle('show');
             });
-
         }
 
         if (window.location.pathname == "/display") {
@@ -460,7 +482,7 @@ function submitYouTubeLink() {
     var data = {
         youtube_link: youtubeLink
     };
-    
+
     socket.emit('addYouTubeLinkToQueue', data);
     document.getElementById('youtube-link').value = '';
 }
@@ -476,8 +498,27 @@ function handleSearchResults(data) {
 }
 
 function submitSong() {
-    const track = JSON.parse(document.getElementById('selected-item').dataset.track);
-    socket.emit('addSongToQueue', { track: track });
+    var selectedItem = document.getElementById('selected-item');
+    var track = JSON.parse(selectedItem.dataset.track);
+
+    // Ensure track_length is provided and is a number
+    if (!track.track_length || isNaN(track.track_length)) {
+        console.error('Track length not provided or invalid');
+        alert('Track length is missing or invalid. Please try again.');
+        return;
+    }
+
+    track.track_length = parseInt(track.track_length, 10);  // Ensure it's an integer
+
+    socket.emit('addSongToQueue', {
+        track: track
+    });
+    socket.emit('get_queue_length');
+    var resultText = document.getElementById('resulttext');
+    resultText.textContent = "Song added to queue!";
+    setTimeout(function() {
+        resultText.textContent = "";
+    }, 3000);
 }
 
 function createTrackItem(track) {
@@ -605,34 +646,36 @@ function playSong(song) {
 
     console.log('Playing:', song.track_name, 'by', song.artist_name);
 
-    const spotifyPlayer = document.getElementById('spotify-player');
+    const spotifyPlayerWrapper = document.getElementById('spotify-player-wrapper');
     const youtubePlayer = document.getElementById('youtube-player');
 
     if (window.location.pathname === '/display') {
         if (song.source === 'spotify') {
-            if (EmbedController) {
-                try {
-                    EmbedController.pause();
-                    EmbedController.loadUri(song.uri);
-                    EmbedController.play();
-                    console.log('Spotify Playback started');
-                } catch (error) {
-                    console.error("Playback error:", error);
-                }
+            if (spotifyPlayerWrapper && EmbedController) {
+                const spotifyURI = `spotify:track:${song.track_id}`;
+                EmbedController.loadUri(spotifyURI, function() {
+                    EmbedController.play(function() {
+                        console.log('Spotify Playback started');
+                        setInterval(updatePlayerProgress, 1000, song.track_length); // Call the function every second
+                    });
+                });
+                spotifyPlayerWrapper.style.display = 'block';
+            } else {
+                console.error('Spotify player element or controller not found');
             }
-            if (spotifyPlayer) spotifyPlayer.style.display = 'block';
             if (youtubePlayer) youtubePlayer.style.display = 'none';
         } else if (song.source === 'youtube') {
             if (EmbedController) {
                 EmbedController.pause();
             }
-            if (spotifyPlayer) spotifyPlayer.style.display = 'none';
+            if (spotifyPlayerWrapper) spotifyPlayerWrapper.style.display = 'none';
             if (youtubePlayer) youtubePlayer.style.display = 'block';
             if (ytPlayerReady) {
                 try {
                     if (validateYouTubeTrackID(song.track_id)) {
                         ytPlayer.loadVideoById(song.track_id);
                         ytPlayer.playVideo();
+                        setInterval(updatePlayerProgress, 1000, song.track_length); // Call the function every second
                     } else {
                         console.error('Invalid YouTube track ID:', song.track_id);
                     }
@@ -657,7 +700,6 @@ function playSong(song) {
         if (submitterUidElem) submitterUidElem.innerHTML = "Submitted By: " + song.uid;
 
         isPlaying = true;
-        updatePlayerProgress(song.track_length);
         bpm = song.bpm;
         animateFrames(song.bpm);
     }
@@ -702,21 +744,23 @@ function updatePlayerProgress(trackLength) {
         document.getElementById('progressBar').value = progress;
         document.getElementById('duration').innerHTML = formatTime(duration);
         document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime);
-    } else if (EmbedController && EmbedController.getPlaybackState().playing) {
-        EmbedController.getCurrentState().then(state => {
-            var duration = state.duration;
-            var currentTime = state.position;
-            var progress = (currentTime / duration) * 100;
-            document.getElementById('progressBar').value = progress;
-            document.getElementById('duration').innerHTML = formatTime(duration / 1000); // Convert ms to s
-            document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime / 1000); // Convert ms to s
+    } else if (EmbedController) {
+        EmbedController.getCurrentState(function(state) {
+            if (state && state.playback_state === 'playing') {
+                var duration = state.duration;
+                var currentTime = state.position;
+                var progress = (currentTime / duration) * 100;
+                document.getElementById('progressBar').value = progress;
+                document.getElementById('duration').innerHTML = formatTime(duration / 1000); // Convert ms to s
+                document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime / 1000); // Convert ms to s
+            }
         });
     } else {
         document.getElementById('progressBar').max = 100;
-        document.getElementById('duration').innerHTML = trackLength;
+        document.getElementById('duration').innerHTML = formatTime(trackLength);
+        document.getElementById('progressTimestamp').innerHTML = formatTime(0);
     }
 }
-
 
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
@@ -769,3 +813,12 @@ function adjustOverlayTextSize() {
 }
 
 window.addEventListener('resize', adjustOverlayTextSize);
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.pathname === '/display') {
+        const startButton = document.getElementById('startButton');
+        startButton.addEventListener('click', function() {
+            startButton.style.display = 'none';
+        });
+    }
+});

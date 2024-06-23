@@ -4,9 +4,9 @@
     <title>CatJam Display</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
     <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
@@ -29,22 +29,52 @@
                     </div>
                 </div>
                 <div id="flexbox-middle-right">
-                    <img id="catjam" src="/static/img/cats/White/frame1.png" width="250" height="250">
+                    <img id="catjam" src="/static/img/cats/White/PusayCenter.png" width="250" height="250">
                 </div>
             </div>
         </header>
         <div class="container">
             <div class="section">
                 <div class="song">
+                    <div id="spotify-player-wrapper">
+                        <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
+                        <script>
+                            var EmbedController;
+                            window.onSpotifyIframeApiReady = (IFrameAPI) => {
+                                let element = document.getElementById('spotify-player');
+                                let options = {
+                                    width: 0,
+                                    height: 0,
+                                    uri: null,
+                                };
+                                let callback = (controller) => {
+                                    EmbedController = controller;
+                                    EmbedController.addListener('playback_update', e => {
+                                        socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
+                                        if (e.data.position == e.data.duration && e.data.duration != 0) {
+                                            console.log('Song ended');
+                                            isPlaying = false;
+                                            defaultFrame();
+                                            clearInterval(animationInterval);
+                                            resetPlayerUI();
+                                            socket.emit('removeFirstSong');
+                                            socket.emit('get_next_song');
+                                            document.getElementById('playQueue').click();
+                                        }
+                                        var progress = (e.data.position / e.data.duration) * 100;
+                                        document.getElementById('progressBar').value = progress;
+                                    });
+                                };
+                                IFrameAPI.createController(element, options, callback);
+                            };
+                        </script>
+                    </div>
                     <div id="youtube-player-wrapper">
                         <div id="youtube-player" style="display:none;"></div>
                     </div>
-                    <div id="spotify-player-wrapper">
-                        <iframe id="spotify-player" src="" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
-                    </div>
                     <section class="admin">
                         <button id="startButton" class="start-button">Start</button>
-                        <button id="playQueue" class="play-queue-button">Play Queue</button>                        
+                        <button id="playQueue" class="play-queue-button">Play Queue</button>
                     </section>
                 </div>
             </div>
