@@ -28,7 +28,7 @@ OIDC_CLIENT_ID=""
 OIDC_CLIENT_SECRET=""
 SSH_HOST=""
 SSH_USER=""
-SSH_PASSWORD=::
+SSH_PASSWORD=""
 ```
 
 Reach out to an RTP to get OIDC credentials to enable CSH authentication, and either an RTP or a CatJam admin to get SSH creds for the PI hosting the display.
