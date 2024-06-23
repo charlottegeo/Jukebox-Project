@@ -73,7 +73,7 @@ def handle_connect():
     if uid not in user_order:
         user_order.append(uid)
     emit('message', {'message': 'Connected to server'})
-    emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 @socketio.on('disconnect')
 @authenticated_only
@@ -114,10 +114,10 @@ def handle_add_song_to_queue(data):
 
             track['source'] = data.get('source', 'spotify')
             add_song_to_user_queue(uid, track)
-            emit('songAdded', {'message': 'Song added to queue', 'track': track})
+            emit('songAdded', {'message': 'Song added to queue', 'track': track}, room=request.sid)
 
             if uid in user_queues:
-                emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+                emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
             
             if not isPlaying:
                 check_and_play_next_song()
@@ -183,9 +183,9 @@ def handle_remove_song_from_queue(data):
 def handle_get_user_queue():
     uid = session.get('uid')
     if uid in user_queues:
-        emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()})
+        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()})
     else:
-        emit('updateUserQueueDisplay', {'queue': []})
+        emit('updateUserQueue', {'queue': []})
 
 @socketio.on('vote_to_skip')
 @authenticated_only

@@ -257,10 +257,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         socket.on('updateUserQueue', function(data) {
-            if (window.location.pathname === '/' && document.getElementById('user-queue-list')) {
-                updateUserQueueDisplay(data.queue);
-            }
+            updateUserQueueDisplay(data.queue);
         });
+        
 
         if (window.location.pathname == "/") {
             const searchSourceSelect = document.getElementById('search-source');
@@ -487,40 +486,6 @@ function submitYouTubeLink() {
     document.getElementById('youtube-link').value = '';
 }
 
-function handleSearchResults(data) {
-    var dropdown = document.getElementById('dropdown');
-    dropdown.innerHTML = '';
-    data.forEach(track => {
-        var item = createTrackItem(track);
-        dropdown.appendChild(item);
-    });
-    dropdown.style.display = 'block';
-}
-
-function submitSong() {
-    var selectedItem = document.getElementById('selected-item');
-    var track = JSON.parse(selectedItem.dataset.track);
-
-    // Ensure track_length is provided and is a number
-    if (!track.track_length || isNaN(track.track_length)) {
-        console.error('Track length not provided or invalid');
-        alert('Track length is missing or invalid. Please try again.');
-        return;
-    }
-
-    track.track_length = parseInt(track.track_length, 10);  // Ensure it's an integer
-
-    socket.emit('addSongToQueue', {
-        track: track
-    });
-    socket.emit('get_queue_length');
-    var resultText = document.getElementById('resulttext');
-    resultText.textContent = "Song added to queue!";
-    setTimeout(function() {
-        resultText.textContent = "";
-    }, 3000);
-}
-
 function createTrackItem(track) {
     var item = document.createElement('div');
     item.className = 'item';
@@ -562,6 +527,16 @@ function createTrackItem(track) {
     return item;
 }
 
+function handleSearchResults(data) {
+    var dropdown = document.getElementById('dropdown');
+    dropdown.innerHTML = '';
+    data.forEach(track => {
+        var item = createTrackItem(track);
+        dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+}
+
 function setText() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
@@ -589,7 +564,14 @@ function setText() {
 function submitSong() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
-    track.track_length = parseInt(track.track_length);
+
+    track.track_length = parseInt(track.track_length, 10);
+    if (isNaN(track.track_length)) {
+        console.error('Track length not provided or invalid');
+        alert('Track length is missing or invalid. Please try again.');
+        return;
+    }
+
     socket.emit('addSongToQueue', {
         track: track
     });
@@ -599,7 +581,12 @@ function submitSong() {
     setTimeout(function() {
         resultText.textContent = "";
     }, 3000);
+
+    socket.on('songAdded', function(data) {
+        socket.emit('get_user_queue');
+    });
 }
+
 
 function getQueueUserCount() {
     socket.emit('getQueueUserCount');
