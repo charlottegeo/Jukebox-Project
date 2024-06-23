@@ -10,7 +10,6 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
     <link rel="manifest" href="/static/img/site.webmanifest">
-    <meta name="token" content="{{ token }}">
 </head>
 <body>
     <div class="container">
@@ -71,26 +70,5 @@
             <button onclick="voteToSkip()">Vote to Skip</button>
         </section>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const token = document.querySelector('meta[name="token"]').content;
-            if (token) {
-                localStorage.setItem('authToken', token);
-                var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
-                    query: { token: token }
-                });
-
-                socket.emit('get_user_queue');
-
-                socket.on('updateUserQueue', function(data) {
-                    updateUserQueueDisplay(data.queue);
-                });
-            } else {
-                console.error('Token not found in session.');
-                alert('Authentication token is missing. Please login again.');
-                window.location.href = '/';
-            }
-        });
-    </script>
 </body>
 </html>

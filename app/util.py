@@ -1,24 +1,5 @@
 from functools import wraps
-from flask import session, current_app
-import jwt
-import datetime
-
-def generate_token(uid):
-    payload = {
-        'user_id': uid,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
-    }
-    token = jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
-    return token
-
-def decode_token(token):
-    try:
-        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
-        return payload['user_id']
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
+from flask import session
 
 def csh_user_auth(func):
     @wraps(func)
