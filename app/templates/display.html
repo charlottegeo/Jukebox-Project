@@ -52,14 +52,13 @@
                                     EmbedController.addListener('playback_update', e => {
                                         socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
                                         if (e.data.position == e.data.duration && e.data.duration != 0) {
-                                            console.log('Song ended');
+                                            console.log('Spotify song ended');
                                             isPlaying = false;
                                             defaultFrame();
                                             clearInterval(animationInterval);
                                             resetPlayerUI();
                                             socket.emit('removeFirstSong');
                                             socket.emit('get_next_song');
-                                            document.getElementById('playQueue').click();
                                         }
                                         var progress = (e.data.position / e.data.duration) * 100;
                                         document.getElementById('progressBar').value = progress;
