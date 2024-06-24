@@ -53,6 +53,7 @@ user_queues = {}
 user_order = []
 skip_votes = {}
 selected_color = "White"  # Default color
+currentPlayingSong = None
 
 # Decorator to ensure the user is authenticated
 def authenticated_only(f):
@@ -148,7 +149,7 @@ def handle_add_playlist_to_queue(data):
     for track in tracks:
         add_song_to_user_queue(uid, track)
 
-    emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
 
 @socketio.on('addAlbumToQueue')
@@ -166,8 +167,9 @@ def handle_add_album_to_queue(data):
     for track in tracks:
         add_song_to_user_queue(uid, track)
 
-    emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
+
 
 @socketio.on('removeSongFromQueue')
 @authenticated_only
@@ -176,7 +178,7 @@ def handle_remove_song_from_queue(data):
     uid = session.get('uid')
     if uid in user_queues:
         user_queues[uid].remove_song(song_index)
-        emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 @socketio.on('get_user_queue')
 @authenticated_only
@@ -216,13 +218,21 @@ def handle_is_playing(data):
 def handle_get_next_song():
     play_next_song()
 
+@socketio.on('get_current_song')
+@authenticated_only
+def handle_get_current_song():
+    if currentPlayingSong:
+        emit('updateCurrentSong', {'currentSong': currentPlayingSong}, room=request.sid)
+    else:
+        emit('updateCurrentSong', {'currentSong': None}, room=request.sid)
+
 @socketio.on('clearQueueForUser')
 @authenticated_only
 def handle_clear_queue_for_user():
     uid = session.get('uid')
     if uid in user_queues:
         user_queues[uid].queue = []
-        emit('updateUserQueueDisplay', {'queue': []}, room=request.sid)
+        emit('updateUserQueue', {'queue': []}, room=request.sid)
         emit('queueUpdated', broadcast=True)
 
 @socketio.on('secondsToMinutes')
@@ -278,7 +288,7 @@ def handle_clear_specific_queue(data):
     uid = data.get('uid')
     if uid in user_queues:
         user_queues[uid].queue = []
-        emit('updateUserQueueDisplay', {'queue': []}, room=request.sid)
+        emit('updateUserQueue', {'queue': []}, room=request.sid)
         emit('queueUpdated', broadcast=True)
 
 @socketio.on('clearAllQueues')
@@ -297,7 +307,7 @@ def handle_reorder_queue(data):
 
     if uid in user_queues and old_index is not None and new_index is not None:
         user_queues[uid].reorder_queue(old_index, new_index)
-        emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 @socketio.on('getQueueUserCount')
 @authenticated_only
@@ -348,7 +358,7 @@ def add_song_to_user_queue(uid, song):
         uid=uid,
         source=song['source']
     ))
-    emit('updateUserQueueDisplay', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 def get_next_user():
     if user_order:
@@ -362,20 +372,26 @@ def check_and_play_next_song():
         play_next_song()
 
 def play_next_song():
-    global isPlaying
+    global isPlaying, currentPlayingSong
     next_user = get_next_user()
     if next_user and next_user in user_queues:
         user_queue = user_queues[next_user]
         if user_queue.queue:
             next_song = user_queue.remove_song()
-            emit('message', {'action': 'next_song', 'nextSong': next_song.to_dict()}, broadcast=True)
+            currentPlayingSong = next_song.to_dict()  # Store the current playing song
+            emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong}, broadcast=True)
+            emit('updateCurrentSong', {'currentSong': currentPlayingSong}, broadcast=True)  # Broadcast the current song to all clients
             isPlaying = True
         else:
+            currentPlayingSong = None
             emit('message', {'action': 'queue_empty'}, broadcast=True)
             isPlaying = False
     else:
+        currentPlayingSong = None
         emit('message', {'action': 'queue_empty'}, broadcast=True)
         isPlaying = False
+    emit('updateUserQueue', {'queue': user_queues[next_user].get_queue()}, broadcast=True)  # Update the queue for all clients
+
 
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')

@@ -30,24 +30,30 @@ function onYouTubeIframeAPIReady() {
 function onPlayerReady(event) {
     ytPlayerReady = true;
     console.log('YouTube Player Ready');
-    playSong();
+    if (pendingSong) {
+        playSong(pendingSong);
+        pendingSong = null;
+    } else {
+        playSong();
+    }
 }
 
 function onPlayerStateChange(event) {
     if (event.data == YT.PlayerState.ENDED) {
-        console.log('Video ended');
+        console.log('YouTube video ended');
         isPlaying = false;
         defaultFrame();
         clearInterval(animationInterval);
         resetPlayerUI();
         socket.emit('removeFirstSong');
         socket.emit('get_next_song');
-        document.getElementById('playQueue').click();
+        socket.emit('get_user_queue');
     } else if (event.data == YT.PlayerState.PLAYING) {
         updateYouTubeProgress();
         setInterval(updateYouTubeProgress, 1000);
     }
 }
+
 
 function validateYouTubeTrackID(track_id) {
     const regex = /^[a-zA-Z0-9_-]{11}$/;
@@ -81,6 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Socket.IO connected');
             if (window.location.pathname === '/') {
                 socket.emit('get_user_queue');
+                socket.emit('get_current_song');
             }
         });
 
@@ -107,6 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        
 
         socket.on('message', function(data) {
             console.log('Received:', data);
@@ -235,8 +243,10 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Socket.IO Error:', error);
         });
 
-        socket.on('updateCurrentSong', function(song) {
-            updateCurrentSong(song);
+        socket.on('updateCurrentSong', function(data) {
+            if (data.currentSong) {
+                updateCurrentSong(data.currentSong);
+            }
         });
 
         socket.on('queueLength', function(data) {
@@ -423,6 +433,7 @@ function removeSongFromQueue(index) {
         songContainer.classList.add('removed');
         setTimeout(() => {
             socket.emit('removeSongFromQueue', { index: index });
+            socket.emit('get_user_queue');
         }, 500);
     }
 }
@@ -609,6 +620,7 @@ function startPlay() {
     socket.emit('get_next_song');
 }
 
+
 function updateAdminQueue(data) {
     var queue = data.queue;
     if (!queue || queue.length === 0) {
@@ -622,8 +634,8 @@ function clearQueue() {
     socket.emit('clearQueueForUser');
 }
 
-function playSong(song) {
-    if (!song || Object.keys(song).length === 0) {
+function playSong(song = null) {
+    if (!song) {
         console.log('Queue is empty');
         resetPlayerUI();
         defaultFrame();
@@ -634,62 +646,54 @@ function playSong(song) {
     console.log('Playing:', song.track_name, 'by', song.artist_name);
 
     const spotifyPlayerWrapper = document.getElementById('spotify-player-wrapper');
-    const youtubePlayer = document.getElementById('youtube-player');
+    const youtubePlayerWrapper = document.getElementById('youtube-player-wrapper');
+    if (song.source === 'spotify') {
+        if (ytPlayerReady && ytPlayer) {
+            ytPlayer.stopVideo();
+        }
+        if (spotifyPlayerWrapper) spotifyPlayerWrapper.style.display = 'block';
+        if (youtubePlayerWrapper) youtubePlayerWrapper.style.display = 'none';
 
-    if (window.location.pathname === '/display') {
-        if (song.source === 'spotify') {
-            if (spotifyPlayerWrapper && EmbedController) {
-                const spotifyURI = `spotify:track:${song.track_id}`;
-                EmbedController.loadUri(spotifyURI, function() {
-                    EmbedController.play(function() {
-                        console.log('Spotify Playback started');
-                        setInterval(updatePlayerProgress, 1000, song.track_length); // Call the function every second
-                    });
-                });
-                spotifyPlayerWrapper.style.display = 'block';
-            } else {
-                console.error('Spotify player element or controller not found');
-            }
-            if (youtubePlayer) youtubePlayer.style.display = 'none';
-        } else if (song.source === 'youtube') {
-            if (EmbedController) {
-                EmbedController.pause();
-            }
-            if (spotifyPlayerWrapper) spotifyPlayerWrapper.style.display = 'none';
-            if (youtubePlayer) youtubePlayer.style.display = 'block';
-            if (ytPlayerReady) {
-                try {
-                    if (validateYouTubeTrackID(song.track_id)) {
-                        ytPlayer.loadVideoById(song.track_id);
-                        ytPlayer.playVideo();
-                        setInterval(updatePlayerProgress, 1000, song.track_length); // Call the function every second
-                    } else {
-                        console.error('Invalid YouTube track ID:', song.track_id);
-                    }
-                } catch (error) {
-                    console.error("Failed to load YouTube video:", error);
-                }
-            } else {
-                console.error("YouTube player is not ready, storing the song to play later");
-                pendingSong = song;
-            }
+        const spotifyURI = `spotify:track:${song.track_id}`;
+        EmbedController.loadUri(spotifyURI, function() {
+            EmbedController.play(function() {
+                console.log('Spotify Playback started');
+            });
+        });
+    } else if (song.source === 'youtube') {
+        if (!ytPlayerReady) {
+            pendingSong = song;
+            console.log('YouTube player is not ready, storing the song to play later');
+            return;
         }
 
-        // Update the UI elements
-        const songTitleElem = document.getElementById("song_title");
-        const artistNameElem = document.getElementById("artist_name");
-        const albumCoverElem = document.getElementById("album-cover");
-        const submitterUidElem = document.getElementById("submitter_uid");
+        if (EmbedController) {
+            EmbedController.pause();
+        }
+        if (spotifyPlayerWrapper) spotifyPlayerWrapper.style.display = 'none';
+        if (youtubePlayerWrapper) youtubePlayerWrapper.style.display = 'block';
 
-        if (songTitleElem) songTitleElem.innerHTML = song.track_name;
-        if (artistNameElem) artistNameElem.innerHTML = song.artist_name;
-        if (albumCoverElem) albumCoverElem.src = song.cover_url;
-        if (submitterUidElem) submitterUidElem.innerHTML = "Submitted By: " + song.uid;
-
-        isPlaying = true;
-        bpm = song.bpm;
-        animateFrames(song.bpm);
+        if (validateYouTubeTrackID(song.track_id)) {
+            ytPlayer.loadVideoById(song.track_id);
+            ytPlayer.playVideo();
+        } else {
+            console.error('Invalid YouTube track ID:', song.track_id);
+        }
     }
+
+    const songTitleElem = document.getElementById("song_title");
+    const artistNameElem = document.getElementById("artist_name");
+    const albumCoverElem = document.getElementById("album-cover");
+    const submitterUidElem = document.getElementById("submitter_uid");
+
+    if (songTitleElem) songTitleElem.innerHTML = song.track_name;
+    if (artistNameElem) artistNameElem.innerHTML = song.artist_name;
+    if (albumCoverElem) albumCoverElem.src = song.cover_url;
+    if (submitterUidElem) submitterUidElem.innerHTML = "Submitted By: " + song.uid;
+
+    isPlaying = true;
+    bpm = song.bpm;
+    animateFrames(song.bpm);
 }
 
 function setCurrentSongUI(song) {
@@ -731,23 +735,13 @@ function updatePlayerProgress(trackLength) {
         document.getElementById('progressBar').value = progress;
         document.getElementById('duration').innerHTML = formatTime(duration);
         document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime);
-    } else if (EmbedController) {
-        EmbedController.getCurrentState(function(state) {
-            if (state && state.playback_state === 'playing') {
-                var duration = state.duration;
-                var currentTime = state.position;
-                var progress = (currentTime / duration) * 100;
-                document.getElementById('progressBar').value = progress;
-                document.getElementById('duration').innerHTML = formatTime(duration / 1000); // Convert ms to s
-                document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime / 1000); // Convert ms to s
-            }
-        });
     } else {
         document.getElementById('progressBar').max = 100;
         document.getElementById('duration').innerHTML = formatTime(trackLength);
         document.getElementById('progressTimestamp').innerHTML = formatTime(0);
     }
 }
+
 
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
