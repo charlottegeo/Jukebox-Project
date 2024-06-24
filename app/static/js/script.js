@@ -9,6 +9,7 @@ var socket;
 var ytPlayerReady = false;
 var ytPlayer;
 var pendingSong = null;
+var tempSongData = null;
 
 var frame0 = "/static/img/cats/White/PusayLeft.png";
 var frame1 = "/static/img/cats/White/PusayCenter.png";
@@ -54,7 +55,6 @@ function onPlayerStateChange(event) {
     }
 }
 
-
 function validateYouTubeTrackID(track_id) {
     const regex = /^[a-zA-Z0-9_-]{11}$/;
     return regex.test(track_id);
@@ -91,14 +91,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        socket.on('connect_error', (error) => {
-            console.error('Socket.IO connection error:', error);
-            if (error.message === 'jwt expired' || error.message === 'invalid token') {
-                alert('Session expired or invalid token. Please login again.');
-                window.location.href = '/';
-            }
-        });
-
         socket.on('youtubePlayerIsReady', function() {
             if (pendingSong && ytPlayerReady) {
                 try {
@@ -114,7 +106,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
 
         socket.on('message', function(data) {
             console.log('Received:', data);
@@ -266,11 +257,26 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(`Vote count: ${voteCount}/${voteThreshold}`);
         });
 
+        socket.on('update_code', function(data) {
+            if(window.location.pathname === '/display'){
+                document.getElementById('current-code').textContent = data.code;
+            }
+        });
+        
         socket.on('updateUserQueue', function(data) {
             updateUserQueueDisplay(data.queue);
         });
-        
 
+        socket.on('code_validation', function(data) {
+            if (data.success) {
+                document.getElementById('code-prompt').style.display = 'none';
+                document.getElementById('code-error').style.display = 'none';
+                submitSong();
+            } else {
+                document.getElementById('code-error').style.display = 'block';
+            }
+        });
+        
         if (window.location.pathname == "/") {
             const searchSourceSelect = document.getElementById('search-source');
             const searchBar = document.getElementById('searchbar');
@@ -583,21 +589,27 @@ function submitSong() {
         return;
     }
 
-    socket.emit('addSongToQueue', {
-        track: track
-    });
-    socket.emit('get_queue_length');
-    var resultText = document.getElementById('resulttext');
-    resultText.textContent = "Song added to queue!";
-    setTimeout(function() {
-        resultText.textContent = "";
-    }, 3000);
+    socket.emit('check_validation', {}, function(data) {
+        if (data.needsValidation) {
+            tempSongData = track;  // Store the song data temporarily
+            promptForCode();
+        } else {
+            socket.emit('addSongToQueue', {
+                track: track
+            });
+            socket.emit('get_queue_length');
+            var resultText = document.getElementById('resulttext');
+            resultText.textContent = "Song added to queue!";
+            setTimeout(function() {
+                resultText.textContent = "";
+            }, 3000);
 
-    socket.on('songAdded', function(data) {
-        socket.emit('get_user_queue');
+            socket.on('songAdded', function(data) {
+                socket.emit('get_user_queue');
+            });
+        }
     });
 }
-
 
 function getQueueUserCount() {
     socket.emit('getQueueUserCount');
@@ -619,7 +631,6 @@ function resetSongSelectionUI() {
 function startPlay() {
     socket.emit('get_next_song');
 }
-
 
 function updateAdminQueue(data) {
     var queue = data.queue;
@@ -742,7 +753,6 @@ function updatePlayerProgress(trackLength) {
     }
 }
 
-
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
@@ -752,6 +762,39 @@ function formatTime(seconds) {
 function voteToSkip() {
     socket.emit('vote_to_skip');
 }
+
+function promptForCode() {
+    document.getElementById('code-prompt').style.display = 'block';
+}
+
+function submitCode() {
+    var code = document.getElementById('code-input').value;
+    socket.emit('validate_code', {code: code}, function(data) {
+        if (data.success) {
+            document.getElementById('code-prompt').style.display = 'none';
+            document.getElementById('code-error').style.display = 'none';
+            if (tempSongData) {
+                socket.emit('addSongToQueue', {
+                    track: tempSongData
+                });
+                tempSongData = null;  // Clear the temporary song data
+                socket.emit('get_queue_length');
+                var resultText = document.getElementById('resulttext');
+                resultText.textContent = "Song added to queue!";
+                setTimeout(function() {
+                    resultText.textContent = "";
+                }, 3000);
+
+                socket.on('songAdded', function(data) {
+                    socket.emit('get_user_queue');
+                });
+            }
+        } else {
+            document.getElementById('code-error').style.display = 'block';
+        }
+    });
+}
+
 
 function calculateFrameDuration(bpm) {
     var bps = bpm / 60;

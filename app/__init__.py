@@ -35,6 +35,7 @@ def create_app():
 
     with app.app_context():
         from app import events
-        threading.Thread(target=events.check_quiet_hours).start()
+        threading.Thread(target=events.update_code, daemon=True).start()
+
 
     return app

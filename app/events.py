@@ -10,6 +10,8 @@ import requests
 import datetime
 import time
 import threading
+import random
+import string
 
 from app import socketio
 from app.models import Song, UserQueue
@@ -27,33 +29,20 @@ SSH_HOST = os.getenv('SSH_HOST')
 SSH_USER = os.getenv('SSH_USER')
 SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 MAX_SONG_LENGTH = 10 * 60  # 10 minutes
-QUIET_HOURS = {
-    "Sunday": (23, 7),
-    "Monday": (23, 7),
-    "Tuesday": (23, 7),
-    "Wednesday": (23, 7),
-    "Thursday": (23, 7),
-    "Friday": (1, 7),
-    "Saturday": (1, 7)
-}
-EXAM_WEEKS = {
-    2024: [(datetime.date(2024, 12, 11), datetime.date(2024, 12, 18)),
-           (datetime.date(2025, 4, 30), datetime.date(2025, 5, 7)),
-           (datetime.date(2025, 8, 8), datetime.date(2025, 8, 12))],
-    2025: [(datetime.date(2025, 12, 10), datetime.date(2025, 12, 17)),
-           (datetime.date(2026, 4, 29), datetime.date(2026, 5, 6)),
-           (datetime.date(2026, 8, 7), datetime.date(2026, 8, 11))],
-    2026: [(datetime.date(2026, 12, 9), datetime.date(2026, 12, 16)),
-           (datetime.date(2027, 4, 28), datetime.date(2027, 5, 5)),
-           (datetime.date(2027, 8, 6), datetime.date(2027, 8, 10))]
-}
+
 
 # In-memory storage
 user_queues = {}
 user_order = []
 skip_votes = {}
+disconnect_timers = {}
+DISCONNECT_GRACE_PERIOD = 60 #in seconds
 selected_color = "White"  # Default color
 currentPlayingSong = None
+current_code = ""
+CODE_INTERVAL = 10  # seconds
+VALIDATION_INTERVAL = 3600  # seconds (1 hour by default, can be changed)
+user_last_validated = {}
 
 # Decorator to ensure the user is authenticated
 def authenticated_only(f):
@@ -69,6 +58,11 @@ def authenticated_only(f):
 @authenticated_only
 def handle_connect():
     uid = session.get('uid')
+    # If there was a disconnect timer, cancel it
+    if uid in disconnect_timers:
+        disconnect_timers[uid].cancel()
+        del disconnect_timers[uid]
+
     if uid not in user_queues:
         user_queues[uid] = UserQueue(uid)
     if uid not in user_order:
@@ -79,9 +73,17 @@ def handle_connect():
 @socketio.on('disconnect')
 @authenticated_only
 def handle_disconnect():
-    uid = session.get('uid')
-    if uid in user_order:
-        user_order.remove(uid)
+    uid = session.get('uid')    
+    def remove_user_queue():
+        if uid in user_order:
+            user_order.remove(uid)
+        if uid in user_queues:
+            del user_queues[uid]
+        emit('message', {'message': 'User queue removed due to disconnect'}, broadcast=True)
+    
+    timer = threading.Timer(DISCONNECT_GRACE_PERIOD, remove_user_queue)
+    timer.start()
+    disconnect_timers[uid] = timer
 
 @socketio.on('searchTracks')
 @authenticated_only
@@ -281,6 +283,23 @@ def handle_set_volume(data):
         emit('volume_set', {'volume': volume}, broadcast=True)
     except Exception as e:
         emit('error', {'message': 'Failed to set volume.'})
+
+@socketio.on('validate_code')
+@authenticated_only
+def handle_validate_code(data):
+    uid = session.get('uid')
+    entered_code = data.get('code')
+    if entered_code == current_code:
+        user_last_validated[uid] = time.time()
+        emit('code_validation', {'success': True})
+    else:
+        emit('code_validation', {'success': False})
+
+@socketio.on('check_validation')
+@authenticated_only
+def handle_check_validation(data):
+    uid = data.get('uid')
+    emit('code_validation', {'needsValidation': needs_validation(uid)})
 
 @socketio.on('clearSpecificQueue')
 @authenticated_only
@@ -503,33 +522,17 @@ def parse_duration_in_seconds(duration_str):
         return hours * 3600 + minutes * 60 + seconds
     return 0
 
-# Quiet hours handling
-def is_exam_week():
-    current_date = datetime.datetime.now().date()
-    current_year = current_date.year
-    for start_date, end_date in EXAM_WEEKS.get(current_year, []):
-        if start_date <= current_date <= end_date:
-            return True
-    return False
+def generate_code():
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=5))
 
-def is_quiet_hours():
-    if is_exam_week():
-        return True
-
-    current_day = datetime.datetime.now().strftime("%A")
-    current_hour = datetime.datetime.now().hour
-    start, end = QUIET_HOURS[current_day]
-
-    if start < end:
-        return start <= current_hour < end
-    else:
-        return current_hour >= start or current_hour < end
-
-def set_quiet_hours_volume():
-    if is_quiet_hours():
-        handle_set_volume({'volume': 60})
-
-def check_quiet_hours():
+def update_code():
+    global current_code
     while True:
-        set_quiet_hours_volume()
-        time.sleep(3600)
+        current_code = generate_code()
+        socketio.emit('update_code', {'code': current_code}, broadcast=True)
+        time.sleep(CODE_INTERVAL)
+
+def needs_validation(uid):
+    if uid not in user_last_validated:
+        return True
+    return (time.time() - user_last_validated[uid]) > VALIDATION_INTERVAL
