@@ -69,7 +69,7 @@ def save_state():
         'user_queues': user_queues_serializable,
         'user_order': user_order,
         'skip_votes': skip_votes,
-        'currentPlayingSong': currentPlayingSong.to_dict() if currentPlayingSong else None,
+        'currentPlayingSong': currentPlayingSong if isinstance(currentPlayingSong, dict) else currentPlayingSong.to_dict() if currentPlayingSong else None,
         'current_code': current_code,
         'user_last_validated': user_last_validated
     }
@@ -126,11 +126,12 @@ def handle_connect():
 def handle_disconnect():
     uid = session.get('uid')    
     def remove_user_queue():
-        if uid in user_order:
-            user_order.remove(uid)
-        if uid in user_queues:
-            del user_queues[uid]
-        emit('message', {'message': 'User queue removed due to disconnect'}, broadcast=True)
+        with current_app.app_context():
+            if uid in user_order:
+                user_order.remove(uid)
+            if uid in user_queues:
+                del user_queues[uid]
+            emit('message', {'message': 'User queue removed due to disconnect'}, broadcast=True)
     
     timer = threading.Timer(DISCONNECT_GRACE_PERIOD, remove_user_queue)
     timer.start()
@@ -349,8 +350,8 @@ def handle_validate_code(data):
 @authenticated_only
 def handle_check_validation(data):
     uid = session.get('uid')
-    needs_validation = needs_validation(uid)
-    emit('check_validation_response', {'needsValidation': needs_validation}, room=request.sid)
+    requires_validation = needs_validation(uid)
+    emit('check_validation_response', {'needsValidation': requires_validation}, room=request.sid)
 
 @socketio.on('clearSpecificQueue')
 @authenticated_only
