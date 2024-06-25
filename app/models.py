@@ -23,6 +23,20 @@ class Song:
             'source': self.source
         }
 
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            track_name=data['track_name'],
+            artist_name=data['artist_name'],
+            track_length=data['track_length'],
+            cover_url=data['cover_url'],
+            track_id=data['track_id'],
+            uri=data['uri'],
+            bpm=data['bpm'],
+            uid=data['uid'],
+            source=data['source']
+        )
+
 class UserQueue:
     def __init__(self, uid):
         self.uid = uid
@@ -47,3 +61,14 @@ class UserQueue:
         if 0 <= old_index < len(self.queue) and 0 <= new_index < len(self.queue):
             self.queue.insert(new_index, self.queue.pop(old_index))
             print(f"Queue reordered for {self.uid}. Current queue: {self.get_queue()}")
+
+    def to_dict(self):
+        return {
+            'uid': self.uid,
+            'queue': [song.to_dict() for song in self.queue]
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        queue = [Song.from_dict(song) for song in data.get('queue', [])]
+        return cls(uid=data['uid'], queue=queue)
