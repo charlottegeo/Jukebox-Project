@@ -6,14 +6,14 @@ from config import Config
 from flask_session import Session
 import threading
 
-socketio = SocketIO()
+socketio = SocketIO(cors_allowed_origins="*")
 sess = Session()
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    socketio.init_app(app)
+    socketio.init_app(app, async_mode='eventlet')
     sess.init_app(app)
 
     CSH_AUTH = ProviderConfiguration(
