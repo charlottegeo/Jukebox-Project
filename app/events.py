@@ -76,8 +76,8 @@ def save_state():
     # Save state to Redis
     redis_instance.set('jukebox_state', json.dumps(state))
 
-def run_with_app_context(target, *args, **kwargs):
-    with current_app.app_context():
+def run_with_app_context(app, target, *args, **kwargs):
+    with app.app_context():
         target(*args, **kwargs)
 
 def periodic_save():
@@ -574,13 +574,6 @@ def parse_duration_in_seconds(duration_str):
 
 def generate_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=5))
-
-def update_code():
-    global current_code
-    while True:
-        current_code = generate_code()
-        socketio.emit('update_code', {'code': current_code}, to='/broadcast')
-        time.sleep(CODE_INTERVAL)
 
 def needs_validation(uid):
     if uid not in user_last_validated:

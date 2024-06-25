@@ -33,7 +33,7 @@ def create_app():
         from app.utils.main import get_token
         token = get_token()
         events.token = token
-        threading.Thread(target=events.run_with_app_context, args=(events.update_code,), daemon=True).start()
-        threading.Thread(target=events.run_with_app_context, args=(events.periodic_save,), daemon=True).start()
+        threading.Thread(target=events.run_with_app_context, args=(app, events.update_code), daemon=True).start()
+        threading.Thread(target=events.run_with_app_context, args=(app, events.periodic_save), daemon=True).start()
 
     return app
