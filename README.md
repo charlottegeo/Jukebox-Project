@@ -37,12 +37,11 @@ Replace the `CLIENT_ID` and `CLIENT_SECRET` values with your Spotify client ID a
 
 `SECRET_KEY` is just a Flask secret key.
 
-To get your client ID and secret, head to https://developer.spotify.com/dashboard and make a new app. When you're done, go to Settings to find your ID and secret.
+To get your client ID and secret, head to https://developer.spotify.com/dashboard and make a new app. When you're done, go to Settings to find your ID and secret. In order for your creds to work properly, you'll need to add `http://localhost:5000/callback` to the Redirect URIs in your Spotify app settings.
+
 **Note: You MUST have a Spotify Premium account to access certain parts of the API that are used here. The current version of catjam uses my client ID + secret as a temporary measure.**
 
 
 ## Usage
 
-To run the server locally, activate your virtual environment, and run `flask run`.
-
-The terminal will spit out a link to a local server that runs the website locally.
+To run the server locally, make sure you have Docker  and Docker Compose installed. Then, run `docker-compose up --build` in the root directory of the project. The server will be running on localhost:5000.
