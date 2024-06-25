@@ -71,7 +71,14 @@ function updateYouTubeProgress() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+    socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        transports: ['websocket', 'polling']
+    });    
 
     socket.on('connect', function() {
         console.log('Socket.IO connected');
@@ -87,6 +94,28 @@ document.addEventListener('DOMContentLoaded', function() {
             startTimer();
         }
     });
+
+    socket.on('check_validation_response', function(data) {
+        if (data.needsValidation) {
+            tempSongData = track;  // Store the song data temporarily
+            promptForCode();
+        } else {
+            socket.emit('addSongToQueue', {
+                track: tempSongData
+            });
+            socket.emit('get_queue_length');
+            var resultText = document.getElementById('resulttext');
+            resultText.textContent = "Song added to queue!";
+            setTimeout(function() {
+                resultText.textContent = "";
+            }, 3000);
+    
+            socket.on('songAdded', function(data) {
+                socket.emit('get_user_queue');
+            });
+        }
+    });
+    
 
     socket.on('disconnect', function() {
         console.log("Socket.IO disconnected");
@@ -501,11 +530,12 @@ function createTrackItem(track) {
     item.onclick = function() {
         console.log('Track clicked:', track.track_name);
         var selectedItem = document.getElementById('selected-item');
-        selectedItem.dataset.track = JSON.stringify(track);
+        selectedItem.dataset.track = JSON.stringify(track); // Store the track data
         setText();
     };
     return item;
 }
+
 
 function handleSearchResults(data) {
     var dropdown = document.getElementById('dropdown');
@@ -543,7 +573,7 @@ function setText() {
 
 function submitSong() {
     var selectedItem = document.getElementById('selected-item');
-    var track = JSON.parse(selectedItem.dataset.track);
+    var track = JSON.parse(selectedItem.dataset.track); // Retrieve the track data
 
     track.track_length = parseInt(track.track_length, 10);
     if (isNaN(track.track_length)) {
@@ -573,27 +603,6 @@ function submitSong() {
         }
     });
 }
-
-socket.on('check_validation_response', function(data) {
-    if (data.needsValidation) {
-        tempSongData = track;  // Store the song data temporarily
-        promptForCode();
-    } else {
-        socket.emit('addSongToQueue', {
-            track: tempSongData
-        });
-        socket.emit('get_queue_length');
-        var resultText = document.getElementById('resulttext');
-        resultText.textContent = "Song added to queue!";
-        setTimeout(function() {
-            resultText.textContent = "";
-        }, 3000);
-
-        socket.on('songAdded', function(data) {
-            socket.emit('get_user_queue');
-        });
-    }
-});
 
 function getQueueUserCount() {
     socket.emit('getQueueUserCount');
