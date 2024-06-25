@@ -38,9 +38,9 @@ class Song:
         )
 
 class UserQueue:
-    def __init__(self, uid):
+    def __init__(self, uid, queue=None):
         self.uid = uid
-        self.queue = []
+        self.queue = queue if queue is not None else []
 
     def add_song(self, song):
         self.queue.append(song)
