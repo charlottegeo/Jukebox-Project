@@ -8,9 +8,10 @@ import re
 from bs4 import BeautifulSoup
 import requests
 import time
-import threading
 import random
 import string
+import logging
+import pyotp
 from app import socketio
 from app.models import Song, UserQueue
 from app.utils.main import search_for_tracks, get_spotify_playlist_tracks, get_spotify_album_tracks
@@ -22,6 +23,8 @@ load_dotenv()
 
 redis_instance = None
 token = None  # Initialize token as None to be set later
+
+logging.basicConfig(level=logging.DEBUG)
 
 def get_redis_instance():
     global redis_instance
@@ -35,6 +38,7 @@ SSH_HOST = os.getenv('SSH_HOST')
 SSH_USER = os.getenv('SSH_USER')
 SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 MAX_SONG_LENGTH = 10 * 60  # 10 minutes
+CODE_INTERVAL = int(os.getenv('CODE_INTERVAL', 30))  # Interval for TOTP code change, default is 30 seconds
 
 # In-memory storage
 user_queues = {}
@@ -44,13 +48,14 @@ disconnect_timers = {}
 DISCONNECT_GRACE_PERIOD = 60  # in seconds
 selected_color = "White"  # Default color
 currentPlayingSong = None
-current_code = ""
-CODE_INTERVAL = 30  # seconds
-VALIDATION_INTERVAL = 3600  # seconds (1 hour by default, can be changed)
 user_last_validated = {}
 
+# Generate a TOTP object
+secret = pyotp.random_base32()
+totp = pyotp.TOTP(secret)
+
 def load_state():
-    global user_queues, user_order, skip_votes, currentPlayingSong, current_code, user_last_validated
+    global user_queues, user_order, skip_votes, currentPlayingSong, user_last_validated
     redis_instance = get_redis_instance()
     state_json = redis_instance.get('jukebox_state')
     if state_json:
@@ -59,7 +64,6 @@ def load_state():
         user_order = state['user_order']
         skip_votes = state['skip_votes']
         currentPlayingSong = Song.from_dict(state['currentPlayingSong']) if state['currentPlayingSong'] else None
-        current_code = state['current_code']
         user_last_validated = state['user_last_validated']
 
 def save_state():
@@ -70,7 +74,6 @@ def save_state():
         'user_order': user_order,
         'skip_votes': skip_votes,
         'currentPlayingSong': currentPlayingSong.to_dict() if currentPlayingSong else None,
-        'current_code': current_code,
         'user_last_validated': user_last_validated
     }
     # Save state to Redis
@@ -85,15 +88,8 @@ def periodic_save():
         save_state()
         time.sleep(60)  # Save every 60s
 
-def update_code():
-    global current_code
-    while True:
-        current_code = generate_code()
-        socketio.emit('update_code', {'code': current_code}, to='/broadcast')
-        time.sleep(CODE_INTERVAL)
-
-# Load state on startup
-load_state()
+# Start the periodic save function
+socketio.start_background_task(periodic_save)
 
 # Decorator to ensure the user is authenticated
 def authenticated_only(f):
@@ -124,15 +120,17 @@ def handle_connect():
 @socketio.on('disconnect')
 @authenticated_only
 def handle_disconnect():
-    uid = session.get('uid')    
+    uid = session.get('uid')
+
     def remove_user_queue():
-        with current_app.app_context():
+        app = current_app._get_current_object()  # Get the current app context
+        with app.app_context():
             if uid in user_order:
                 user_order.remove(uid)
             if uid in user_queues:
                 del user_queues[uid]
             emit('message', {'message': 'User queue removed due to disconnect'}, broadcast=True)
-    
+
     timer = threading.Timer(DISCONNECT_GRACE_PERIOD, remove_user_queue)
     timer.start()
     disconnect_timers[uid] = timer
@@ -324,7 +322,6 @@ def handle_set_volume(data):
     if volume is None:
         emit('error', {'message': 'Invalid volume input.'})
         return
-
     try:
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -336,15 +333,17 @@ def handle_set_volume(data):
         emit('error', {'message': 'Failed to set volume.'})
 
 @socketio.on('validate_code')
-@authenticated_only
 def handle_validate_code(data):
     uid = session.get('uid')
     entered_code = data.get('code')
-    if entered_code == current_code:
+    logging.debug(f'Validating code: {entered_code} for user: {uid}')  # Debug statement
+    if totp.verify(entered_code):
         user_last_validated[uid] = time.time()
         emit('code_validation', {'success': True})
+        logging.debug('Validation succeeded')  # Debug statement
     else:
         emit('code_validation', {'success': False})
+        logging.debug('Validation failed')  # Debug statement
 
 @socketio.on('check_validation')
 @authenticated_only
@@ -359,7 +358,7 @@ def handle_clear_specific_queue(data):
     uid = data.get('uid')
     if uid in user_queues:
         user_queues[uid].queue = []
-        emit('updateUserQueue', {'queue': []}, room=request.sid)
+        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
         emit('queueUpdated', broadcast=True)
 
 @socketio.on('clearAllQueues')
@@ -572,9 +571,6 @@ def parse_duration_in_seconds(duration_str):
         seconds = int(match.group(3)) if match.group(3) else 0
         return hours * 3600 + minutes * 60 + seconds
     return 0
-
-def generate_code():
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=5))
 
 def needs_validation(uid):
     if uid not in user_last_validated:

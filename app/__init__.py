@@ -4,7 +4,7 @@ from flask_pyoidc.flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMetadata
 from config import Config
 from flask_session import Session
-import threading
+import logging
 
 socketio = SocketIO(cors_allowed_origins="*")
 sess = Session()
@@ -13,6 +13,9 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    logging.basicConfig(level=logging.DEBUG)
+    app.logger.setLevel(logging.DEBUG)
+    
     socketio.init_app(app, async_mode='eventlet')
     sess.init_app(app)
 
@@ -33,7 +36,5 @@ def create_app():
         from app.utils.main import get_token
         token = get_token()
         events.token = token
-        threading.Thread(target=events.run_with_app_context, args=(app, events.update_code), daemon=True).start()
-        threading.Thread(target=events.run_with_app_context, args=(app, events.periodic_save), daemon=True).start()
 
     return app

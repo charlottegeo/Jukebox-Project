@@ -90,12 +90,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     socket.on('update_code', function(data) {
         if (window.location.pathname === '/display') {
-            document.getElementById('current-code').textContent = data.code;
-            startTimer();
+            console.log('update_code event received:', data);
+            let codeElement = document.getElementById('current-code');
+            let timerElement = document.getElementById('code-timer');
+            if (codeElement) {
+                codeElement.textContent = data.code;
+                console.log('Current Code updated:', data.code);
+            } else {
+                console.error('Element with ID current-code not found');
+            }
+            if (timerElement) {
+                startTimer();
+            } else {
+                console.error('Element with ID code-timer not found');
+            }
         }
     });
 
     socket.on('check_validation_response', function(data) {
+        console.log('check_validation_response event received:', data);
         if (data.needsValidation) {
             promptForCode();
         } else {
@@ -109,22 +122,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(function() {
                     resultText.textContent = "";
                 }, 3000);
-    
-                socket.on('songAdded', function(data) {
-                    socket.emit('get_user_queue');
-                });
             }
         }
     });
-    
-    
 
+    socket.on('code_validation', function(data) {
+        console.log('code_validation event received:', data);
+        if (data.success) {
+            document.getElementById('code-prompt').style.display = 'none';
+            document.getElementById('code-error').style.display = 'none';
+            if (tempSongData) {
+                socket.emit('addSongToQueue', { track: tempSongData });
+                tempSongData = null;
+                socket.emit('get_queue_length');
+                var resultText = document.getElementById('resulttext');
+                resultText.textContent = "Song added to queue!";
+                setTimeout(function() {
+                    resultText.textContent = "";
+                }, 3000);
+            }
+        } else {
+            document.getElementById('code-error').style.display = 'block';
+        }
+    });
+    
     socket.on('disconnect', function() {
         console.log("Socket.IO disconnected");
     });
 
     socket.on('error', function(error) {
         console.error('Socket.IO Error:', error);
+    });
+
+    socket.on('songAdded', function(data) {
+        console.log('Song added to queue:', data);
+        socket.emit('get_user_queue');
+    });
+
+    socket.on('updateUserQueue', function(data) {
+        console.log('User queue updated:', data.queue);
+        updateUserQueueDisplay(data.queue);
     });
 
     socket.on('youtubePlayerIsReady', function() {
@@ -139,6 +176,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (error) {
                 console.error('Failed to load YouTube video:', error);
+            }
+        }
+    });
+
+    socket.on('updateCurrentSong', function(data) {
+        if (window.location.pathname === '/') {
+            if (data.currentSong) {
+                updateCurrentSong(data.currentSong);
+            } else {
+                resetPlayerUI();
             }
         }
     });
@@ -187,6 +234,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 playSong(data.nextSong);
+                if (window.location.pathname === '/') {
+                    updateCurrentSong(data.nextSong);
+                } else {
+                    setCurrentSongUI(data.nextSong);
+                }
                 break;
             case 'queueUpdated':
                 console.log('Queue updated, checking if playback should start.');
@@ -195,6 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     socket.emit('get_next_song');
                 }
                 if (window.location.pathname === '/' && document.getElementById('user-queue-list')) {
+                    console.log('User queue updated:', data.queue);
                     updateUserQueueDisplay(data.queue);
                 }
                 break;
@@ -416,7 +469,6 @@ function updateUserQueueDisplay(queue) {
         setTimeout(() => songContainer.classList.remove('added'), 500);
     });
 
-    // This lets the user drag and drop the songs in the queue
     new Sortable(userQueueList, {
         onEnd: function(evt) {
             let oldIndex = evt.oldIndex;
@@ -731,12 +783,6 @@ function updatePlayerProgress(trackLength) {
     }
 }
 
-function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-}
-
 function voteToSkip() {
     socket.emit('vote_to_skip');
 }
@@ -747,30 +793,8 @@ function promptForCode() {
 
 function submitCode() {
     var code = document.getElementById('code-input').value;
-    socket.emit('validate_code', {code: code}, function(data) {
-        if (data.success) {
-            document.getElementById('code-prompt').style.display = 'none';
-            document.getElementById('code-error').style.display = 'none';
-            if (tempSongData) {
-                socket.emit('addSongToQueue', {
-                    track: tempSongData
-                });
-                tempSongData = null;  // Clear the temporary song data
-                socket.emit('get_queue_length');
-                var resultText = document.getElementById('resulttext');
-                resultText.textContent = "Song added to queue!";
-                setTimeout(function() {
-                    resultText.textContent = "";
-                }, 3000);
-
-                socket.emit('songAdded', function(data) {
-                    socket.emit('get_user_queue');
-                });
-            }
-        } else {
-            document.getElementById('code-error').style.display = 'block';
-        }
-    });
+    console.log('Submitting code:', code);  // Debug statement
+    socket.emit('validate_code', { code: code });
 }
 
 function calculateFrameDuration(bpm) {
@@ -817,7 +841,7 @@ window.addEventListener('resize', adjustOverlayTextSize);
 
 function startTimer() {
     let timerElement = document.getElementById('code-timer');
-    let timeLeft = 30;
+    let timeLeft = 30; // This should match your TOTP interval
     timerElement.textContent = timeLeft;
 
     let timerInterval = setInterval(function() {
