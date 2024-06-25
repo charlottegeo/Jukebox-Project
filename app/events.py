@@ -69,7 +69,7 @@ def save_state():
         'user_queues': user_queues_serializable,
         'user_order': user_order,
         'skip_votes': skip_votes,
-        'currentPlayingSong': currentPlayingSong if isinstance(currentPlayingSong, dict) else currentPlayingSong.to_dict() if currentPlayingSong else None,
+        'currentPlayingSong': currentPlayingSong.to_dict() if currentPlayingSong else None,
         'current_code': current_code,
         'user_last_validated': user_last_validated
     }
@@ -275,7 +275,7 @@ def handle_get_next_song():
 @authenticated_only
 def handle_get_current_song():
     if currentPlayingSong:
-        emit('updateCurrentSong', {'currentSong': currentPlayingSong}, room=request.sid)
+        emit('updateCurrentSong', {'currentSong': currentPlayingSong.to_dict()}, room=request.sid)
     else:
         emit('updateCurrentSong', {'currentSong': None}, room=request.sid)
 
@@ -449,9 +449,9 @@ def play_next_song():
         user_queue = user_queues[next_user]
         if user_queue.queue:
             next_song = user_queue.remove_song()
-            currentPlayingSong = next_song.to_dict()  # Store the current playing song
-            emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong}, broadcast=True)
-            emit('updateCurrentSong', {'currentSong': currentPlayingSong}, broadcast=True)  # Broadcast the current song to all clients
+            currentPlayingSong = next_song  # Store the current playing song as a Song object
+            emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong.to_dict()}, broadcast=True)
+            emit('updateCurrentSong', {'currentSong': currentPlayingSong.to_dict()}, broadcast=True)  # Broadcast the current song to all clients
             isPlaying = True
         else:
             currentPlayingSong = None

@@ -97,24 +97,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     socket.on('check_validation_response', function(data) {
         if (data.needsValidation) {
-            tempSongData = track;  // Store the song data temporarily
             promptForCode();
         } else {
-            socket.emit('addSongToQueue', {
-                track: tempSongData
-            });
-            socket.emit('get_queue_length');
-            var resultText = document.getElementById('resulttext');
-            resultText.textContent = "Song added to queue!";
-            setTimeout(function() {
-                resultText.textContent = "";
-            }, 3000);
+            if (tempSongData) {
+                socket.emit('addSongToQueue', {
+                    track: tempSongData
+                });
+                socket.emit('get_queue_length');
+                var resultText = document.getElementById('resulttext');
+                resultText.textContent = "Song added to queue!";
+                setTimeout(function() {
+                    resultText.textContent = "";
+                }, 3000);
     
-            socket.on('songAdded', function(data) {
-                socket.emit('get_user_queue');
-            });
+                socket.on('songAdded', function(data) {
+                    socket.emit('get_user_queue');
+                });
+            }
         }
     });
+    
     
 
     socket.on('disconnect', function() {
@@ -536,7 +538,6 @@ function createTrackItem(track) {
     return item;
 }
 
-
 function handleSearchResults(data) {
     var dropdown = document.getElementById('dropdown');
     dropdown.innerHTML = '';
@@ -573,7 +574,7 @@ function setText() {
 
 function submitSong() {
     var selectedItem = document.getElementById('selected-item');
-    var track = JSON.parse(selectedItem.dataset.track); // Retrieve the track data
+    var track = JSON.parse(selectedItem.dataset.track); // Retrieves track data
 
     track.track_length = parseInt(track.track_length, 10);
     if (isNaN(track.track_length)) {
@@ -582,28 +583,10 @@ function submitSong() {
         return;
     }
 
-    socket.emit('check_validation', {}, function(data) {
-        if (data && data.needsValidation) {
-            tempSongData = track;  // Store the song data temporarily
-            promptForCode();
-        } else {
-            socket.emit('addSongToQueue', {
-                track: track
-            });
-            socket.emit('get_queue_length');
-            var resultText = document.getElementById('resulttext');
-            resultText.textContent = "Song added to queue!";
-            setTimeout(function() {
-                resultText.textContent = "";
-            }, 3000);
+    tempSongData = track; // Stores song data temporarily
 
-            socket.on('songAdded', function(data) {
-                socket.emit('get_user_queue');
-            });
-        }
-    });
+    socket.emit('check_validation', {}); // Emit validation check
 }
-
 function getQueueUserCount() {
     socket.emit('getQueueUserCount');
 }
