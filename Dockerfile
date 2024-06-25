@@ -1,4 +1,6 @@
 FROM python:3.11.5-alpine
+LABEL maintainer="Charlotte George <cngg805@gmail.com>"
+
 WORKDIR /app
 
 RUN apk update && apk add --no-cache \
@@ -9,9 +11,8 @@ RUN apk update && apk add --no-cache \
     cyrus-sasl-dev
 
 COPY requirements.txt /app
-RUN pip3 install -r requirements.txt --no-cache-dir
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY . /app
 
-ENTRYPOINT ["flask"]
-CMD ["run", "--host=0.0.0.0", "--port=5000"]
+CMD ["gunicorn", "app:create_app()", "--bind=0.0.0.0:5000", "--worker-class=eventlet", "--workers=3"]

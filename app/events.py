@@ -1,27 +1,33 @@
 import json
 import os
 from dotenv import load_dotenv
-from flask_socketio import SocketIO, emit, disconnect
-from flask import session, request
+from flask_socketio import emit, disconnect
+from flask import session, request, current_app
 import paramiko
 import re
 from bs4 import BeautifulSoup
 import requests
-import datetime
 import time
 import threading
 import random
 import string
-
 from app import socketio
 from app.models import Song, UserQueue
-from app.utils.main import get_token, search_for_tracks, get_spotify_playlist_tracks, get_spotify_album_tracks
-from app.utils.track_wrapper import TrackWrapper, formatTime
+from app.utils.main import search_for_tracks, get_spotify_playlist_tracks, get_spotify_album_tracks
+from app.utils.track_wrapper import formatTime
 from .util import csh_user_auth
 
 # Load environment variables
 load_dotenv()
-token = get_token()
+
+redis_instance = None
+token = None  # Initialize token as None to be set later
+
+def get_redis_instance():
+    global redis_instance
+    if redis_instance is None:
+        redis_instance = current_app.config['SESSION_REDIS']
+    return redis_instance
 
 # Configuration variables
 isPlaying = False
@@ -30,19 +36,64 @@ SSH_USER = os.getenv('SSH_USER')
 SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 MAX_SONG_LENGTH = 10 * 60  # 10 minutes
 
-
 # In-memory storage
 user_queues = {}
 user_order = []
 skip_votes = {}
 disconnect_timers = {}
-DISCONNECT_GRACE_PERIOD = 60 #in seconds
+DISCONNECT_GRACE_PERIOD = 60  # in seconds
 selected_color = "White"  # Default color
 currentPlayingSong = None
 current_code = ""
-CODE_INTERVAL = 10  # seconds
+CODE_INTERVAL = 30  # seconds
 VALIDATION_INTERVAL = 3600  # seconds (1 hour by default, can be changed)
 user_last_validated = {}
+
+def load_state():
+    global user_queues, user_order, skip_votes, currentPlayingSong, current_code, user_last_validated
+    redis_instance = get_redis_instance()
+    state_json = redis_instance.get('jukebox_state')
+    if state_json:
+        state = json.loads(state_json)
+        user_queues = {uid: UserQueue.from_dict(queue) for uid, queue in state['user_queues'].items()}
+        user_order = state['user_order']
+        skip_votes = state['skip_votes']
+        currentPlayingSong = Song.from_dict(state['currentPlayingSong']) if state['currentPlayingSong'] else None
+        current_code = state['current_code']
+        user_last_validated = state['user_last_validated']
+
+def save_state():
+    redis_instance = get_redis_instance()
+    user_queues_serializable = {uid: user_queue.to_dict() for uid, user_queue in user_queues.items()}
+    state = {
+        'user_queues': user_queues_serializable,
+        'user_order': user_order,
+        'skip_votes': skip_votes,
+        'currentPlayingSong': currentPlayingSong.to_dict() if currentPlayingSong else None,
+        'current_code': current_code,
+        'user_last_validated': user_last_validated
+    }
+    # Save state to Redis
+    redis_instance.set('jukebox_state', json.dumps(state))
+
+def run_with_app_context(target, *args, **kwargs):
+    with current_app.app_context():
+        target(*args, **kwargs)
+
+def periodic_save():
+    while True:
+        save_state()
+        time.sleep(60)  # Save every 60s
+
+def update_code():
+    global current_code
+    while True:
+        current_code = generate_code()
+        socketio.emit('update_code', {'code': current_code}, to='/broadcast')
+        time.sleep(CODE_INTERVAL)
+
+# Load state on startup
+load_state()
 
 # Decorator to ensure the user is authenticated
 def authenticated_only(f):
@@ -172,7 +223,6 @@ def handle_add_album_to_queue(data):
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
 
-
 @socketio.on('removeSongFromQueue')
 @authenticated_only
 def handle_remove_song_from_queue(data):
@@ -298,8 +348,9 @@ def handle_validate_code(data):
 @socketio.on('check_validation')
 @authenticated_only
 def handle_check_validation(data):
-    uid = data.get('uid')
-    emit('code_validation', {'needsValidation': needs_validation(uid)})
+    uid = session.get('uid')
+    needs_validation = needs_validation(uid)
+    emit('check_validation_response', {'needsValidation': needs_validation}, room=request.sid)
 
 @socketio.on('clearSpecificQueue')
 @authenticated_only
@@ -357,7 +408,7 @@ def handle_add_youtube_link_to_queue(data):
         except Exception as e:
             emit('error', {'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
     else:
-        emit('error', {'message': 'Invalid YouTube link or user not authenticated.'}, room=request.sid)
+        emit('error', {'message': 'Invalid YouTube link or user not authenticated.'})
 
 # Helper functions
 
@@ -410,7 +461,6 @@ def play_next_song():
         emit('message', {'action': 'queue_empty'}, broadcast=True)
         isPlaying = False
     emit('updateUserQueue', {'queue': user_queues[next_user].get_queue()}, broadcast=True)  # Update the queue for all clients
-
 
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')
@@ -529,7 +579,7 @@ def update_code():
     global current_code
     while True:
         current_code = generate_code()
-        socketio.emit('update_code', {'code': current_code}, broadcast=True)
+        socketio.emit('update_code', {'code': current_code}, to='/broadcast')
         time.sleep(CODE_INTERVAL)
 
 def needs_validation(uid):

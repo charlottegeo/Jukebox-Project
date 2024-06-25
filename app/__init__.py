@@ -13,8 +13,6 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    app.secret_key = app.config['SECRET_KEY']
-
     socketio.init_app(app)
     sess.init_app(app)
 
@@ -27,15 +25,15 @@ def create_app():
     auth = OIDCAuthentication({"default": CSH_AUTH}, app)
 
     from app.routes import create_main_blueprint, oidc_callback
-
     main = create_main_blueprint(auth)
     app.register_blueprint(main)
 
-    auth.init_app(app)
-
     with app.app_context():
         from app import events
-        threading.Thread(target=events.update_code, daemon=True).start()
-
+        from app.utils.main import get_token
+        token = get_token()
+        events.token = token
+        threading.Thread(target=events.run_with_app_context, args=(events.update_code,), daemon=True).start()
+        threading.Thread(target=events.run_with_app_context, args=(events.periodic_save,), daemon=True).start()
 
     return app
