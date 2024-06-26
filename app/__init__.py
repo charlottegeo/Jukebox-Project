@@ -12,10 +12,8 @@ sess = Session()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-
     logging.basicConfig(level=logging.DEBUG)
     app.logger.setLevel(logging.DEBUG)
-    
     socketio.init_app(app, async_mode='eventlet')
     sess.init_app(app)
 
@@ -36,5 +34,8 @@ def create_app():
         from app.utils.main import get_token
         token = get_token()
         events.token = token
+
+    socketio.start_background_task(events.periodic_save, app)
+    events.start_code_generation(app, socketio)
 
     return app

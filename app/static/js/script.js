@@ -1,7 +1,6 @@
 var isPlaying = false;
 var isPaused = false;
 var animationInterval;
-var pingInterval = null;
 var typingTimer;
 var doneTypingInterval = 500;
 var socket;
@@ -78,13 +77,17 @@ document.addEventListener('DOMContentLoaded', function() {
         reconnectionDelayMax: 5000,
         timeout: 20000,
         transports: ['websocket', 'polling']
-    });    
+    });
 
     socket.on('connect', function() {
         console.log('Socket.IO connected');
         if (window.location.pathname === '/') {
             socket.emit('get_user_queue');
             socket.emit('get_current_song');
+        }
+        if (window.location.pathname === '/display') {
+            socket.emit('get_code_interval');
+            socket.emit('get_new_code');
         }
     });
 
@@ -100,7 +103,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Element with ID current-code not found');
             }
             if (timerElement) {
-                startTimer();
+                timerElement.textContent = data.remaining_time;
+            } else {
+                console.error('Element with ID code-timer not found');
+            }
+        }
+    });
+
+    socket.on('update_timer', function(data) {
+        if (window.location.pathname === '/display') {
+            let timerElement = document.getElementById('code-timer');
+            if (timerElement) {
+                timerElement.textContent = data.remaining_time;
             } else {
                 console.error('Element with ID code-timer not found');
             }
@@ -145,18 +159,13 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('code-error').style.display = 'block';
         }
     });
-    
+
     socket.on('disconnect', function() {
         console.log("Socket.IO disconnected");
     });
 
     socket.on('error', function(error) {
         console.error('Socket.IO Error:', error);
-    });
-
-    socket.on('songAdded', function(data) {
-        console.log('Song added to queue:', data);
-        socket.emit('get_user_queue');
     });
 
     socket.on('updateUserQueue', function(data) {
@@ -351,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
                 document.getElementById('add-button').style.display = 'block';
             }
-        });            
+        });
         searchBar.addEventListener('keyup', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -375,6 +384,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var startButton = document.getElementById('startButton');
         startButton.addEventListener('click', function() {
             startButton.style.display = 'none';
+        });
+
+        window.addEventListener('beforeunload', function() {
+            socket.emit('stop_code_generation');
         });
     }
 
@@ -600,6 +613,12 @@ function handleSearchResults(data) {
     dropdown.style.display = 'block';
 }
 
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+}
+
 function setText() {
     var selectedItem = document.getElementById('selected-item');
     var track = JSON.parse(selectedItem.dataset.track);
@@ -639,6 +658,7 @@ function submitSong() {
 
     socket.emit('check_validation', {}); // Emit validation check
 }
+
 function getQueueUserCount() {
     socket.emit('getQueueUserCount');
 }
@@ -741,7 +761,6 @@ function setCurrentSongUI(song) {
     document.getElementById("song_title").innerHTML = song.track_name;
     document.getElementById("artist_name").innerHTML = song.artist_name;
     document.getElementById("album-cover").src = song.cover_url;
-    document.getElementById("submitter_uid").innerHTML = "Submitted By: " + song.uid;
 }
 
 function resetPlayerUI() {
@@ -838,17 +857,3 @@ function adjustOverlayTextSize() {
 }
 
 window.addEventListener('resize', adjustOverlayTextSize);
-
-function startTimer() {
-    let timerElement = document.getElementById('code-timer');
-    let timeLeft = 30; // This should match your TOTP interval
-    timerElement.textContent = timeLeft;
-
-    let timerInterval = setInterval(function() {
-        timeLeft--;
-        timerElement.textContent = timeLeft;
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-        }
-    }, 1000);
-}
