@@ -8,8 +8,8 @@ RUN apk update && apk add --no-cache \
     libc-dev \
     libldap \
     openldap-dev \
-    cyrus-sasl-dev
-
+    cyrus-sasl-dev \
+    chrony
 COPY requirements.txt /app
 RUN pip3 install --no-cache-dir -r requirements.txt
 
