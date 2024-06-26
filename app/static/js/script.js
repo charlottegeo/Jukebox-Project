@@ -170,11 +170,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     socket.on('updateUserQueue', function(data) {
         console.log('User queue updated:', data.queue);
-        updateUserQueueDisplay(data.queue);
+        if (window.location.pathname === '/') {
+            updateUserQueueDisplay(data.queue);
+        }
     });
 
     socket.on('youtubePlayerIsReady', function() {
-        if (pendingSong && ytPlayerReady) {
+        if (window.location.pathname === '/display' && pendingSong && ytPlayerReady) {
             try {
                 if (validateYouTubeTrackID(pendingSong.track_id)) {
                     ytPlayer.loadVideoById(pendingSong.track_id);
@@ -190,9 +192,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     socket.on('updateCurrentSong', function(data) {
-        if (window.location.pathname === '/') {
+        if (window.location.pathname === '/display') {
+            console.log('updateCurrentSong event received:', data);
             if (data.currentSong) {
-                updateCurrentSong(data.currentSong);
+                setCurrentSongUI(data.currentSong);
+                playSong(data.currentSong);
             } else {
                 resetPlayerUI();
             }
@@ -201,108 +205,102 @@ document.addEventListener('DOMContentLoaded', function() {
 
     socket.on('message', function(data) {
         console.log('Received:', data);
-        switch(data.action) {
-            case 'searchResults':
-                handleSearchResults(data.results);
-                break;
-            case 'next_song':
-                if (data.nextSong.source === 'spotify') {
-                    let track_id = data.nextSong.track_id;
-                    if (track_id) {
-                        const spotifyWrapper = document.getElementById('spotify-player-wrapper');
-                        if (spotifyWrapper) {
-                            const spotifyURI = `spotify:track:${track_id}`;
-                            if (EmbedController && typeof EmbedController.loadUri === 'function' && typeof EmbedController.play === 'function') {
-                                EmbedController.loadUri(spotifyURI);
-                                EmbedController.play();
-                                spotifyWrapper.style.display = 'block';
+        if (window.location.pathname === '/display') {
+            switch(data.action) {
+                case 'next_song':
+                    if (data.nextSong.source === 'spotify') {
+                        let track_id = data.nextSong.track_id;
+                        if (track_id) {
+                            const spotifyWrapper = document.getElementById('spotify-player-wrapper');
+                            if (spotifyWrapper) {
+                                const spotifyURI = `spotify:track:${track_id}`;
+                                if (EmbedController && typeof EmbedController.loadUri === 'function' && typeof EmbedController.play === 'function') {
+                                    EmbedController.loadUri(spotifyURI);
+                                    EmbedController.play();
+                                    spotifyWrapper.style.display = 'block';
+                                } else {
+                                    console.error('EmbedController methods are not available');
+                                }
                             } else {
-                                console.error('EmbedController methods are not available');
+                                console.error('Spotify player wrapper not found');
                             }
                         } else {
-                            console.error('Spotify player wrapper not found');
+                            console.error('Invalid Spotify track ID');
                         }
-                    } else {
-                        console.error('Invalid Spotify track ID');
-                    }
-                } else if (data.nextSong.source === 'youtube') {
-                    if (ytPlayerReady) {
-                        try {
-                            if (validateYouTubeTrackID(data.nextSong.track_id)) {
-                                ytPlayer.loadVideoById(data.nextSong.track_id);
-                                ytPlayer.playVideo();
-                            } else {
-                                console.error('Invalid YouTube track ID:', data.nextSong.track_id);
+                    } else if (data.nextSong.source === 'youtube') {
+                        if (ytPlayerReady) {
+                            try {
+                                if (validateYouTubeTrackID(data.nextSong.track_id)) {
+                                    ytPlayer.loadVideoById(data.nextSong.track_id);
+                                    ytPlayer.playVideo();
+                                } else {
+                                    console.error('Invalid YouTube track ID:', data.nextSong.track_id);
+                                }
+                            } catch (error) {
+                                console.error('Failed to load YouTube video:', error);
                             }
-                        } catch (error) {
-                            console.error('Failed to load YouTube video:', error);
+                        } else {
+                            pendingSong = data.nextSong;
+                            console.log('YouTube player is not ready, storing the song to play later');
                         }
-                    } else {
-                        pendingSong = data.nextSong;
-                        console.log('YouTube player is not ready, storing the song to play later');
                     }
-                }
-                playSong(data.nextSong);
-                if (window.location.pathname === '/') {
-                    updateCurrentSong(data.nextSong);
-                } else {
+                    playSong(data.nextSong);
                     setCurrentSongUI(data.nextSong);
-                }
-                break;
-            case 'queueUpdated':
-                console.log('Queue updated, checking if playback should start.');
-                if (!isPlaying) {
-                    console.log('No song is currently playing, requesting next song.');
-                    socket.emit('get_next_song');
-                }
-                if (window.location.pathname === '/' && document.getElementById('user-queue-list')) {
-                    console.log('User queue updated:', data.queue);
-                    updateUserQueueDisplay(data.queue);
-                }
-                break;
-            case 'formattedTime':
-                if (window.location.pathname === '/display') {
+                    break;
+                case 'queueUpdated':
+                    console.log('Queue updated, checking if playback should start.');
+                    if (!isPlaying) {
+                        console.log('No song is currently playing, requesting next song.');
+                        socket.emit('get_next_song');
+                    }
+                    break;
+                case 'formattedTime':
                     document.getElementById('progressTimestamp').innerText = data.time;
-                }
-                break;
-            case 'queueLength':
-                if (data.length == 1) {
-                    if (window.location.pathname === '/display') {
+                    break;
+                case 'queueLength':
+                    if (data.length == 1) {
                         document.getElementById('playQueue').click();
                         console.log("Playing first song");
                     }
-                }
-                break;
-            case 'checkIfPlaying':
-                socket.emit('isPlaying', { isPlaying: isPlaying });
-                break;
-            case 'queue_empty':
-                console.log("Queue is empty, isPlaying:", isPlaying);
-                if (isPlaying) {
-                    resetPlayerUI();
-                    defaultFrame();
-                    clearInterval(animationInterval);
-                    if (EmbedController) {
+                    break;
+                case 'checkIfPlaying':
+                    socket.emit('isPlaying', { isPlaying: isPlaying });
+                    break;
+                case 'queue_empty':
+                    console.log("Queue is empty, isPlaying:", isPlaying);
+                    if (isPlaying) {
+                        resetPlayerUI();
+                        defaultFrame();
+                        clearInterval(animationInterval);
+                        if (EmbedController) {
+                            EmbedController.pause();
+                        }
+                        if (ytPlayerReady && ytPlayer) {
+                            ytPlayer.stopVideo();
+                        }
+                        isPlaying = false;
+                    }
+                    break;
+                case 'togglePlay':
+                    console.log("Toggling play");
+                    if (isPlaying) {
                         EmbedController.pause();
+                        isPlaying = false;
+                    } else {
+                        EmbedController.togglePlay();
+                        isPlaying = true;
                     }
-                    if (ytPlayerReady && ytPlayer) {
-                        ytPlayer.stopVideo();
-                    }
-                    isPlaying = false;
-                }
-                break;
-            case 'togglePlay':
-                console.log("Toggling play");
-                if (isPlaying) {
-                    EmbedController.pause();
-                    isPlaying = false;
-                } else {
-                    EmbedController.togglePlay();
-                    isPlaying = true;
-                }
-                break;
-            case 'cat_colors':
-                if (window.location.pathname === '/admin') {
+                    break;
+            }
+        } else if (window.location.pathname === '/') {
+            switch(data.action) {
+                case 'searchResults':
+                    handleSearchResults(data.results);
+                    break;
+                case 'addYouTubeLinkToQueue':
+                    console.log('Adding YouTube link to queue');
+                    break;
+                case 'cat_colors':
                     var dropdown = document.getElementById('catColorDropdown');
                     dropdown.innerHTML = '';
                     data.colors.forEach(color => {
@@ -311,16 +309,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         option.innerText = color;
                         dropdown.appendChild(option);
                     });
-                }
-                break;
-            case 'color_changed':
-                if (window.location.pathname === '/admin') {
+                    break;
+                case 'color_changed':
                     document.getElementById('catColorDropdown').value = data.color;
-                }
-                break;
-            case 'addYouTubeLinkToQueue':
-                console.log('Adding YouTube link to queue');
-                break;
+                    break;
+            }
         }
     });
 
@@ -695,7 +688,10 @@ function clearQueue() {
     socket.emit('clearQueueForUser');
 }
 
+
 function playSong(song = null) {
+    if (window.location.pathname !== '/display') return;
+
     if (!song) {
         console.log('Queue is empty');
         resetPlayerUI();
@@ -758,12 +754,17 @@ function playSong(song = null) {
 }
 
 function setCurrentSongUI(song) {
+    if (window.location.pathname !== '/display') return;
+
+    console.log('Setting current song UI:', song);
     document.getElementById("song_title").innerHTML = song.track_name;
     document.getElementById("artist_name").innerHTML = song.artist_name;
     document.getElementById("album-cover").src = song.cover_url;
 }
 
 function resetPlayerUI() {
+    if (window.location.pathname !== '/display') return;
+
     const songTitleElem = document.getElementById("song_title");
     const artistNameElem = document.getElementById("artist_name");
     const albumCoverElem = document.getElementById("album-cover");
@@ -788,6 +789,8 @@ function resetPlayerUI() {
 }
 
 function updatePlayerProgress(trackLength) {
+    if (window.location.pathname !== '/display') return;
+
     if (ytPlayerReady && ytPlayer.getPlayerState() == YT.PlayerState.PLAYING) {
         var duration = ytPlayer.getDuration();
         var currentTime = ytPlayer.getCurrentTime();
