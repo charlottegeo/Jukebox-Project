@@ -67,12 +67,12 @@ def broadcast_code(app, socketio):
     while not code_timer_event.is_set():
         with app.app_context():
             new_code, interval = generate_code()
-            socketio.emit('update_code', {'code': new_code, 'remaining_time': interval})
+            socketio.emit('update_code', {'code': new_code, 'remaining_time': interval}, namespace='/')
             for second in range(interval):
                 if code_timer_event.is_set():
                     break
                 remaining_time = interval - second
-                socketio.emit('update_timer', {'remaining_time': remaining_time})
+                socketio.emit('update_timer', {'remaining_time': remaining_time}, namespace='/')
                 time.sleep(1)
 
 def load_state():
@@ -132,24 +132,24 @@ def handle_connect(auth):
     emit('message', {'message': 'Connected to server'})
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
-    # Send the current code and remaining time to the newly connected client
+    #TODO: Add an if statement to check if the user is the touch screen
+    #TODO: Ask RTPs for an account to use for the touch screen
     time_elapsed = time.time() - code_gen_time
     remaining_time = max(CODE_INTERVAL - int(time_elapsed), 0)
-    emit('update_code', {'code': current_code, 'remaining_time': remaining_time})
+    emit('update_code', {'code': current_code, 'remaining_time': remaining_time}, room=request.sid)
 
 @socketio.on('get_code_interval')
 def handle_get_code_interval():
-    emit('code_interval', {'CODE_INTERVAL': CODE_INTERVAL})
+    emit('code_interval', {'CODE_INTERVAL': CODE_INTERVAL}, namespace='/')
 
-def start_remove_user_queue(app, uid):
+def start_remove_user_queue(app, uid, stop_event):
     def _remove_user_queue():
         with app.app_context():
-            if uid in disconnect_timers:
-                for _ in range(DISCONNECT_GRACE_PERIOD):
-                    if disconnect_timers[uid]['stop']:
-                        return
-                    time.sleep(1)
-                remove_user_queue(app, uid)
+            for _ in range(DISCONNECT_GRACE_PERIOD):
+                if stop_event.is_set():
+                    return
+                time.sleep(1)
+            remove_user_queue(app, uid)
     return _remove_user_queue
 
 def remove_user_queue(app, uid):
@@ -158,21 +158,23 @@ def remove_user_queue(app, uid):
             user_order.remove(uid)
         if uid in user_queues:
             del user_queues[uid]
-        socketio.emit('message', {'message': 'User queue removed due to disconnect'}, broadcast=True)
+        socketio.emit('message', {'message': 'User queue removed due to disconnect'}, namespace='/')
 
 @socketio.on('disconnect')
 @authenticated_only
 def handle_disconnect():
     uid = session.get('uid')
 
-    # Start the grace period task
+    # Stop the grace period task if it is running
     if uid in disconnect_timers:
-        disconnect_timers[uid]['task'].cancel()
+        disconnect_timers[uid]['stop_event'].set()
         del disconnect_timers[uid]
 
+    # Create a new stop event for the grace period task
+    stop_event = Event()
     disconnect_timers[uid] = {
-        'task': socketio.start_background_task(start_remove_user_queue(current_app._get_current_object(), uid)),
-        'stop': False
+        'task': socketio.start_background_task(start_remove_user_queue(current_app._get_current_object(), uid, stop_event)),
+        'stop_event': stop_event
     }
 
 @socketio.on('get_new_code')
@@ -188,9 +190,9 @@ def handle_search_tracks(data):
     try:
         result_array = search_for_tracks(token, track_name, 5)
         search_results = [track.to_dict(source=source) for track in result_array]
-        emit('message', {'action': 'searchResults', 'results': search_results})
+        emit('message', {'action': 'searchResults', 'results': search_results}, room=request.sid)
     except Exception as e:
-        emit('message', {'action': 'error', 'error': str(e)})
+        emit('message', {'action': 'error', 'error': str(e)}, room=request.sid)
 
 @socketio.on('addSongToQueue')
 @authenticated_only
@@ -205,11 +207,11 @@ def handle_add_song_to_queue(data):
             try:
                 track_length = int(track_length)
             except ValueError:
-                emit('error', {'message': 'Invalid track length'})
+                emit('error', {'message': 'Invalid track length'}, room=request.sid)
                 return
             
             if track_length > MAX_SONG_LENGTH:
-                emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'})
+                emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'}, room=request.sid)
                 return
 
             track['source'] = data.get('source', 'spotify')
@@ -234,14 +236,14 @@ def handle_add_song_to_queue(data):
             if not isPlaying:
                 check_and_play_next_song()
         else:
-            emit('error', {'message': 'Track length not provided'})
+            emit('error', {'message': 'Track length not provided'}, room=request.sid)
     else:
-        emit('error', {'message': 'Track data not provided'})
+        emit('error', {'message': 'Track data not provided'}, room=request.sid)
 
 @socketio.on('youtubePlayerReady')
 @authenticated_only
 def handle_youtube_player_ready():
-    emit('youtubePlayerIsReady', broadcast=True)
+    emit('youtubePlayerIsReady', namespace='/')
 
 @socketio.on('addPlaylistToQueue')
 @authenticated_only
@@ -249,6 +251,11 @@ def handle_add_playlist_to_queue(data):
     link = data.get('link')
     source = data.get('source')
     uid = session.get('uid')
+    
+    requires_validation = needs_validation(uid)
+    if requires_validation:
+        emit('check_validation_response', {'needsValidation': True}, room=request.sid)
+        return
     
     if source == 'spotify':
         tracks = get_spotify_playlist_tracks(link)
@@ -263,12 +270,18 @@ def handle_add_playlist_to_queue(data):
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
 
+
 @socketio.on('addAlbumToQueue')
 @authenticated_only
 def handle_add_album_to_queue(data):
     link = data.get('link')
     source = data.get('source')
     uid = session.get('uid')
+
+    requires_validation = needs_validation(uid)
+    if requires_validation:
+        emit('check_validation_response', {'needsValidation': True}, room=request.sid)
+        return
     
     if source == 'spotify':
         tracks = get_spotify_album_tracks(link)
@@ -280,6 +293,7 @@ def handle_add_album_to_queue(data):
 
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
+
 
 @socketio.on('removeSongFromQueue')
 @authenticated_only
@@ -311,9 +325,9 @@ def handle_vote_to_skip():
         if len(skip_votes) >= skip_threshold:
             play_next_song()
             skip_votes.clear()
-            emit('message', {'action': 'skipSong'}, broadcast=True)
+            emit('message', {'action': 'skipSong'}, namespace='/')
         else:
-            emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, broadcast=True)
+            emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, namespace='/')
 
 @socketio.on('isPlaying')
 @authenticated_only
@@ -343,13 +357,13 @@ def handle_clear_queue_for_user():
     if uid in user_queues:
         user_queues[uid].queue = []
         emit('updateUserQueue', {'queue': []}, room=request.sid)
-        emit('queueUpdated', broadcast=True)
+        emit('queueUpdated', namespace='/')
 
 @socketio.on('secondsToMinutes')
 @authenticated_only
 def handle_seconds_to_minutes(data):
     formatted_time = formatTime(data.get('seconds'))
-    emit('message', {'action': 'formattedTime', 'time': formatted_time}, broadcast=True)
+    emit('message', {'action': 'formattedTime', 'time': formatted_time}, namespace='/')
 
 @socketio.on('skipSong')
 @authenticated_only
@@ -359,27 +373,27 @@ def handle_skip_song():
 @socketio.on('refreshDisplay')
 @authenticated_only
 def handle_refresh_display():
-    emit('reloadPage', broadcast=True)
+    emit('reloadPage', namespace='/')
 
 @socketio.on('get_cat_colors')
 @authenticated_only
 def handle_get_cat_colors():
     colors = get_cat_colors()
-    emit('message', {'action': 'cat_colors', 'colors': colors}, broadcast=True)
+    emit('message', {'action': 'cat_colors', 'colors': colors}, namespace='/')
 
 @socketio.on('change_cat_color')
 @authenticated_only
 def handle_change_cat_color(color):
     global selected_color
     selected_color = color
-    emit('color_changed', {'color': color}, broadcast=True)
+    emit('color_changed', {'color': color}, namespace='/')
 
 @socketio.on('set_volume')
 @authenticated_only
 def handle_set_volume(data):
     volume = sanitize_volume_input(data['volume'])
     if volume is None:
-        emit('error', {'message': 'Invalid volume input.'})
+        emit('error', {'message': 'Invalid volume input.'}, room=request.sid)
         return
     try:
         ssh = paramiko.SSHClient()
@@ -387,9 +401,9 @@ def handle_set_volume(data):
         ssh.connect(SSH_HOST, username=SSH_USER, password=SSH_PASSWORD)
         ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(f'amixer set Master {volume}%')
         ssh.close()
-        emit('volume_set', {'volume': volume}, broadcast=True)
+        emit('volume_set', {'volume': volume}, namespace='/')
     except Exception as e:
-        emit('error', {'message': 'Failed to set volume.'})
+        emit('error', {'message': 'Failed to set volume.'}, room=request.sid)
 
 @socketio.on('validate_code')
 def handle_validate_code(data):
@@ -397,9 +411,9 @@ def handle_validate_code(data):
     entered_code = data.get('code')
     if entered_code == current_code:
         user_last_validated[uid] = time.time()
-        emit('code_validation', {'success': True})
+        emit('code_validation', {'success': True}, room=request.sid)
     else:
-        emit('code_validation', {'success': False})
+        emit('code_validation', {'success': False}, room=request.sid)
 
 @socketio.on('check_validation')
 @authenticated_only
@@ -415,14 +429,14 @@ def handle_clear_specific_queue(data):
     if uid in user_queues:
         user_queues[uid].queue = []
         emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
-        emit('queueUpdated', broadcast=True)
+        emit('queueUpdated', namespace='/')
 
 @socketio.on('clearAllQueues')
 @authenticated_only
 def handle_clear_all_queues():
     for uid in user_queues:
         user_queues[uid].queue = []
-    emit('queueUpdated', broadcast=True)
+    emit('queueUpdated', namespace='/')
 
 @socketio.on('reorderQueue')
 @authenticated_only
@@ -440,14 +454,14 @@ def handle_reorder_queue(data):
 def handle_get_queue_user_count():
     queue_count = len(user_queues)
     user_count = len(set(user_queues.keys()))
-    emit('queueUserCount', {'queues': queue_count, 'users': user_count})
+    emit('queueUserCount', {'queues': queue_count, 'users': user_count}, room=request.sid)
 
 @socketio.on('set_song_length_limit')
 @authenticated_only
 def handle_set_song_length_limit(data):
     global song_length_limit
     song_length_limit = data['length']
-    emit('song_length_limit_set', {'length': song_length_limit}, broadcast=True)
+    emit('song_length_limit_set', {'length': song_length_limit}, namespace='/')
 
 @socketio.on('addYoutubeLinkToQueue')
 @authenticated_only
@@ -456,15 +470,20 @@ def handle_add_youtube_link_to_queue(data):
     uid = session.get('uid')
     if youtube_link and uid:
         try:
+            requires_validation = needs_validation(uid)
+            if requires_validation:
+                emit('check_validation_response', {'needsValidation': True}, room=request.sid)
+                return
+
             track_data = parse_youtube_link(youtube_link, uid)  # Pass uid here
             if track_data:
                 add_song_to_user_queue(uid, track_data)
-                emit('queueUpdated', broadcast=True)
+                emit('queueUpdated', namespace='/')
                 check_and_play_next_song()
         except Exception as e:
             emit('error', {'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
     else:
-        emit('error', {'message': 'Invalid YouTube link or user not authenticated.'})
+        emit('error', {'message': 'Invalid YouTube link or user not authenticated.'}, room=request.sid)
 
 # Helper functions
 
@@ -496,18 +515,18 @@ def play_next_song():
         if user_queue.queue:
             next_song = user_queue.remove_song()
             currentPlayingSong = next_song
-            emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong.to_dict()}, broadcast=True)
-            emit('updateCurrentSong', {'currentSong': currentPlayingSong.to_dict()}, broadcast=True)
+            emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong.to_dict()}, namespace='/')
+            emit('updateCurrentSong', {'currentSong': currentPlayingSong.to_dict()}, namespace='/')
             isPlaying = True
         else:
             currentPlayingSong = None
-            emit('message', {'action': 'queue_empty'}, broadcast=True)
+            emit('message', {'action': 'queue_empty'}, namespace='/')
             isPlaying = False
     else:
         currentPlayingSong = None
-        emit('message', {'action': 'queue_empty'}, broadcast=True)
+        emit('message', {'action': 'queue_empty'}, namespace='/')
         isPlaying = False
-    emit('updateUserQueue', {'queue': user_queues[next_user].get_queue()}, broadcast=True)
+    emit('updateUserQueue', {'queue': user_queues[next_user].get_queue()}, namespace='/')
 
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')
