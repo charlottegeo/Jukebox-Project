@@ -44,6 +44,7 @@ pydantic_core==2.16.3
 pyjwkest==1.4.2
 PyJWT==2.8.0
 PyNaCl==1.5.0
+pyotp==2.9.0
 python-dotenv==1.0.1
 python-engineio==4.9.0
 python-ldap==3.4.4
