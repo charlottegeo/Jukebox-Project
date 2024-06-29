@@ -4,7 +4,7 @@ import os
 from threading import Event
 from dotenv import load_dotenv
 from flask_socketio import emit, disconnect
-from flask import session, request, current_app, copy_current_request_context
+from flask import session, request, current_app
 import logging
 import pyotp
 import paramiko
@@ -24,7 +24,9 @@ current_code = None
 code_gen_time = None
 code_timer_event = Event()
 redis_instance = None
-token = None 
+token = None
+tempSongData = None
+tempYoutubeLink = None
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -67,12 +69,12 @@ def broadcast_code(app, socketio):
     while not code_timer_event.is_set():
         with app.app_context():
             new_code, interval = generate_code()
-            socketio.emit('update_code', {'code': new_code, 'remaining_time': interval}, namespace='/')
+            socketio.emit('update_code', {'code': new_code, 'remaining_time': interval})
             for second in range(interval):
                 if code_timer_event.is_set():
                     break
                 remaining_time = interval - second
-                socketio.emit('update_timer', {'remaining_time': remaining_time}, namespace='/')
+                socketio.emit('update_timer', {'remaining_time': remaining_time})
                 time.sleep(1)
 
 def load_state():
@@ -118,7 +120,7 @@ def authenticated_only(f):
 # Event handlers
 @socketio.on('connect')
 @authenticated_only
-def handle_connect(auth):
+def handle_connect():
     uid = session.get('uid')
     # If there was a disconnect timer, cancel it
     if uid in disconnect_timers:
@@ -132,8 +134,6 @@ def handle_connect(auth):
     emit('message', {'message': 'Connected to server'})
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
-    #TODO: Add an if statement to check if the user is the touch screen
-    #TODO: Ask RTPs for an account to use for the touch screen
     time_elapsed = time.time() - code_gen_time
     remaining_time = max(CODE_INTERVAL - int(time_elapsed), 0)
     emit('update_code', {'code': current_code, 'remaining_time': remaining_time}, room=request.sid)
@@ -142,28 +142,29 @@ def handle_connect(auth):
 def handle_get_code_interval():
     emit('code_interval', {'CODE_INTERVAL': CODE_INTERVAL}, namespace='/')
 
-def start_remove_user_queue(app, uid, stop_event):
+def start_remove_user_queue(app, uid, sid, stop_event):
     def _remove_user_queue():
         with app.app_context():
             for _ in range(DISCONNECT_GRACE_PERIOD):
                 if stop_event.is_set():
                     return
                 time.sleep(1)
-            remove_user_queue(app, uid)
+            remove_user_queue(app, uid, sid)
     return _remove_user_queue
 
-def remove_user_queue(app, uid):
+def remove_user_queue(app, uid, sid):
     with app.app_context():
         if uid in user_order:
             user_order.remove(uid)
         if uid in user_queues:
             del user_queues[uid]
-        socketio.emit('message', {'message': 'User queue removed due to disconnect'}, namespace='/')
+        socketio.emit('message', {'message': 'User queue removed due to disconnect'}, to=sid)
 
 @socketio.on('disconnect')
 @authenticated_only
 def handle_disconnect():
     uid = session.get('uid')
+    sid = request.sid
 
     # Stop the grace period task if it is running
     if uid in disconnect_timers:
@@ -173,7 +174,7 @@ def handle_disconnect():
     # Create a new stop event for the grace period task
     stop_event = Event()
     disconnect_timers[uid] = {
-        'task': socketio.start_background_task(start_remove_user_queue(current_app._get_current_object(), uid, stop_event)),
+        'task': socketio.start_background_task(start_remove_user_queue(current_app._get_current_object(), uid, sid, stop_event)),
         'stop_event': stop_event
     }
 
@@ -197,19 +198,19 @@ def handle_search_tracks(data):
 @socketio.on('addSongToQueue')
 @authenticated_only
 def handle_add_song_to_queue(data):
+    global tempSongData
     track = data.get('track')
     uid = session.get('uid')
     logging.debug(f"Received addSongToQueue event with track: {track} and uid: {uid}")
     if track:
         track_length = track.get('track_length')
-        logging.debug(f"Track length: {track_length}")
         if track_length is not None:
             try:
                 track_length = int(track_length)
             except ValueError:
                 emit('error', {'message': 'Invalid track length'}, room=request.sid)
                 return
-            
+
             if track_length > MAX_SONG_LENGTH:
                 emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'}, room=request.sid)
                 return
@@ -226,15 +227,9 @@ def handle_add_song_to_queue(data):
                 uid=uid,
                 source=track['source']
             )
-            logging.debug(f"Adding song to queue: {song.to_dict()}")
             add_song_to_user_queue(uid, song.to_dict())
-            emit('songAdded', {'message': 'Song added to queue', 'track': song.to_dict()}, room=request.sid)
-
-            if uid in user_queues:
-                emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
-            
-            if not isPlaying:
-                check_and_play_next_song()
+            emit('songAdded', {'track': song.to_dict()}, room=request.sid)
+            emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
         else:
             emit('error', {'message': 'Track length not provided'}, room=request.sid)
     else:
@@ -243,7 +238,7 @@ def handle_add_song_to_queue(data):
 @socketio.on('youtubePlayerReady')
 @authenticated_only
 def handle_youtube_player_ready():
-    emit('youtubePlayerIsReady', namespace='/')
+    emit('youtubePlayerIsReady', broadcast=True)
 
 @socketio.on('addPlaylistToQueue')
 @authenticated_only
@@ -251,12 +246,12 @@ def handle_add_playlist_to_queue(data):
     link = data.get('link')
     source = data.get('source')
     uid = session.get('uid')
-    
+
     requires_validation = needs_validation(uid)
     if requires_validation:
         emit('check_validation_response', {'needsValidation': True}, room=request.sid)
         return
-    
+
     if source == 'spotify':
         tracks = get_spotify_playlist_tracks(link)
     elif source == 'youtube':
@@ -269,7 +264,6 @@ def handle_add_playlist_to_queue(data):
 
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
-
 
 @socketio.on('addAlbumToQueue')
 @authenticated_only
@@ -294,7 +288,6 @@ def handle_add_album_to_queue(data):
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
 
-
 @socketio.on('removeSongFromQueue')
 @authenticated_only
 def handle_remove_song_from_queue(data):
@@ -309,9 +302,9 @@ def handle_remove_song_from_queue(data):
 def handle_get_user_queue():
     uid = session.get('uid')
     if uid in user_queues:
-        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()})
     else:
-        emit('updateUserQueue', {'queue': []}, room=request.sid)
+        emit('updateUserQueue', {'queue': []})
 
 @socketio.on('vote_to_skip')
 @authenticated_only
@@ -325,9 +318,9 @@ def handle_vote_to_skip():
         if len(skip_votes) >= skip_threshold:
             play_next_song()
             skip_votes.clear()
-            emit('message', {'action': 'skipSong'}, namespace='/')
+            emit('message', {'action': 'skipSong'}, broadcast=True)
         else:
-            emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, namespace='/')
+            emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, broadcast=True)
 
 @socketio.on('isPlaying')
 @authenticated_only
@@ -357,13 +350,13 @@ def handle_clear_queue_for_user():
     if uid in user_queues:
         user_queues[uid].queue = []
         emit('updateUserQueue', {'queue': []}, room=request.sid)
-        emit('queueUpdated', namespace='/')
+        emit('queueUpdated', broadcast=True)
 
 @socketio.on('secondsToMinutes')
 @authenticated_only
 def handle_seconds_to_minutes(data):
     formatted_time = formatTime(data.get('seconds'))
-    emit('message', {'action': 'formattedTime', 'time': formatted_time}, namespace='/')
+    emit('message', {'action': 'formattedTime', 'time': formatted_time}, broadcast=True)
 
 @socketio.on('skipSong')
 @authenticated_only
@@ -373,20 +366,20 @@ def handle_skip_song():
 @socketio.on('refreshDisplay')
 @authenticated_only
 def handle_refresh_display():
-    emit('reloadPage', namespace='/')
+    emit('reloadPage', broadcast=True)
 
 @socketio.on('get_cat_colors')
 @authenticated_only
 def handle_get_cat_colors():
     colors = get_cat_colors()
-    emit('message', {'action': 'cat_colors', 'colors': colors}, namespace='/')
+    emit('message', {'action': 'cat_colors', 'colors': colors}, broadcast=True)
 
 @socketio.on('change_cat_color')
 @authenticated_only
 def handle_change_cat_color(color):
     global selected_color
     selected_color = color
-    emit('color_changed', {'color': color}, namespace='/')
+    emit('color_changed', {'color': color}, broadcast=True)
 
 @socketio.on('set_volume')
 @authenticated_only
@@ -401,7 +394,7 @@ def handle_set_volume(data):
         ssh.connect(SSH_HOST, username=SSH_USER, password=SSH_PASSWORD)
         ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(f'amixer set Master {volume}%')
         ssh.close()
-        emit('volume_set', {'volume': volume}, namespace='/')
+        emit('volume_set', {'volume': volume}, broadcast=True)
     except Exception as e:
         emit('error', {'message': 'Failed to set volume.'}, room=request.sid)
 
@@ -412,6 +405,10 @@ def handle_validate_code(data):
     if entered_code == current_code:
         user_last_validated[uid] = time.time()
         emit('code_validation', {'success': True}, room=request.sid)
+        if tempSongData:
+            addSongToQueueAfterValidation(uid)
+        elif tempYoutubeLink:
+            addYoutubeLinkToQueueAfterValidation(uid)
     else:
         emit('code_validation', {'success': False}, room=request.sid)
 
@@ -429,14 +426,14 @@ def handle_clear_specific_queue(data):
     if uid in user_queues:
         user_queues[uid].queue = []
         emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
-        emit('queueUpdated', namespace='/')
+        emit('queueUpdated', broadcast=True)
 
 @socketio.on('clearAllQueues')
 @authenticated_only
 def handle_clear_all_queues():
     for uid in user_queues:
         user_queues[uid].queue = []
-    emit('queueUpdated', namespace='/')
+    emit('queueUpdated', broadcast=True)
 
 @socketio.on('reorderQueue')
 @authenticated_only
@@ -461,24 +458,25 @@ def handle_get_queue_user_count():
 def handle_set_song_length_limit(data):
     global song_length_limit
     song_length_limit = data['length']
-    emit('song_length_limit_set', {'length': song_length_limit}, namespace='/')
-
+    emit('song_length_limit_set', {'length': song_length_limit}, broadcast=True)
 @socketio.on('addYoutubeLinkToQueue')
 @authenticated_only
 def handle_add_youtube_link_to_queue(data):
+    global tempYoutubeLink
     youtube_link = data.get('youtube_link')
     uid = session.get('uid')
     if youtube_link and uid:
         try:
             requires_validation = needs_validation(uid)
             if requires_validation:
+                tempYoutubeLink = youtube_link
                 emit('check_validation_response', {'needsValidation': True}, room=request.sid)
                 return
 
-            track_data = parse_youtube_link(youtube_link, uid)  # Pass uid here
+            track_data = parse_youtube_link(youtube_link, uid)
             if track_data:
                 add_song_to_user_queue(uid, track_data)
-                emit('queueUpdated', namespace='/')
+                emit('queueUpdated', broadcast=True)
                 check_and_play_next_song()
         except Exception as e:
             emit('error', {'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
@@ -486,6 +484,29 @@ def handle_add_youtube_link_to_queue(data):
         emit('error', {'message': 'Invalid YouTube link or user not authenticated.'}, room=request.sid)
 
 # Helper functions
+
+def addSongToQueueAfterValidation(uid):
+    global tempSongData
+    if tempSongData:
+        add_song_to_user_queue(uid, tempSongData)
+        tempSongData = None
+        emit('get_queue_length')
+        emit('songAdded', {'message': 'Song added to queue', 'track': tempSongData}, room=request.sid)
+        emit('get_user_queue', room=request.sid)
+        if not isPlaying:
+            play_next_song()
+
+def addYoutubeLinkToQueueAfterValidation(uid):
+    global tempYoutubeLink
+    if tempYoutubeLink:
+        track_data = parse_youtube_link(tempYoutubeLink, uid)
+        if track_data:
+            add_song_to_user_queue(uid, track_data)
+            tempYoutubeLink = None
+            emit('songAdded', {'track': track_data}, room=request.sid)
+            emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+            if not isPlaying:
+                play_next_song()
 
 def add_song_to_user_queue(uid, song_dict):
     if uid not in user_queues:
@@ -495,6 +516,10 @@ def add_song_to_user_queue(uid, song_dict):
     song = Song.from_dict(song_dict)
     user_queues[uid].add_song(song)
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+
+    if not isPlaying:
+        play_next_song()
+
 
 def get_next_user():
     if user_order:
@@ -515,18 +540,19 @@ def play_next_song():
         if user_queue.queue:
             next_song = user_queue.remove_song()
             currentPlayingSong = next_song
-            emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong.to_dict()}, namespace='/')
-            emit('updateCurrentSong', {'currentSong': currentPlayingSong.to_dict()}, namespace='/')
+            emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong.to_dict()}, broadcast=True)
+            emit('updateCurrentSong', {'currentSong': currentPlayingSong.to_dict()}, broadcast=True)
             isPlaying = True
         else:
             currentPlayingSong = None
-            emit('message', {'action': 'queue_empty'}, namespace='/')
+            emit('message', {'action': 'queue_empty'}, broadcast=True)
             isPlaying = False
     else:
         currentPlayingSong = None
-        emit('message', {'action': 'queue_empty'}, namespace='/')
+        emit('message', {'action': 'queue_empty'}, broadcast=True)
         isPlaying = False
-    emit('updateUserQueue', {'queue': user_queues[next_user].get_queue()}, namespace='/')
+    if next_user in user_queues:
+        emit('updateUserQueue', {'queue': user_queues[next_user].get_queue()}, broadcast=True)
 
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')
