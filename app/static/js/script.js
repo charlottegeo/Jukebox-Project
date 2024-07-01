@@ -15,60 +15,9 @@ var frame1 = "/static/img/cats/White/PusayCenter.png";
 var frame2 = "/static/img/cats/White/PusayRight.png";
 var song_placeholder = "/static/img/song_placeholder.png";
 
-function onYouTubeIframeAPIReady() {
-    ytPlayer = new YT.Player('youtube-player', {
-        height: '0',
-        width: '0',
-        videoId: '',
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        }
-    });
-}
-
-function onPlayerReady(event) {
-    ytPlayerReady = true;
-    console.log('YouTube Player Ready');
-    if (pendingSong) {
-        playSong(pendingSong);
-        pendingSong = null;
-    } else {
-        playSong();
-    }
-}
-
-function onPlayerStateChange(event) {
-    if (event.data == YT.PlayerState.ENDED) {
-        console.log('YouTube video ended');
-        isPlaying = false;
-        defaultFrame();
-        clearInterval(animationInterval);
-        resetPlayerUI();
-        socket.emit('removeFirstSong');
-        socket.emit('get_next_song');
-        socket.emit('get_user_queue');
-    } else if (event.data == YT.PlayerState.PLAYING) {
-        updateYouTubeProgress();
-        setInterval(updateYouTubeProgress, 1000);
-    }
-}
-
-
 function validateYouTubeTrackID(track_id) {
     const regex = /^[a-zA-Z0-9_-]{11}$/;
     return regex.test(track_id);
-}
-
-function updateYouTubeProgress() {
-    if (ytPlayerReady && ytPlayer.getPlayerState() == YT.PlayerState.PLAYING) {
-        var duration = ytPlayer.getDuration();
-        var currentTime = ytPlayer.getCurrentTime();
-        var progress = (currentTime / duration) * 100;
-        document.getElementById('progressBar').value = progress;
-        document.getElementById('duration').innerHTML = formatTime(duration);
-        document.getElementById('progressTimestamp').innerHTML = formatTime(currentTime);
-    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
