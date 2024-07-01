@@ -8,7 +8,6 @@ import re
 from bs4 import BeautifulSoup
 import requests
 import datetime
-import time
 import threading
 
 from app import socketio
@@ -27,26 +26,6 @@ SSH_HOST = os.getenv('SSH_HOST')
 SSH_USER = os.getenv('SSH_USER')
 SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 MAX_SONG_LENGTH = 10 * 60  # 10 minutes
-QUIET_HOURS = {
-    "Sunday": (23, 7),
-    "Monday": (23, 7),
-    "Tuesday": (23, 7),
-    "Wednesday": (23, 7),
-    "Thursday": (23, 7),
-    "Friday": (1, 7),
-    "Saturday": (1, 7)
-}
-EXAM_WEEKS = {
-    2024: [(datetime.date(2024, 12, 11), datetime.date(2024, 12, 18)),
-           (datetime.date(2025, 4, 30), datetime.date(2025, 5, 7)),
-           (datetime.date(2025, 8, 8), datetime.date(2025, 8, 12))],
-    2025: [(datetime.date(2025, 12, 10), datetime.date(2025, 12, 17)),
-           (datetime.date(2026, 4, 29), datetime.date(2026, 5, 6)),
-           (datetime.date(2026, 8, 7), datetime.date(2026, 8, 11))],
-    2026: [(datetime.date(2026, 12, 9), datetime.date(2026, 12, 16)),
-           (datetime.date(2027, 4, 28), datetime.date(2027, 5, 5)),
-           (datetime.date(2027, 8, 6), datetime.date(2027, 8, 10))]
-}
 
 # In-memory storage
 user_queues = {}
@@ -169,7 +148,6 @@ def handle_add_album_to_queue(data):
 
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
-
 
 @socketio.on('removeSongFromQueue')
 @authenticated_only
@@ -392,7 +370,6 @@ def play_next_song():
         isPlaying = False
     emit('updateUserQueue', {'queue': user_queues[next_user].get_queue()}, broadcast=True)  # Update the queue for all clients
 
-
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')
     if not os.path.exists(base_path):
@@ -502,34 +479,3 @@ def parse_duration_in_seconds(duration_str):
         seconds = int(match.group(3)) if match.group(3) else 0
         return hours * 3600 + minutes * 60 + seconds
     return 0
-
-# Quiet hours handling
-def is_exam_week():
-    current_date = datetime.datetime.now().date()
-    current_year = current_date.year
-    for start_date, end_date in EXAM_WEEKS.get(current_year, []):
-        if start_date <= current_date <= end_date:
-            return True
-    return False
-
-def is_quiet_hours():
-    if is_exam_week():
-        return True
-
-    current_day = datetime.datetime.now().strftime("%A")
-    current_hour = datetime.datetime.now().hour
-    start, end = QUIET_HOURS[current_day]
-
-    if start < end:
-        return start <= current_hour < end
-    else:
-        return current_hour >= start or current_hour < end
-
-def set_quiet_hours_volume():
-    if is_quiet_hours():
-        handle_set_volume({'volume': 60})
-
-def check_quiet_hours():
-    while True:
-        set_quiet_hours_volume()
-        time.sleep(3600)

@@ -7,7 +7,6 @@ from flask_session import Session
 import threading
 
 socketio = SocketIO()
-sess = Session()
 
 def create_app():
     app = Flask(__name__)
@@ -16,7 +15,6 @@ def create_app():
     app.secret_key = app.config['SECRET_KEY']
 
     socketio.init_app(app)
-    sess.init_app(app)
 
     CSH_AUTH = ProviderConfiguration(
         issuer=app.config["OIDC_ISSUER"],
@@ -35,6 +33,5 @@ def create_app():
 
     with app.app_context():
         from app import events
-        threading.Thread(target=events.check_quiet_hours).start()
 
     return app

@@ -4,7 +4,6 @@ var animationInterval;
 var pingInterval = null;
 var typingTimer;
 var doneTypingInterval = 500;
-var authToken;
 var socket;
 var ytPlayerReady = false;
 var ytPlayer;
@@ -21,301 +20,289 @@ function validateYouTubeTrackID(track_id) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    authToken = localStorage.getItem('authToken');
+    socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
 
-    if (!authToken) {
-        console.error('Auth token is missing');
-        alert('Authentication token is missing. Please login again.');
-        window.location.href = '/';
-    } else {
-        socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port, {
-            query: { token: authToken }
-        });
+    socket.on('connect', function() {
+        console.log('Socket.IO connected');
+        if (window.location.pathname === '/') {
+            socket.emit('get_user_queue');
+            socket.emit('get_current_song');
+        }
+    });
 
-        socket.on('connect', function() {
-            console.log('Socket.IO connected');
-            if (window.location.pathname === '/') {
-                socket.emit('get_user_queue');
-                socket.emit('get_current_song');
-            }
-        });
+    socket.on('connect_error', (error) => {
+        console.error('Socket.IO connection error:', error);
+        if (error.message === 'jwt expired' || error.message === 'invalid token') {
+            alert('Session expired or invalid token. Please login again.');
+            window.location.href = '/';
+        }
+    });
 
-        socket.on('connect_error', (error) => {
-            console.error('Socket.IO connection error:', error);
-            if (error.message === 'jwt expired' || error.message === 'invalid token') {
-                alert('Session expired or invalid token. Please login again.');
-                window.location.href = '/';
-            }
-        });
-
-        socket.on('youtubePlayerIsReady', function() {
-            if (pendingSong && ytPlayerReady) {
-                try {
-                    if (validateYouTubeTrackID(pendingSong.track_id)) {
-                        ytPlayer.loadVideoById(pendingSong.track_id);
-                        ytPlayer.playVideo();
-                        pendingSong = null;
-                    } else {
-                        console.error('Invalid YouTube track ID:', pendingSong.track_id);
-                    }
-                } catch (error) {
-                    console.error('Failed to load YouTube video:', error);
-                }
-            }
-        });
-        
-
-        socket.on('message', function(data) {
-            console.log('Received:', data);
-            switch(data.action) {
-                case 'searchResults':
-                    handleSearchResults(data.results);
-                    break;
-                case 'next_song':
-                    if (data.nextSong.source === 'spotify') {
-                        let track_id = data.nextSong.track_id;
-                        if (track_id) {
-                            const spotifyWrapper = document.getElementById('spotify-player-wrapper');
-                            if (spotifyWrapper) {
-                                const spotifyURI = `spotify:track:${track_id}`;
-                                if (EmbedController && typeof EmbedController.loadUri === 'function' && typeof EmbedController.play === 'function') {
-                                    EmbedController.loadUri(spotifyURI);
-                                    EmbedController.play();
-                                    spotifyWrapper.style.display = 'block';
-                                } else {
-                                    console.error('EmbedController methods are not available');
-                                }
-                            } else {
-                                console.error('Spotify player wrapper not found');
-                            }
-                        } else {
-                            console.error('Invalid Spotify track ID');
-                        }
-                    } else if (data.nextSong.source === 'youtube') {
-                        if (ytPlayerReady) {
-                            try {
-                                if (validateYouTubeTrackID(data.nextSong.track_id)) {
-                                    ytPlayer.loadVideoById(data.nextSong.track_id);
-                                    ytPlayer.playVideo();
-                                } else {
-                                    console.error('Invalid YouTube track ID:', data.nextSong.track_id);
-                                }
-                            } catch (error) {
-                                console.error('Failed to load YouTube video:', error);
-                            }
-                        } else {
-                            pendingSong = data.nextSong;
-                            console.log('YouTube player is not ready, storing the song to play later');
-                        }
-                    }
-                    playSong(data.nextSong);
-                    break;
-                case 'queueUpdated':
-                    console.log('Queue updated, checking if playback should start.');
-                    if (!isPlaying) {
-                        console.log('No song is currently playing, requesting next song.');
-                        socket.emit('get_next_song');
-                    }
-                    if (window.location.pathname === '/' && document.getElementById('user-queue-list')) {
-                        updateUserQueueDisplay(data.queue);
-                    }
-                    break;
-                case 'formattedTime':
-                    if (window.location.pathname === '/display') {
-                        document.getElementById('progressTimestamp').innerText = data.time;
-                    }
-                    break;
-                case 'queueLength':
-                    if (data.length == 1) {
-                        if (window.location.pathname === '/display') {
-                            document.getElementById('playQueue').click();
-                            console.log("Playing first song");
-                        }
-                    }
-                    break;
-                case 'checkIfPlaying':
-                    socket.emit('isPlaying', { isPlaying: isPlaying });
-                    break;
-                case 'queue_empty':
-                    console.log("Queue is empty, isPlaying:", isPlaying);
-                    if (isPlaying) {
-                        resetPlayerUI();
-                        defaultFrame();
-                        clearInterval(animationInterval);
-                        if (EmbedController) {
-                            EmbedController.pause();
-                        }
-                        if (ytPlayerReady && ytPlayer) {
-                            ytPlayer.stopVideo();
-                        }
-                        isPlaying = false;
-                    }
-                    break;
-                case 'togglePlay':
-                    console.log("Toggling play");
-                    if (isPlaying) {
-                        EmbedController.pause();
-                        isPlaying = false;
-                    } else {
-                        EmbedController.togglePlay();
-                        isPlaying = true;
-                    }
-                    break;
-                case 'cat_colors':
-                    if (window.location.pathname === '/admin') {
-                        var dropdown = document.getElementById('catColorDropdown');
-                        dropdown.innerHTML = '';
-                        data.colors.forEach(color => {
-                            var option = document.createElement('option');
-                            option.value = color;
-                            option.innerText = color;
-                            dropdown.appendChild(option);
-                        });
-                    }
-                    break;
-                case 'color_changed':
-                    if (window.location.pathname === '/admin') {
-                        document.getElementById('catColorDropdown').value = data.color;
-                    }
-                    break;
-                case 'addYouTubeLinkToQueue':
-                    console.log('Adding YouTube link to queue');
-                    break;
-            }
-        });
-
-        socket.on('disconnect', function() {
-            console.log("Socket.IO disconnected");
-        });
-
-        socket.on('error', function(error) {
-            console.error('Socket.IO Error:', error);
-        });
-
-        socket.on('updateCurrentSong', function(data) {
-            if (data.currentSong) {
-                updateCurrentSong(data.currentSong);
-            }
-        });
-
-        socket.on('queueLength', function(data) {
-            var queueLength = data.length;
-            console.log('Queue length:', queueLength);
-            if (queueLength === 1) {
-                if (!isPlaying) {
-                    document.getElementById('playQueue').click();
-                    console.log("Playing first song");
-                }
-            }
-        });
-
-        socket.on('vote_count', function(data) {
-            const voteCount = data.votes;
-            const voteThreshold = data.threshold;
-            console.log(`Vote count: ${voteCount}/${voteThreshold}`);
-        });
-
-        socket.on('updateUserQueue', function(data) {
-            updateUserQueueDisplay(data.queue);
-        });
-        
-
-        if (window.location.pathname == "/") {
-            const searchSourceSelect = document.getElementById('search-source');
-            const searchBar = document.getElementById('searchbar');
-            const youtubeLinkInput = document.getElementById('youtube-link');
-            let searchSource = localStorage.getItem('searchSource') || 'spotify'; // Default to 'spotify'
-            const profilePic = document.getElementById('profile-pic');
-            const profileDropdown = document.querySelector('.profile-dropdown');
-            searchBar.value = "";
-            youtubeLinkInput.value = "";
-            searchSourceSelect.value = searchSource;
-            if (searchSource === 'youtube') {
-                searchBar.style.display = 'none';
-                youtubeLinkInput.style.display = 'block';
-            }
-            searchSourceSelect.addEventListener('change', function() {
-                searchSource = this.value;
-                localStorage.setItem('searchSource', searchSource);
-                if (this.value === 'youtube') {
-                    searchBar.style.display = 'none';
-                    searchBar.value = '';
-                    youtubeLinkInput.style.display = 'block';
+    socket.on('youtubePlayerIsReady', function() {
+        if (pendingSong && ytPlayerReady) {
+            try {
+                if (validateYouTubeTrackID(pendingSong.track_id)) {
+                    ytPlayer.loadVideoById(pendingSong.track_id);
+                    ytPlayer.playVideo();
+                    pendingSong = null;
                 } else {
-                    searchBar.style.display = 'block';
-                    youtubeLinkInput.style.display = 'none';
-                    youtubeLinkInput.value = '';
+                    console.error('Invalid YouTube track ID:', pendingSong.track_id);
                 }
-            });
-            searchBar.addEventListener('keyup', function(event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    handleInput(searchBar.value, searchSource);
-                }
-            });
-
-            youtubeLinkInput.addEventListener('keyup', function(event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    handleInput(youtubeLinkInput.value, searchSource);
-                }
-            });
-            profilePic.addEventListener('click', function() {
-                profileDropdown.classList.toggle('show');
-            });
+            } catch (error) {
+                console.error('Failed to load YouTube video:', error);
+            }
         }
+    });
 
-        if (window.location.pathname == "/display") {
-            document.getElementById('playQueue').addEventListener('click', startPlay);
-            var startButton = document.getElementById('startButton');
-            startButton.addEventListener('click', function() {
-                startButton.style.display = 'none';
-            });
-        }
-
-        if (window.location.pathname == "/admin") {
-            const clearAllQueuesBtn = document.getElementById('clearAllQueuesBtn');
-            const clearSpecificQueueBtn = document.getElementById('clearSpecificQueueBtn');
-            const userIdInput = document.getElementById('user-id-input');
-
-            clearAllQueuesBtn.addEventListener('click', function() {
-                socket.emit('clearAllQueues');
-            });
-
-            clearSpecificQueueBtn.addEventListener('click', function() {
-                const userId = userIdInput.value;
-                if (userId) {
-                    socket.emit('clearSpecificQueue', { uid: userId });
+    socket.on('message', function(data) {
+        console.log('Received:', data);
+        switch(data.action) {
+            case 'searchResults':
+                handleSearchResults(data.results);
+                break;
+            case 'next_song':
+                if (data.nextSong.source === 'spotify') {
+                    let track_id = data.nextSong.track_id;
+                    if (track_id) {
+                        const spotifyWrapper = document.getElementById('spotify-player-wrapper');
+                        if (spotifyWrapper) {
+                            const spotifyURI = `spotify:track:${track_id}`;
+                            if (EmbedController && typeof EmbedController.loadUri === 'function' && typeof EmbedController.play === 'function') {
+                                EmbedController.loadUri(spotifyURI);
+                                EmbedController.play();
+                                spotifyWrapper.style.display = 'block';
+                            } else {
+                                console.error('EmbedController methods are not available');
+                            }
+                        } else {
+                            console.error('Spotify player wrapper not found');
+                        }
+                    } else {
+                        console.error('Invalid Spotify track ID');
+                    }
+                } else if (data.nextSong.source === 'youtube') {
+                    if (ytPlayerReady) {
+                        try {
+                            if (validateYouTubeTrackID(data.nextSong.track_id)) {
+                                ytPlayer.loadVideoById(data.nextSong.track_id);
+                                ytPlayer.playVideo();
+                            } else {
+                                console.error('Invalid YouTube track ID:', data.nextSong.track_id);
+                            }
+                        } catch (error) {
+                            console.error('Failed to load YouTube video:', error);
+                        }
+                    } else {
+                        pendingSong = data.nextSong;
+                        console.log('YouTube player is not ready, storing the song to play later');
+                    }
                 }
-            });
-
-            socket.on('queueUserCount', function(data) {
-                const countDisplay = document.getElementById('queue-user-count');
-                countDisplay.textContent = `Queues: ${data.queues}, Users: ${data.users}`;
-            });
-
-            document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
-            document.getElementById('skipSongBtn').addEventListener('click', function() {
-                isPlaying = false;
-                socket.emit('skipSong');
-            });
-            document.getElementById('refreshDisplayBtn').addEventListener('click', function() {
-                socket.emit('refreshDisplay');
-            });
-            populateCatColorDropdown();
-            document.getElementById('catColorDropdown').addEventListener('change', function() {
-                var selectedColor = this.value;
-                socket.emit('change_cat_color', selectedColor);
-            });
-            document.getElementById('setVolumeBtn').addEventListener('click', function() {
-                var volumeLevel = document.getElementById('volumeSlider').value;
-                socket.emit('set_volume', { volume: volumeLevel });
-            });
-            document.getElementById('setSongLengthBtn').addEventListener('click', function() {
-                var songLengthLimit = document.getElementById('songLengthInput').value;
-                socket.emit('set_song_length_limit', { length: songLengthLimit });
-            });
+                playSong(data.nextSong);
+                break;
+            case 'queueUpdated':
+                console.log('Queue updated, checking if playback should start.');
+                if (!isPlaying) {
+                    console.log('No song is currently playing, requesting next song.');
+                    socket.emit('get_next_song');
+                }
+                if (window.location.pathname === '/' && document.getElementById('user-queue-list')) {
+                    updateUserQueueDisplay(data.queue);
+                }
+                break;
+            case 'formattedTime':
+                if (window.location.pathname === '/display') {
+                    document.getElementById('progressTimestamp').innerText = data.time;
+                }
+                break;
+            case 'queueLength':
+                if (data.length == 1) {
+                    if (window.location.pathname === '/display') {
+                        document.getElementById('playQueue').click();
+                        console.log("Playing first song");
+                    }
+                }
+                break;
+            case 'checkIfPlaying':
+                socket.emit('isPlaying', { isPlaying: isPlaying });
+                break;
+            case 'queue_empty':
+                console.log("Queue is empty, isPlaying:", isPlaying);
+                if (isPlaying) {
+                    resetPlayerUI();
+                    defaultFrame();
+                    clearInterval(animationInterval);
+                    if (EmbedController) {
+                        EmbedController.pause();
+                    }
+                    if (ytPlayerReady && ytPlayer) {
+                        ytPlayer.stopVideo();
+                    }
+                    isPlaying = false;
+                }
+                break;
+            case 'togglePlay':
+                console.log("Toggling play");
+                if (isPlaying) {
+                    EmbedController.pause();
+                    isPlaying = false;
+                } else {
+                    EmbedController.togglePlay();
+                    isPlaying = true;
+                }
+                break;
+            case 'cat_colors':
+                if (window.location.pathname === '/admin') {
+                    var dropdown = document.getElementById('catColorDropdown');
+                    dropdown.innerHTML = '';
+                    data.colors.forEach(color => {
+                        var option = document.createElement('option');
+                        option.value = color;
+                        option.innerText = color;
+                        dropdown.appendChild(option);
+                    });
+                }
+                break;
+            case 'color_changed':
+                if (window.location.pathname === '/admin') {
+                    document.getElementById('catColorDropdown').value = data.color;
+                }
+                break;
+            case 'addYouTubeLinkToQueue':
+                console.log('Adding YouTube link to queue');
+                break;
         }
+    });
+
+    socket.on('disconnect', function() {
+        console.log("Socket.IO disconnected");
+    });
+
+    socket.on('error', function(error) {
+        console.error('Socket.IO Error:', error);
+    });
+
+    socket.on('updateCurrentSong', function(data) {
+        if (data.currentSong) {
+            updateCurrentSong(data.currentSong);
+        }
+    });
+
+    socket.on('queueLength', function(data) {
+        var queueLength = data.length;
+        console.log('Queue length:', queueLength);
+        if (queueLength === 1) {
+            if (!isPlaying) {
+                document.getElementById('playQueue').click();
+                console.log("Playing first song");
+            }
+        }
+    });
+
+    socket.on('vote_count', function(data) {
+        const voteCount = data.votes;
+        const voteThreshold = data.threshold;
+        console.log(`Vote count: ${voteCount}/${voteThreshold}`);
+    });
+
+    socket.on('updateUserQueue', function(data) {
+        updateUserQueueDisplay(data.queue);
+    });
+
+    if (window.location.pathname == "/") {
+        const searchSourceSelect = document.getElementById('search-source');
+        const searchBar = document.getElementById('searchbar');
+        const youtubeLinkInput = document.getElementById('youtube-link');
+        let searchSource = localStorage.getItem('searchSource') || 'spotify'; // Default to 'spotify'
+        const profilePic = document.getElementById('profile-pic');
+        const profileDropdown = document.querySelector('.profile-dropdown');
+        searchBar.value = "";
+        youtubeLinkInput.value = "";
+        searchSourceSelect.value = searchSource;
+        if (searchSource === 'youtube') {
+            searchBar.style.display = 'none';
+            youtubeLinkInput.style.display = 'block';
+        }
+        searchSourceSelect.addEventListener('change', function() {
+            searchSource = this.value;
+            localStorage.setItem('searchSource', searchSource);
+            if (this.value === 'youtube') {
+                searchBar.style.display = 'none';
+                searchBar.value = '';
+                youtubeLinkInput.style.display = 'block';
+            } else {
+                searchBar.style.display = 'block';
+                youtubeLinkInput.style.display = 'none';
+                youtubeLinkInput.value = '';
+            }
+        });
+        searchBar.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleInput(searchBar.value, searchSource);
+            }
+        });
+
+        youtubeLinkInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleInput(youtubeLinkInput.value, searchSource);
+            }
+        });
+        profilePic.addEventListener('click', function() {
+            profileDropdown.classList.toggle('show');
+        });
+    }
+
+    if (window.location.pathname == "/display") {
+        document.getElementById('playQueue').addEventListener('click', startPlay);
+        var startButton = document.getElementById('startButton');
+        startButton.addEventListener('click', function() {
+            startButton.style.display = 'none';
+        });
+    }
+
+    if (window.location.pathname == "/admin") {
+        const clearAllQueuesBtn = document.getElementById('clearAllQueuesBtn');
+        const clearSpecificQueueBtn = document.getElementById('clearSpecificQueueBtn');
+        const userIdInput = document.getElementById('user-id-input');
+
+        clearAllQueuesBtn.addEventListener('click', function() {
+            socket.emit('clearAllQueues');
+        });
+
+        clearSpecificQueueBtn.addEventListener('click', function() {
+            const userId = userIdInput.value;
+            if (userId) {
+                socket.emit('clearSpecificQueue', { uid: userId });
+            }
+        });
+
+        socket.on('queueUserCount', function(data) {
+            const countDisplay = document.getElementById('queue-user-count');
+            countDisplay.textContent = `Queues: ${data.queues}, Users: ${data.users}`;
+        });
+
+        document.getElementById('pausePlayBtn').addEventListener('click', pausePlay);
+        document.getElementById('skipSongBtn').addEventListener('click', function() {
+            isPlaying = false;
+            socket.emit('skipSong');
+        });
+        document.getElementById('refreshDisplayBtn').addEventListener('click', function() {
+            socket.emit('refreshDisplay');
+        });
+        populateCatColorDropdown();
+        document.getElementById('catColorDropdown').addEventListener('change', function() {
+            var selectedColor = this.value;
+            socket.emit('change_cat_color', selectedColor);
+        });
+        document.getElementById('setVolumeBtn').addEventListener('click', function() {
+            var volumeLevel = document.getElementById('volumeSlider').value;
+            socket.emit('set_volume', { volume: volumeLevel });
+        });
+        document.getElementById('setSongLengthBtn').addEventListener('click', function() {
+            var songLengthLimit = document.getElementById('songLengthInput').value;
+            socket.emit('set_song_length_limit', { length: songLengthLimit });
+        });
     }
 });
 
@@ -547,7 +534,6 @@ function submitSong() {
     });
 }
 
-
 function getQueueUserCount() {
     socket.emit('getQueueUserCount');
 }
@@ -568,7 +554,6 @@ function resetSongSelectionUI() {
 function startPlay() {
     socket.emit('get_next_song');
 }
-
 
 function updateAdminQueue(data) {
     var queue = data.queue;
@@ -690,7 +675,6 @@ function updatePlayerProgress(trackLength) {
         document.getElementById('progressTimestamp').innerHTML = formatTime(0);
     }
 }
-
 
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
