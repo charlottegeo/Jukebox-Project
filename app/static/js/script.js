@@ -1,9 +1,9 @@
 var isPlaying = false;
 var isPaused = false;
+var isLoading = false;
 var animationInterval;
 var pingInterval = null;
 var typingTimer;
-var doneTypingInterval = 500;
 var socket;
 var ytPlayerReady = false;
 var ytPlayer;
@@ -61,6 +61,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 handleSearchResults(data.results);
                 break;
             case 'next_song':
+                if (isLoading) {
+                    console.log('Already loading a song, ignoring next song request.');
+                    return;
+                }
                 if (data.nextSong.source === 'spotify') {
                     let track_id = data.nextSong.track_id;
                     if (track_id) {
@@ -569,6 +573,11 @@ function clearQueue() {
 }
 
 function playSong(song = null) {
+    if (isLoading) {
+        console.log('Another song is currently loading, ignoring request to play:', song.track_name);
+        return;
+    }
+
     if (!song) {
         console.log('Queue is empty');
         resetPlayerUI();
@@ -578,13 +587,16 @@ function playSong(song = null) {
     }
 
     console.log('Playing:', song.track_name, 'by', song.artist_name);
+    isLoading = true;
 
     const spotifyPlayerWrapper = document.getElementById('spotify-player-wrapper');
     const youtubePlayerWrapper = document.getElementById('youtube-player-wrapper');
+
     if (song.source === 'spotify') {
         if (ytPlayerReady && ytPlayer) {
             ytPlayer.stopVideo();
         }
+
         if (spotifyPlayerWrapper) spotifyPlayerWrapper.style.display = 'block';
         if (youtubePlayerWrapper) youtubePlayerWrapper.style.display = 'none';
 
@@ -592,26 +604,24 @@ function playSong(song = null) {
         EmbedController.loadUri(spotifyURI, function() {
             EmbedController.play(function() {
                 console.log('Spotify Playback started');
+                isLoading = false;
             });
         });
     } else if (song.source === 'youtube') {
-        if (!ytPlayerReady) {
-            pendingSong = song;
-            console.log('YouTube player is not ready, storing the song to play later');
-            return;
-        }
-
         if (EmbedController) {
             EmbedController.pause();
         }
+
         if (spotifyPlayerWrapper) spotifyPlayerWrapper.style.display = 'none';
         if (youtubePlayerWrapper) youtubePlayerWrapper.style.display = 'block';
 
         if (validateYouTubeTrackID(song.track_id)) {
             ytPlayer.loadVideoById(song.track_id);
             ytPlayer.playVideo();
+            isLoading = false;
         } else {
             console.error('Invalid YouTube track ID:', song.track_id);
+            isLoading = false;
         }
     }
 
@@ -659,6 +669,7 @@ function resetPlayerUI() {
         ytPlayer.stopVideo();
         youtubePlayer.style.display = 'none';
     }
+    isLoading = false;
 }
 
 function updatePlayerProgress(trackLength) {

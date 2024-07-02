@@ -3,15 +3,12 @@ from flask_socketio import SocketIO
 from flask_pyoidc.flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMetadata
 from config import Config
-from flask_session import Session
-import threading
 
-socketio = SocketIO()
+socketio = SocketIO(async_mode='eventlet')
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-
     app.secret_key = app.config['SECRET_KEY']
 
     socketio.init_app(app)

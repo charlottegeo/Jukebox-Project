@@ -1,3 +1,0 @@
-Virtual environment name: venv
-To activate environment: .\venv\Scripts\activate 
-OR source venv/bin/activate if you are on Mac/Linux
