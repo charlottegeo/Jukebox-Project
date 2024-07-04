@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const socketProtocol = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
     socket = io.connect(socketProtocol + window.location.host, {
         transports: ['websocket'],
-        upgrade: false
+        upgrade: false,
+        pingInterval: 25000,
+        pingTimeout: 60000
     });
 
     socket.on('connect', function() {
