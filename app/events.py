@@ -52,7 +52,7 @@ def handle_connect():
         user_queues[uid] = UserQueue(uid)
     if uid not in user_order:
         user_order.append(uid)
-    emit('message', {'message': 'Connected to server'})
+    emit('message', {'message': 'Connected to server'}, room=request.sid)
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
 @socketio.on('disconnect')
@@ -70,9 +70,9 @@ def handle_search_tracks(data):
     try:
         result_array = search_for_tracks(token, track_name, 5)
         search_results = [track.to_dict(source=source) for track in result_array]
-        emit('message', {'action': 'searchResults', 'results': search_results})
+        emit('message', {'action': 'searchResults', 'results': search_results}, room=request.sid)
     except Exception as e:
-        emit('message', {'action': 'error', 'error': str(e)})
+        emit('message', {'action': 'error', 'error': str(e)}, room=request.sid)
 
 @socketio.on('addSongToQueue')
 @authenticated_only
@@ -85,11 +85,11 @@ def handle_add_song_to_queue(data):
             try:
                 track_length = int(track_length)
             except ValueError:
-                emit('error', {'message': 'Invalid track length'})
+                emit('error', {'message': 'Invalid track length'}, room=request.sid)
                 return
             
             if track_length > MAX_SONG_LENGTH:
-                emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'})
+                emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'}, room=request.sid)
                 return
 
             track['source'] = data.get('source', 'spotify')
@@ -102,14 +102,14 @@ def handle_add_song_to_queue(data):
             if not isPlaying:
                 check_and_play_next_song()
         else:
-            emit('error', {'message': 'Track length not provided'})
+            emit('error', {'message': 'Track length not provided'}, room=request.sid)
     else:
-        emit('error', {'message': 'Track data not provided'})
+        emit('error', {'message': 'Track data not provided'}, room=request.sid)
 
 @socketio.on('youtubePlayerReady')
 @authenticated_only
 def handle_youtube_player_ready():
-    emit('youtubePlayerIsReady', broadcast=True)
+    emit('youtubePlayerIsReady', room=request.sid)
 
 @socketio.on('addPlaylistToQueue')
 @authenticated_only
@@ -163,9 +163,9 @@ def handle_remove_song_from_queue(data):
 def handle_get_user_queue():
     uid = session.get('uid')
     if uid in user_queues:
-        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()})
+        emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     else:
-        emit('updateUserQueue', {'queue': []})
+        emit('updateUserQueue', {'queue': []}, room=request.sid)
 
 @socketio.on('vote_to_skip')
 @authenticated_only
@@ -181,7 +181,7 @@ def handle_vote_to_skip():
             skip_votes.clear()
             emit('message', {'action': 'skipSong'}, broadcast=True)
         else:
-            emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, broadcast=True)
+            emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, room=request.sid)
 
 @socketio.on('isPlaying')
 @authenticated_only
@@ -199,6 +199,7 @@ def handle_get_next_song():
 @socketio.on('get_current_song')
 @authenticated_only
 def handle_get_current_song():
+    uid = session.get('uid')
     if currentPlayingSong:
         emit('updateCurrentSong', {'currentSong': currentPlayingSong}, room=request.sid)
     else:
@@ -211,13 +212,13 @@ def handle_clear_queue_for_user():
     if uid in user_queues:
         user_queues[uid].queue = []
         emit('updateUserQueue', {'queue': []}, room=request.sid)
-        emit('queueUpdated', broadcast=True)
+        emit('queueUpdated', room=request.sid)
 
 @socketio.on('secondsToMinutes')
 @authenticated_only
 def handle_seconds_to_minutes(data):
     formatted_time = formatTime(data.get('seconds'))
-    emit('message', {'action': 'formattedTime', 'time': formatted_time}, broadcast=True)
+    emit('message', {'action': 'formattedTime', 'time': formatted_time}, room=request.sid)
 
 @socketio.on('skipSong')
 @authenticated_only
@@ -227,27 +228,27 @@ def handle_skip_song():
 @socketio.on('refreshDisplay')
 @authenticated_only
 def handle_refresh_display():
-    emit('reloadPage', broadcast=True)
+    emit('reloadPage', room=request.sid)
 
 @socketio.on('get_cat_colors')
 @authenticated_only
 def handle_get_cat_colors():
     colors = get_cat_colors()
-    emit('message', {'action': 'cat_colors', 'colors': colors}, broadcast=True)
+    emit('message', {'action': 'cat_colors', 'colors': colors}, room=request.sid)
 
 @socketio.on('change_cat_color')
 @authenticated_only
 def handle_change_cat_color(color):
     global selected_color
     selected_color = color
-    emit('color_changed', {'color': color}, broadcast=True)
+    emit('color_changed', {'color': color}, room=request.sid)
 
 @socketio.on('set_volume')
 @authenticated_only
 def handle_set_volume(data):
     volume = sanitize_volume_input(data['volume'])
     if volume is None:
-        emit('error', {'message': 'Invalid volume input.'})
+        emit('error', {'message': 'Invalid volume input.'}, room=request.sid)
         return
 
     try:
@@ -256,9 +257,9 @@ def handle_set_volume(data):
         ssh.connect(SSH_HOST, username=SSH_USER, password=SSH_PASSWORD)
         ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(f'amixer set Master {volume}%')
         ssh.close()
-        emit('volume_set', {'volume': volume}, broadcast=True)
+        emit('volume_set', {'volume': volume}, room=request.sid)
     except Exception as e:
-        emit('error', {'message': 'Failed to set volume.'})
+        emit('error', {'message': 'Failed to set volume.'}, room=request.sid)
 
 @socketio.on('clearSpecificQueue')
 @authenticated_only
@@ -267,7 +268,7 @@ def handle_clear_specific_queue(data):
     if uid in user_queues:
         user_queues[uid].queue = []
         emit('updateUserQueue', {'queue': []}, room=request.sid)
-        emit('queueUpdated', broadcast=True)
+        emit('queueUpdated', room=request.sid)
 
 @socketio.on('clearAllQueues')
 @authenticated_only
@@ -292,14 +293,14 @@ def handle_reorder_queue(data):
 def handle_get_queue_user_count():
     queue_count = len(user_queues)
     user_count = len(set(user_queues.keys()))
-    emit('queueUserCount', {'queues': queue_count, 'users': user_count})
+    emit('queueUserCount', {'queues': queue_count, 'users': user_count}, room=request.sid)
 
 @socketio.on('set_song_length_limit')
 @authenticated_only
 def handle_set_song_length_limit(data):
     global song_length_limit
     song_length_limit = data['length']
-    emit('song_length_limit_set', {'length': song_length_limit}, broadcast=True)
+    emit('song_length_limit_set', {'length': song_length_limit}, room=request.sid)
 
 @socketio.on('addYoutubeLinkToQueue')
 @authenticated_only
@@ -311,7 +312,7 @@ def handle_add_youtube_link_to_queue(data):
             track_data = parse_youtube_link(youtube_link, emit, request.sid)
             if track_data:
                 add_song_to_user_queue(uid, track_data)
-                emit('queueUpdated', broadcast=True)
+                emit('queueUpdated', {'queue': user_queues[uid].get_queue()}, room=request.sid)
                 check_and_play_next_song()
         except Exception as e:
             emit('error', {'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
@@ -362,13 +363,12 @@ def play_next_song():
             isPlaying = True
         else:
             currentPlayingSong = None
-            emit('message', {'action': 'queue_empty'}, broadcast=True)
+            emit('message', {'action': 'queue_empty'}, room=request.sid)
             isPlaying = False
     else:
         currentPlayingSong = None
-        emit('message', {'action': 'queue_empty'}, broadcast=True)
+        emit('message', {'action': 'queue_empty'}, room=request.sid)
         isPlaying = False
-    emit('updateUserQueue', {'queue': user_queues[next_user].get_queue()}, broadcast=True)  # Update the queue for all clients
 
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')
