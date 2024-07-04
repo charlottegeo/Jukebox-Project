@@ -20,7 +20,11 @@ function validateYouTubeTrackID(track_id) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+    const socketProtocol = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
+    socket = io.connect(socketProtocol + window.location.host, {
+        transports: ['websocket'],
+        upgrade: false
+    });
 
     socket.on('connect', function() {
         console.log('Socket.IO connected');
