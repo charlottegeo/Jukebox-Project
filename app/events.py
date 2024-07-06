@@ -340,7 +340,18 @@ def handle_add_youtube_link_to_queue(data):
     youtube_bpm = data.get('bpm')
     uid = session.get('uid')
     if youtube_link and uid:
+        if not is_valid_youtube_link(youtube_link):
+            emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Invalid YouTube link format.'}, room=request.sid)
+            return
         try:
+            if youtube_bpm is not None:
+                try:
+                    youtube_bpm = int(youtube_bpm)
+                    if youtube_bpm < 1:
+                        raise ValueError("BPM must be at least 1.")
+                except ValueError as e:
+                    emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': str(e)}, room=request.sid)
+                    return
             track_data = parse_youtube_link(youtube_link, emit, request.sid)
             if track_data:
                 track_data['bpm'] = youtube_bpm if youtube_bpm else '90'  # Default to 90 if no BPM is provided
@@ -420,6 +431,10 @@ def sanitize_volume_input(volume):
             return None
     except ValueError:
         return None
+
+def is_valid_youtube_link(link):
+    regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/(watch\?v=|embed/|v/|.+\?v=|.+&v=|playlist\?list=|.*list=)([a-zA-Z0-9_-]{11}|[a-zA-Z0-9_-]+)')
+    return bool(regex.match(link))
 
 def parse_youtube_link(youtube_link, emit_func, sid):
     try:

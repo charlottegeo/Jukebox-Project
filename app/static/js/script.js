@@ -19,6 +19,11 @@ function validateYouTubeTrackID(track_id) {
     return regex.test(track_id);
 }
 
+function isValidYouTubeLink(link) {
+    const regex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/(watch\?v=|embed\/|v\/|.+\?v=|.+&v=|playlist\?list=|.*list=)([a-zA-Z0-9_-]{11}|[a-zA-Z0-9_-]+)/;
+    return regex.test(link);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const socketProtocol = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
     socket = io.connect(socketProtocol + window.location.host, {
@@ -451,13 +456,17 @@ function handleInput(input, source) {
         }
     } else if (source === 'youtube') {
         const youtubeBpm = document.getElementById('youtube-bpm').value;
-        if (isYouTubePlaylist(input)) {
-            socket.emit('addPlaylistToQueue', { link: input, source: 'youtube', bpm: youtubeBpm });
+        if (isValidYouTubeLink(input)) {
+            if (isYouTubePlaylist(input)) {
+                socket.emit('addPlaylistToQueue', { link: input, source: 'youtube', bpm: youtubeBpm });
+            } else {
+                socket.emit('addYoutubeLinkToQueue', { youtube_link: input, source: 'youtube', bpm: youtubeBpm });
+            }
+            document.getElementById('youtube-link').value = '';
+            document.getElementById('youtube-bpm').value = '90';
         } else {
-            socket.emit('addYoutubeLinkToQueue', { youtube_link: input, source: 'youtube', bpm: youtubeBpm });
+            spawnMessage('red', 'Invalid YouTube link');
         }
-        document.getElementById('youtube-link').value = '';
-        document.getElementById('youtube-bpm').value = '90';
     }
     document.getElementById('searchbar').value = '';
 }
