@@ -20,6 +20,7 @@ Flask-Session==0.8.0
 Flask-SocketIO==5.3.6
 Flask-SQLAlchemy==3.1.1
 future==1.0.0
+gevent==24.2.1
 greenlet==3.0.3
 gunicorn==21.2.0
 h11==0.14.0
@@ -51,6 +52,7 @@ python-ldap==3.4.4
 python-socketio==5.11.1
 redis==5.0.6
 requests==2.31.0
+setuptools==70.2.0
 simple-websocket==1.0.0
 six==1.16.0
 soupsieve==2.5
@@ -59,3 +61,5 @@ typing_extensions==4.9.0
 urllib3==2.2.1
 Werkzeug==3.0.1
 wsproto==1.2.0
+zope.event==5.0
+zope.interface==6.4.post2

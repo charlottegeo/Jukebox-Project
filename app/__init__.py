@@ -1,13 +1,10 @@
-import eventlet
-eventlet.monkey_patch()
-
 from flask import Flask
 from flask_socketio import SocketIO
 from flask_pyoidc.flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import ProviderConfiguration, ClientMetadata
 from config import Config
 
-socketio = SocketIO(async_mode='eventlet')
+socketio = SocketIO(async_mode='gevent')
 
 def create_app():
     app = Flask(__name__)
