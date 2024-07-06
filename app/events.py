@@ -72,7 +72,7 @@ def handle_search_tracks(data):
         search_results = [track.to_dict(source=source) for track in result_array]
         emit('message', {'action': 'searchResults', 'results': search_results}, room=request.sid)
     except Exception as e:
-        emit('message', {'action': 'error', 'error': str(e)}, room=request.sid)
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': str(e)}, room=request.sid)
 
 @socketio.on('addSongToQueue')
 @authenticated_only
@@ -85,16 +85,16 @@ def handle_add_song_to_queue(data):
             try:
                 track_length = int(track_length)
             except ValueError:
-                emit('error', {'message': 'Invalid track length'}, room=request.sid)
+                emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Invalid track length'}, room=request.sid)
                 return
             
             if track_length > MAX_SONG_LENGTH:
-                emit('error', {'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'}, room=request.sid)
+                emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'}, room=request.sid)
                 return
 
             track['source'] = data.get('source', 'spotify')
             add_song_to_user_queue(uid, track)
-            emit('songAdded', {'message': 'Song added to queue', 'track': track}, room=request.sid)
+            emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'Song added to queue'}, room=request.sid)
 
             if uid in user_queues:
                 emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
@@ -102,9 +102,10 @@ def handle_add_song_to_queue(data):
             if not isPlaying:
                 check_and_play_next_song()
         else:
-            emit('error', {'message': 'Track length not provided'}, room=request.sid)
+            emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Track length not provided'}, room=request.sid)
     else:
-        emit('error', {'message': 'Track data not provided'}, room=request.sid)
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Track data not provided'}, room=request.sid)
+
 
 @socketio.on('youtubePlayerReady')
 @authenticated_only
@@ -156,7 +157,10 @@ def handle_remove_song_from_queue(data):
     uid = session.get('uid')
     if uid in user_queues:
         user_queues[uid].remove_song(song_index)
+        emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'Song removed from queue'}, room=request.sid)
         emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+    else:
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'User not authenticated or queue not found.'}, room=request.sid)
 
 @socketio.on('get_user_queue')
 @authenticated_only
@@ -211,8 +215,10 @@ def handle_clear_queue_for_user():
     uid = session.get('uid')
     if uid in user_queues:
         user_queues[uid].queue = []
+        emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'Queue cleared.'}, room=request.sid)
         emit('updateUserQueue', {'queue': []}, room=request.sid)
-        emit('queueUpdated', room=request.sid)
+    else:
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'User not authenticated or queue not found.'}, room=request.sid)
 
 @socketio.on('secondsToMinutes')
 @authenticated_only
@@ -248,7 +254,7 @@ def handle_change_cat_color(color):
 def handle_set_volume(data):
     volume = sanitize_volume_input(data['volume'])
     if volume is None:
-        emit('error', {'message': 'Invalid volume input.'}, room=request.sid)
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Invalid volume input.'}, room=request.sid)
         return
 
     try:
@@ -257,9 +263,9 @@ def handle_set_volume(data):
         ssh.connect(SSH_HOST, username=SSH_USER, password=SSH_PASSWORD)
         ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(f'amixer set Master {volume}%')
         ssh.close()
-        emit('volume_set', {'volume': volume}, room=request.sid)
+        emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': f'Volume set to {volume}%'}, room=request.sid)
     except Exception as e:
-        emit('error', {'message': 'Failed to set volume.'}, room=request.sid)
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Failed to set volume.'}, room=request.sid)
 
 @socketio.on('clearSpecificQueue')
 @authenticated_only
@@ -289,17 +295,18 @@ def handle_update_song_bpm(data):
             if new_bpm <= 0:
                 raise ValueError("BPM must be a positive integer.")
         except ValueError as e:
-            emit('error', {'message': str(e)}, room=request.sid)
+            emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': str(e)}, room=request.sid)
             return
         
         user_queue = user_queues[uid]
         if 0 <= song_index < len(user_queue.queue):
             user_queue.queue[song_index].bpm = new_bpm
+            emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'Song BPM updated.'}, room=request.sid)
             emit('updateUserQueue', {'queue': user_queue.get_queue()}, room=request.sid)
         else:
-            emit('error', {'message': 'Invalid song index.'}, room=request.sid)
+            emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Invalid song index.'}, room=request.sid)
     else:
-        emit('error', {'message': 'User not authenticated or queue not found.'}, room=request.sid)
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'User not authenticated or queue not found.'}, room=request.sid)
 
 @socketio.on('reorderQueue')
 @authenticated_only
@@ -338,12 +345,13 @@ def handle_add_youtube_link_to_queue(data):
             if track_data:
                 track_data['bpm'] = youtube_bpm if youtube_bpm else '90'  # Default to 90 if no BPM is provided
                 add_song_to_user_queue(uid, track_data)
-                emit('queueUpdated', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+                emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'YouTube link added to queue'}, room=request.sid)
+                emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
                 check_and_play_next_song()
         except Exception as e:
-            emit('error', {'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
+            emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
     else:
-        emit('error', {'message': 'Invalid YouTube link or user not authenticated.'}, room=request.sid)
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Invalid YouTube link or user not authenticated.'}, room=request.sid)
 
 # Helper functions
 

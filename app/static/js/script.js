@@ -66,6 +66,8 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'searchResults':
                 handleSearchResults(data.results);
                 break;
+            case 'spawnMessage':
+                spawnMessage(data.color, data.message);
             case 'next_song':
                 if (isLoading) {
                     console.log('Already loading a song, ignoring next song request.');
@@ -406,6 +408,35 @@ function populateCatColorDropdown() {
     socket.emit('get_cat_colors');
 }
 
+function spawnMessage(color, message) {
+    const container = document.getElementById('message-container');
+
+    const messageBox = document.createElement('div');
+    messageBox.className = `message-box ${color}`;
+    messageBox.innerHTML = `
+        <span>${message}</span>
+        <span class="close-btn" onclick="closeMessage(this)">×</span>
+    `;
+    container.appendChild(messageBox);
+
+    // Remove the message box after 5 seconds
+    setTimeout(() => {
+        messageBox.style.animation = 'fadeOut 0.5s';
+        setTimeout(() => {
+            container.removeChild(messageBox);
+        }, 500); // Wait for the animation to finish
+    }, 5000);
+}
+
+// Close the message box when the close button is clicked
+function closeMessage(closeBtn) {
+    const messageBox = closeBtn.parentElement;
+    messageBox.style.animation = 'fadeOut 0.5s';
+    setTimeout(() => {
+        messageBox.remove();
+    }, 500); // Wait for the animation to finish
+}
+
 function handleInput(input, source) {
     if (source === 'spotify') {
         if (isSpotifyPlaylist(input)) {
@@ -540,11 +571,6 @@ function submitSong() {
         track: track
     });
     socket.emit('get_queue_length');
-    var resultText = document.getElementById('resulttext');
-    resultText.textContent = "Song added to queue!";
-    setTimeout(function() {
-        resultText.textContent = "";
-    }, 3000);
 
     socket.on('songAdded', function(data) {
         socket.emit('get_user_queue');
