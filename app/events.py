@@ -174,14 +174,14 @@ def handle_vote_to_skip():
     if uid not in skip_votes:
         skip_votes[uid] = True
         active_users = len(user_queues)
-        skip_threshold = active_users // 2 + 1
+        skip_threshold = max(2, active_users // 2 + 1)  #Ensures that at least 50% of users must vote to skip
+
+        emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, broadcast=True)
 
         if len(skip_votes) >= skip_threshold:
             play_next_song()
             skip_votes.clear()
             emit('message', {'action': 'skipSong'}, broadcast=True)
-        else:
-            emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, room=request.sid)
 
 @socketio.on('isPlaying')
 @authenticated_only
