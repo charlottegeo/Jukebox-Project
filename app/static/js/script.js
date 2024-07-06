@@ -244,6 +244,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 youtubeLinkInput.style.display = 'none';
                 youtubeLinkInput.value = '';
             }
+
+            const dropdown = document.getElementById('dropdown');
+            dropdown.style.display = 'none';
+            dropdown.innerHTML = '';
+            resetSongSelectionUI();
         });
         searchBar.addEventListener('keyup', function(event) {
             if (event.key === 'Enter') {
@@ -499,11 +504,10 @@ function setText() {
     var track = JSON.parse(selectedItem.dataset.track);
     selectedItem.style.display = 'block';
     var infoText = document.getElementById('info-text');
-    if (infoText.value == null) {
-        infoText.textContent = "Selected Song:";
-    }
-    selectedItem.style.display = 'flex';
-    selectedItem.justifyContent = 'space-between';
+    infoText.textContent = "Selected Song:";
+    var selectedSong = document.getElementById('selected-song');
+    selectedSong.style.display = 'flex';
+    selectedSong.style.justifyContent = 'space-between';
     var sImg = document.getElementById('selected-img');
     var sTrackName = document.getElementById('selected-track-name');
     var sArtistName = document.getElementById('selected-artist-name');
@@ -513,9 +517,7 @@ function setText() {
     sArtistName.textContent = track.artist_name;
     sTrackLength.textContent = track.track_length;
     var addButton = document.getElementById('add-button');
-    if (window.getComputedStyle(addButton).display == 'none') {
-        addButton.style.display = 'block';
-    }
+    addButton.style.display = 'block';
 }
 
 function submitSong() {
@@ -549,8 +551,6 @@ function getQueueUserCount() {
 }
 
 function resetSongSelectionUI() {
-    var dropdown = document.getElementById('dropdown');
-    dropdown.innerHTML = '';
     var selectedSong = document.getElementById('selected-song');
     selectedSong.style.display = 'none';
     var infoText = document.getElementById('info-text');
@@ -559,6 +559,8 @@ function resetSongSelectionUI() {
     addButton.style.display = 'none';
     var searchbar = document.getElementById('searchbar');
     searchbar.value = '';
+    var youtubeLinkInput = document.getElementById('youtube-link');
+    youtubeLinkInput.value = '';
 }
 
 function startPlay() {
