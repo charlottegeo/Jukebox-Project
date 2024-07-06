@@ -78,43 +78,47 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Already loading a song, ignoring next song request.');
                     return;
                 }
-                if (data.nextSong.source === 'spotify') {
-                    let track_id = data.nextSong.track_id;
-                    if (track_id) {
-                        const spotifyWrapper = document.getElementById('spotify-player-wrapper');
-                        if (spotifyWrapper) {
-                            const spotifyURI = `spotify:track:${track_id}`;
-                            if (EmbedController && typeof EmbedController.loadUri === 'function' && typeof EmbedController.play === 'function') {
-                                EmbedController.loadUri(spotifyURI);
-                                EmbedController.play();
-                                spotifyWrapper.style.display = 'block';
+                if (data.nextSong) {
+                    if (data.nextSong.source === 'spotify') {
+                        let track_id = data.nextSong.track_id;
+                        if (track_id) {
+                            const spotifyWrapper = document.getElementById('spotify-player-wrapper');
+                            if (spotifyWrapper) {
+                                const spotifyURI = `spotify:track:${track_id}`;
+                                if (EmbedController && typeof EmbedController.loadUri === 'function' && typeof EmbedController.play === 'function') {
+                                    EmbedController.loadUri(spotifyURI);
+                                    EmbedController.play();
+                                    spotifyWrapper.style.display = 'block';
+                                } else {
+                                    console.error('EmbedController methods are not available');
+                                }
                             } else {
-                                console.error('EmbedController methods are not available');
+                                console.error('Spotify player wrapper not found');
                             }
                         } else {
-                            console.error('Spotify player wrapper not found');
+                            console.error('Invalid Spotify track ID');
                         }
-                    } else {
-                        console.error('Invalid Spotify track ID');
-                    }
-                } else if (data.nextSong.source === 'youtube') {
-                    if (ytPlayerReady) {
-                        try {
-                            if (validateYouTubeTrackID(data.nextSong.track_id)) {
-                                ytPlayer.loadVideoById(data.nextSong.track_id);
-                                ytPlayer.playVideo();
-                            } else {
-                                console.error('Invalid YouTube track ID:', data.nextSong.track_id);
+                    } else if (data.nextSong.source === 'youtube') {
+                        if (ytPlayerReady) {
+                            try {
+                                if (validateYouTubeTrackID(data.nextSong.track_id)) {
+                                    ytPlayer.loadVideoById(data.nextSong.track_id);
+                                    ytPlayer.playVideo();
+                                } else {
+                                    console.error('Invalid YouTube track ID:', data.nextSong.track_id);
+                                }
+                            } catch (error) {
+                                console.error('Failed to load YouTube video:', error);
                             }
-                        } catch (error) {
-                            console.error('Failed to load YouTube video:', error);
+                        } else {
+                            pendingSong = data.nextSong;
+                            console.log('YouTube player is not ready, storing the song to play later');
                         }
-                    } else {
-                        pendingSong = data.nextSong;
-                        console.log('YouTube player is not ready, storing the song to play later');
                     }
+                    playSong(data.nextSong);
+                } else {
+                    console.log('No next song available');
                 }
-                playSong(data.nextSong);
                 break;
             case 'queueUpdated':
                 console.log('Queue updated, checking if playback should start.');
