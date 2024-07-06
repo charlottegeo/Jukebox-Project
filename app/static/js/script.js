@@ -222,15 +222,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchSourceSelect = document.getElementById('search-source');
         const searchBar = document.getElementById('searchbar');
         const youtubeLinkInput = document.getElementById('youtube-link');
+        const youtubeBpmInput = document.getElementById('youtube-bpm');
         let searchSource = localStorage.getItem('searchSource') || 'spotify'; // Default to 'spotify'
         const profilePic = document.getElementById('profile-pic');
         const profileDropdown = document.querySelector('.profile-dropdown');
         searchBar.value = "";
         youtubeLinkInput.value = "";
+        youtubeBpmInput.value = "90";
         searchSourceSelect.value = searchSource;
         if (searchSource === 'youtube') {
             searchBar.style.display = 'none';
             youtubeLinkInput.style.display = 'block';
+            youtubeBpmInput.style.display = 'block';
         }
         searchSourceSelect.addEventListener('change', function() {
             searchSource = this.value;
@@ -239,12 +242,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 searchBar.style.display = 'none';
                 searchBar.value = '';
                 youtubeLinkInput.style.display = 'block';
+                youtubeBpmInput.style.display = 'block';
             } else {
                 searchBar.style.display = 'block';
                 youtubeLinkInput.style.display = 'none';
+                youtubeBpmInput.style.display = 'none';
                 youtubeLinkInput.value = '';
+                youtubeBpmInput.value = '90';
             }
-
+    
             const dropdown = document.getElementById('dropdown');
             dropdown.style.display = 'none';
             dropdown.innerHTML = '';
@@ -358,6 +364,8 @@ function updateUserQueueDisplay(queue) {
                 ${song.track_name}<br>
                 By: ${song.artist_name}<br>
                 <button onclick="removeSongFromQueue(${index})">Remove</button>
+                <br>
+                BPM: <input type="number" class="bpm-input" value="${song.bpm || 90}" onchange="updateSongBpm(${index}, this.value)">
             </div>
         `;
         songContainer.appendChild(overlay);
@@ -375,6 +383,11 @@ function updateUserQueueDisplay(queue) {
             socket.emit('reorderQueue', { oldIndex: oldIndex, newIndex: newIndex });
         }
     });
+}
+
+function updateSongBpm(index, bpm) {
+    console.log('Updating BPM for song at index:', index, 'to BPM:', bpm);
+    socket.emit('updateSongBpm', { index: index, bpm: bpm });
 }
 
 function removeSongFromQueue(index) {
@@ -406,12 +419,14 @@ function handleInput(input, source) {
             return;
         }
     } else if (source === 'youtube') {
+        const youtubeBpm = document.getElementById('youtube-bpm').value;
         if (isYouTubePlaylist(input)) {
-            socket.emit('addPlaylistToQueue', { link: input, source: 'youtube' });
+            socket.emit('addPlaylistToQueue', { link: input, source: 'youtube', bpm: youtubeBpm });
         } else {
-            socket.emit('addYoutubeLinkToQueue', { youtube_link: input, source: 'youtube' });
+            socket.emit('addYoutubeLinkToQueue', { youtube_link: input, source: 'youtube', bpm: youtubeBpm });
         }
         document.getElementById('youtube-link').value = '';
+        document.getElementById('youtube-bpm').value = '90';
     }
     document.getElementById('searchbar').value = '';
 }
@@ -436,16 +451,6 @@ function searchTracks() {
         source: source
     };
     socket.emit('searchTracks', data);
-}
-
-function submitYouTubeLink() {
-    var youtubeLink = document.getElementById('youtube-link').value;
-    var data = {
-        youtube_link: youtubeLink
-    };
-
-    socket.emit('addYouTubeLinkToQueue', data);
-    document.getElementById('youtube-link').value = '';
 }
 
 function createTrackItem(track) {

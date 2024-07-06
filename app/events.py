@@ -277,6 +277,30 @@ def handle_clear_all_queues():
         user_queues[uid].queue = []
     emit('queueUpdated', broadcast=True)
 
+@socketio.on('updateSongBpm')
+@authenticated_only
+def handle_update_song_bpm(data):
+    song_index = data.get('index')
+    new_bpm = data.get('bpm')
+    uid = session.get('uid')
+    if uid in user_queues:
+        try:
+            new_bpm = int(new_bpm)
+            if new_bpm <= 0:
+                raise ValueError("BPM must be a positive integer.")
+        except ValueError as e:
+            emit('error', {'message': str(e)}, room=request.sid)
+            return
+        
+        user_queue = user_queues[uid]
+        if 0 <= song_index < len(user_queue.queue):
+            user_queue.queue[song_index].bpm = new_bpm
+            emit('updateUserQueue', {'queue': user_queue.get_queue()}, room=request.sid)
+        else:
+            emit('error', {'message': 'Invalid song index.'}, room=request.sid)
+    else:
+        emit('error', {'message': 'User not authenticated or queue not found.'}, room=request.sid)
+
 @socketio.on('reorderQueue')
 @authenticated_only
 def handle_reorder_queue(data):
@@ -306,11 +330,13 @@ def handle_set_song_length_limit(data):
 @authenticated_only
 def handle_add_youtube_link_to_queue(data):
     youtube_link = data.get('youtube_link')
+    youtube_bpm = data.get('bpm')
     uid = session.get('uid')
     if youtube_link and uid:
         try:
             track_data = parse_youtube_link(youtube_link, emit, request.sid)
             if track_data:
+                track_data['bpm'] = youtube_bpm if youtube_bpm else '90'  # Default to 90 if no BPM is provided
                 add_song_to_user_queue(uid, track_data)
                 emit('queueUpdated', {'queue': user_queues[uid].get_queue()}, room=request.sid)
                 check_and_play_next_song()
