@@ -439,14 +439,11 @@ progress[value]::-moz-progress-bar {
     box-sizing: border-box;
 }
 
-.overlay .song-info button {
-    pointer-events: auto;
-}
 
 .song-container:hover .overlay {
     opacity: 1;
+    pointer-events: auto; 
 }
-
 .profile {
     position: absolute;
     top: 10px;
@@ -586,4 +583,23 @@ progress[value]::-moz-progress-bar {
 .message-box .close-btn {
     cursor: pointer;
     margin-left: 10px;
+}
+
+.song-container.highlight {
+    border: 2px solid #00BFFF;
+    position: relative;
+}
+
+.song-container.highlight::before {
+    content: "UP NEXT";
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #00BFFF;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: bold;
+    font-size: 12px;
 }

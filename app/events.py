@@ -390,6 +390,11 @@ def get_next_user():
         return user_order[0]
     return None
 
+def peek_next_user():
+    if user_order:
+        return user_order[0]
+    return None
+
 def check_and_play_next_song():
     global isPlaying
     if not isPlaying:
@@ -405,6 +410,11 @@ def play_next_song():
             currentPlayingSong = next_song.to_dict()  # Store the current playing song
             emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong}, broadcast=True)
             emit('updateCurrentSong', {'currentSong': currentPlayingSong}, broadcast=True)  # Broadcast the current song to all clients
+            next_user_after_current = peek_next_user()
+            if next_user_after_current and user_queues[next_user_after_current].queue:
+                next_user_first_song = user_queues[next_user_after_current].queue[0].to_dict()
+                session['next_user'] = next_user_after_current  # Store next user ID in session
+                emit('highlight_next_song', {'next_user': next_user_after_current, 'next_song': next_user_first_song}, broadcast=True)
             isPlaying = True
         else:
             currentPlayingSong = None
@@ -414,6 +424,7 @@ def play_next_song():
         currentPlayingSong = None
         emit('message', {'action': 'queue_empty'}, room=request.sid)
         isPlaying = False
+
 
 def get_cat_colors():
     base_path = os.path.join('app', 'static', 'img', 'cats')

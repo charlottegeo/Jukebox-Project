@@ -225,6 +225,23 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log(`Vote count: ${voteCount}/${voteThreshold}`);
     });
 
+    socket.on('highlight_next_song', function(data) {
+        const nextUserId = data.next_user;
+        const nextSong = data.next_song;
+        if (window.location.pathname === '/' && sessionStorage.getItem('uid') === nextUserId) {
+            const userQueueList = document.getElementById('user-queue-list');
+            if (userQueueList) {
+                const songContainers = userQueueList.getElementsByClassName('song-container');
+                for (let container of songContainers) {
+                    container.classList.remove('highlight');
+                }
+                if (songContainers.length > 0) {
+                    songContainers[0].classList.add('highlight');
+                }
+            }
+        }
+    });
+    
     socket.on('updateUserQueue', function(data) {
         updateUserQueueDisplay(data.queue);
     });
@@ -386,6 +403,12 @@ function updateUserQueueDisplay(queue) {
         setTimeout(() => songContainer.classList.remove('added'), 500);
     });
 
+    // Highlight the first song if the next user in the round robin system
+    const nextUserId = sessionStorage.getItem('next_user');
+    if (nextUserId === sessionStorage.getItem('uid') && userQueueList.children.length > 0) {
+        userQueueList.children[0].classList.add('highlight');
+    }
+
     // This lets the user drag and drop the songs in the queue
     new Sortable(userQueueList, {
         onEnd: function(evt) {
@@ -395,6 +418,7 @@ function updateUserQueueDisplay(queue) {
         }
     });
 }
+
 
 function updateSongBpm(index, bpm) {
     console.log('Updating BPM for song at index:', index, 'to BPM:', bpm);
