@@ -44,14 +44,11 @@ class UserQueue:
 
     def add_song(self, song):
         self.queue.append(song)
-        print(f"Song added to {self.uid}'s queue. Current queue: {self.get_queue()}")
 
     def remove_song(self, index=0):
         if self.queue:
             removed_song = self.queue.pop(index)
-            print(f"Song removed from {self.uid}'s queue. Current queue: {self.get_queue()}")
             return removed_song
-        print(f"No song to remove from {self.uid}'s queue. Current queue: {self.get_queue()}")
         return None
 
     def get_queue(self):
@@ -60,7 +57,6 @@ class UserQueue:
     def reorder_queue(self, old_index, new_index):
         if 0 <= old_index < len(self.queue) and 0 <= new_index < len(self.queue):
             self.queue.insert(new_index, self.queue.pop(old_index))
-            print(f"Queue reordered for {self.uid}. Current queue: {self.get_queue()}")
 
     def to_dict(self):
         return {

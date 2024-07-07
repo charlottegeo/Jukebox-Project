@@ -7,8 +7,6 @@ import paramiko
 import re
 from bs4 import BeautifulSoup
 import requests
-import datetime
-import threading
 
 from app import socketio
 from app.models import Song, UserQueue
@@ -33,6 +31,7 @@ user_order = []
 skip_votes = {}
 selected_color = "White"  # Default color
 currentPlayingSong = None
+
 
 # Decorator to ensure the user is authenticated
 def authenticated_only(f):
@@ -289,6 +288,7 @@ def handle_update_song_bpm(data):
     song_index = data.get('index')
     new_bpm = data.get('bpm')
     uid = session.get('uid')
+
     if uid in user_queues:
         try:
             new_bpm = int(new_bpm)
