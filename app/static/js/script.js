@@ -393,7 +393,11 @@ function updateUserQueueDisplay(queue) {
                 By: ${song.artist_name}<br>
                 <button onclick="removeSongFromQueue(${index})">Remove</button>
                 <br>
-                BPM: <input type="number" class="bpm-input" value="${song.bpm || 90}" onchange="updateSongBpm(${index}, this.value)">
+                BPM: ${
+                    song.source === 'youtube' ? 
+                    `<input type="number" class="bpm-input" value="${song.bpm || 90}" onchange="updateSongBpm(${index}, this.value)">` :
+                    `${song.bpm}`
+                }
             </div>
         `;
         songContainer.appendChild(overlay);
