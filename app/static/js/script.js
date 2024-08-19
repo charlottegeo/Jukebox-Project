@@ -194,8 +194,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    socket.on('disconnect', function() {
-        console.log("Socket.IO disconnected");
+    socket.on('disconnect', function(reason) {
+        console.log("Socket.IO disconnected: " + reason);
     });
 
     socket.on('error', function(error) {
