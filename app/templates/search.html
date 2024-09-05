@@ -2,13 +2,13 @@
 <html>
 <head>
     <title>CatJam</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="../static/css/styles.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
+    <script src="../static/js/script.js"></script>
+    <link rel="apple-touch-icon" sizes="180x180" href="../static/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../static/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../static/img/favicon-16x16.png">
     <link rel="manifest" href="/static/img/site.webmanifest">
 </head>
 <body>
@@ -19,6 +19,12 @@
                 <img id="profile-pic" src="{{ auth_dict['picture'] }}" alt="Profile Picture">
                 <div class="profile-dropdown">
                     <a class="dropdown-item" href="/logout">Logout</a>
+                    <div class="cat-color-selection">
+                        <label for="catColorDropdown">Select Cat Color:</label>
+                        <select id="catColorDropdown">
+                            <!-- Options will be dynamically populated -->
+                        </select>
+                    </div>
                 </div>
             </div>
         </header>
@@ -70,14 +76,6 @@
         <section class="vote-skip">
             <button onclick="voteToSkip()">Vote to Skip</button>
         </section>
-
-        <!-- TODO: make this a pop-up where it is a box over everything else, and maybe everything under the popup gets darker?
-                <div id="code-prompt" style="display: none;">
-                    <input type="text" id="code-input" placeholder="Enter code">
-                    <button onclick="submitCode()">Submit Code</button>
-                    <div id="code-error" style="color: red; display: none;">Invalid code, please try again.</div>
-                </div>
-        -->       
     </div>
     <div id="message-container"></div>
 </body>

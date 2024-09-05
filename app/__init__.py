@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_socketio import SocketIO
 from flask_pyoidc.flask_pyoidc import OIDCAuthentication
@@ -7,7 +8,9 @@ from config import Config
 socketio = SocketIO(async_mode='gevent')
 
 def create_app():
-    app = Flask(__name__)
+    static_folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../static')
+    
+    app = Flask(__name__, static_folder=static_folder_path)
     app.config.from_object(Config)
     app.secret_key = app.config['SECRET_KEY']
 

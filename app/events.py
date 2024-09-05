@@ -2,21 +2,34 @@ import json
 import os
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit, disconnect
-from flask import session, request
+from flask import current_app, session, request, url_for
 import paramiko
 import re
-from bs4 import BeautifulSoup
+import time
 import requests
-
+import yt_dlp
+import librosa
+import numpy as np
+import boto3
+import tempfile
+import logging
+from botocore.exceptions import NoCredentialsError
 from app import socketio
 from app.models import Song, UserQueue
 from app.utils.main import get_token, search_for_tracks, get_spotify_playlist_tracks, get_spotify_album_tracks
 from app.utils.track_wrapper import TrackWrapper, formatTime
 from .util import csh_user_auth
 
+
 # Load environment variables
 load_dotenv()
 token = get_token()
+
+# S3 Configuration
+s3 = boto3.client('s3', endpoint_url='https://s3.csh.rit.edu',
+                  aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+                  aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
+BUCKET_NAME = 'catjam'
 
 # Configuration variables
 isPlaying = False
@@ -29,9 +42,11 @@ MAX_SONG_LENGTH = 10 * 60  # 10 minutes
 user_queues = {}
 user_order = []
 skip_votes = {}
+user_colors = {}
 selected_color = "White"  # Default color
 currentPlayingSong = None
 
+logging.basicConfig(level=logging.INFO)
 
 # Decorator to ensure the user is authenticated
 def authenticated_only(f):
@@ -78,17 +93,14 @@ def handle_search_tracks(data):
 def handle_add_song_to_queue(data):
     track = data.get('track')
     uid = session.get('uid')
+
     if track:
-        track_length = track.get('track_length')
-        if track_length is not None:
-            try:
-                track_length = int(track_length)
-            except ValueError:
-                emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Invalid track length'}, room=request.sid)
-                return
-            
-            if track_length > MAX_SONG_LENGTH:
-                emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Track length {track_length} exceeds maximum allowed length {MAX_SONG_LENGTH}'}, room=request.sid)
+        track_length_seconds = track.get('track_length')
+
+        if track_length_seconds is not None:
+            if not is_within_length_limit(track_length_seconds):
+                max_length_formatted = formatTime(MAX_SONG_LENGTH)
+                emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Track length {formatTime(track_length_seconds)} exceeds maximum allowed length {max_length_formatted}'}, room=request.sid)
                 return
 
             track['source'] = data.get('source', 'spotify')
@@ -105,7 +117,6 @@ def handle_add_song_to_queue(data):
     else:
         emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Track data not provided'}, room=request.sid)
 
-
 @socketio.on('youtubePlayerReady')
 @authenticated_only
 def handle_youtube_player_ready():
@@ -117,19 +128,39 @@ def handle_add_playlist_to_queue(data):
     link = data.get('link')
     source = data.get('source')
     uid = session.get('uid')
+    default_bpm = data.get('bpm', 90)  # Default BPM to 90 if not provided
     
+    unsuccessful_count = 0
+    successful_count = 0
+
+    emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'Loading playlist...'}, room=request.sid)
+
     if source == 'spotify':
         tracks = get_spotify_playlist_tracks(link)
     elif source == 'youtube':
-        tracks = get_youtube_playlist_tracks(link)
+        tracks, unsuccessful_count = get_youtube_playlist_tracks(link, default_bpm)
     else:
         tracks = []
 
     for track in tracks:
-        add_song_to_user_queue(uid, track)
+        track_length_seconds = parse_duration_in_seconds(track['track_length'])
 
-    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+        # Check if the song length is within the allowed limit
+        if is_within_length_limit(track_length_seconds):
+            track['track_length'] = track_length_seconds
+            add_song_to_user_queue(uid, track)
+            successful_count += 1
+            emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
+        else:
+            unsuccessful_count += 1
+
     check_and_play_next_song()
+
+    # Emit a message summarizing the results
+    if successful_count > 0:
+        emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': f'Successfully added {successful_count} tracks to queue. {unsuccessful_count} tracks were skipped due to length limit.'}, room=request.sid)
+    else:
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'All {unsuccessful_count} tracks were skipped due to length limit.'}, room=request.sid)
 
 @socketio.on('addAlbumToQueue')
 @authenticated_only
@@ -138,16 +169,33 @@ def handle_add_album_to_queue(data):
     source = data.get('source')
     uid = session.get('uid')
     
+    unsuccessful_count = 0
+    successful_count = 0
+
     if source == 'spotify':
         tracks = get_spotify_album_tracks(link)
     else:
         tracks = []
 
     for track in tracks:
-        add_song_to_user_queue(uid, track)
+        track_length_seconds = parse_duration_in_seconds(track['track_length'])
+
+        # Check if the song length is within the allowed limit
+        if is_within_length_limit(track_length_seconds):
+            track['track_length'] = track_length_seconds
+            add_song_to_user_queue(uid, track)
+            successful_count += 1
+        else:
+            unsuccessful_count += 1
 
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
+
+    # Emit a message summarizing the results
+    if successful_count > 0:
+        emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': f'Successfully added {successful_count} tracks to queue. {unsuccessful_count} tracks were skipped due to length limit.'}, room=request.sid)
+    else:
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'All {unsuccessful_count} tracks were skipped due to length limit.'}, room=request.sid)
 
 @socketio.on('removeSongFromQueue')
 @authenticated_only
@@ -177,7 +225,7 @@ def handle_vote_to_skip():
     if uid not in skip_votes:
         skip_votes[uid] = True
         active_users = len(user_queues)
-        skip_threshold = max(2, active_users // 2 + 1)  #Ensures that at least 50% of users must vote to skip
+        skip_threshold = max(2, active_users // 2 + 1)  # Ensures that at least 50% of users must vote to skip
 
         emit('vote_count', {'votes': len(skip_votes), 'threshold': skip_threshold}, broadcast=True)
 
@@ -235,11 +283,23 @@ def handle_skip_song():
 def handle_refresh_display():
     emit('reloadPage', room=request.sid)
 
+@socketio.on('userColorChange')
+@authenticated_only
+def handle_user_color_change(data):
+    uid = session.get('uid')
+    selected_color = data.get('color')
+
+    if uid:
+        user_colors[uid] = selected_color
+        emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': f'Color changed to {selected_color}.'}, room=request.sid)
+    else:
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'User not authenticated.'}, room=request.sid)
+
 @socketio.on('get_cat_colors')
 @authenticated_only
 def handle_get_cat_colors():
     colors = get_cat_colors()
-    emit('message', {'action': 'cat_colors', 'colors': colors}, room=request.sid)
+    emit('cat_colors', {'colors': colors}, room=request.sid)
 
 @socketio.on('change_cat_color')
 @authenticated_only
@@ -329,9 +389,9 @@ def handle_get_queue_user_count():
 @socketio.on('set_song_length_limit')
 @authenticated_only
 def handle_set_song_length_limit(data):
-    global song_length_limit
-    song_length_limit = data['length']
-    emit('song_length_limit_set', {'length': song_length_limit}, room=request.sid)
+    global MAX_SONG_LENGTH
+    MAX_SONG_LENGTH = data['length']
+    emit('song_length_limit_set', {'length': MAX_SONG_LENGTH}, room=request.sid)
 
 @socketio.on('addYoutubeLinkToQueue')
 @authenticated_only
@@ -339,26 +399,58 @@ def handle_add_youtube_link_to_queue(data):
     youtube_link = data.get('youtube_link')
     youtube_bpm = data.get('bpm')
     uid = session.get('uid')
+
     if youtube_link and uid:
         if not is_valid_youtube_link(youtube_link):
             emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Invalid YouTube link format.'}, room=request.sid)
             return
+        
         try:
-            if youtube_bpm is not None:
-                try:
-                    youtube_bpm = int(youtube_bpm)
-                    if youtube_bpm < 1:
-                        raise ValueError("BPM must be at least 1.")
-                except ValueError as e:
-                    emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': str(e)}, room=request.sid)
-                    return
-            track_data = parse_youtube_link(youtube_link, emit, request.sid)
-            if track_data:
-                track_data['bpm'] = youtube_bpm if youtube_bpm else '90'  # Default to 90 if no BPM is provided
-                add_song_to_user_queue(uid, track_data)
-                emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'YouTube link added to queue'}, room=request.sid)
-                emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
-                check_and_play_next_song()
+            # Extract metadata using yt_dlp without downloading
+            ydl_opts = {'skip_download': True}  # Skip the download, just get the info
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(youtube_link, download=False)
+                track_name = info_dict.get('title', 'YouTube Video')
+                artist_name = info_dict.get('uploader', 'Unknown Artist')
+                track_length_seconds = info_dict.get('duration', 0)
+                video_id = info_dict.get('id')
+                cover_url = f'https://img.youtube.com/vi/{video_id}/0.jpg'
+
+            # If track length exceeds limit, skip
+            if not is_within_length_limit(track_length_seconds):
+                max_length_formatted = formatTime(MAX_SONG_LENGTH)
+                emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Track length {formatTime(track_length_seconds)} exceeds maximum allowed length {max_length_formatted}'}, room=request.sid)
+                return
+
+            # Prepare track data
+            track_data = {
+                'track_name': track_name,
+                'artist_name': artist_name,
+                'track_length': track_length_seconds,
+                'cover_url': cover_url,
+                'track_id': video_id,
+                'uri': youtube_link,
+                'bpm': youtube_bpm or 90,  # Default to 90 if not provided
+                'source': 'youtube'
+            }
+
+            # Check if the MP3 file already exists in S3
+            object_name = f"{track_data['track_id']}.mp3"
+            try:
+                s3.head_object(Bucket=BUCKET_NAME, Key=object_name)
+                print(f"MP3 file {object_name} already exists in S3.")
+                track_data['mp3_url'] = f"https://s3.csh.rit.edu/{BUCKET_NAME}/{object_name}"
+            except Exception:
+                print(f"MP3 file {object_name} not found in S3. Downloading now.")
+                # Start the background task to download the MP3 only if it does not exist
+                socketio.start_background_task(download_mp3_and_analyze, track_data, request.sid)
+
+            # Add to queue regardless of whether MP3 exists or is being downloaded
+            add_song_to_user_queue(uid, track_data)
+
+            # Emit success message
+            emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'YouTube link added to queue'}, room=request.sid)
+
         except Exception as e:
             emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Failed to process YouTube link: {str(e)}'}, room=request.sid)
     else:
@@ -380,7 +472,8 @@ def add_song_to_user_queue(uid, song):
         uri=song['uri'],
         bpm=song['bpm'],
         uid=uid,
-        source=song['source']
+        source=song['source'],
+        wav_url=song.get('wav_url')
     ))
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
@@ -395,6 +488,15 @@ def peek_next_user():
         return user_order[0]
     return None
 
+def is_next_song_globally(uid, track_id):
+    """Check if the song is the next one to be played globally in the round-robin."""
+    next_user = peek_next_user()
+    if next_user and next_user in user_queues:
+        next_queue = user_queues[next_user].get_queue()
+        if next_queue and next_queue[0]['track_id'] == track_id and uid == next_user:
+            return True
+    return False
+
 def check_and_play_next_song():
     global isPlaying
     if not isPlaying:
@@ -403,18 +505,35 @@ def check_and_play_next_song():
 def play_next_song():
     global isPlaying, currentPlayingSong
     next_user = get_next_user()
+
     if next_user and next_user in user_queues:
         user_queue = user_queues[next_user]
+
         if user_queue.queue:
             next_song = user_queue.remove_song()
-            currentPlayingSong = next_song.to_dict()  # Store the current playing song
+
+            # If the next song is a YouTube song, check for the MP3 file availability
+            if next_song.source == 'youtube':
+                object_name = f"{next_song.track_id}.mp3"
+                try:
+                    s3.head_object(Bucket=BUCKET_NAME, Key=object_name)
+                    print(f"MP3 file {object_name} already exists in S3. Loading now.")
+                    next_song.mp3_url = f"https://s3.csh.rit.edu/{BUCKET_NAME}/{object_name}"
+                    emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'MP3 file found. Preparing to play...'}, broadcast=True)
+                    isPlaying = True
+                except Exception:
+                    print(f"MP3 file {object_name} not found in S3. It's being prepared.")
+                    emit('message', {'action': 'spawnMessage', 'color': 'yellow', 'message': 'Preparing the next song, please wait...'}, broadcast=True)
+                    isPlaying = False
+                    return
+
+            # Update the current playing song
+            currentPlayingSong = next_song.to_dict()
+
+            # Emit update to clients
+            emit('updateCurrentSong', {'currentSong': currentPlayingSong}, broadcast=True)
             emit('message', {'action': 'next_song', 'nextSong': currentPlayingSong}, broadcast=True)
-            emit('updateCurrentSong', {'currentSong': currentPlayingSong}, broadcast=True)  # Broadcast the current song to all clients
-            next_user_after_current = peek_next_user()
-            if next_user_after_current and user_queues[next_user_after_current].queue:
-                next_user_first_song = user_queues[next_user_after_current].queue[0].to_dict()
-                session['next_user'] = next_user_after_current  # Store next user ID in session
-                emit('highlight_next_song', {'next_user': next_user_after_current, 'next_song': next_user_first_song}, broadcast=True)
+
             isPlaying = True
         else:
             currentPlayingSong = None
@@ -426,11 +545,68 @@ def play_next_song():
         isPlaying = False
 
 
+def download_mp3_and_analyze(track_data, sid):
+    try:
+        # Create a temporary file to store the downloaded MP3
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
+            tmp_filepath = tmp_file.name
+
+        # yt-dlp options for downloading the best audio format
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': tmp_filepath,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'quiet': True,  # Suppress output
+            'no_warnings': True,  # Suppress warnings
+            'logger': logging.getLogger()  # Use logging for yt-dlp
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(track_data['uri'], download=True)
+
+        # Analyze BPM with librosa
+        bpm = analyze_bpm(tmp_filepath)
+        track_data['bpm'] = bpm
+
+        # Upload the file to S3 with metadata
+        object_name = f"{track_data['track_id']}.mp3"
+        with open(tmp_filepath, 'rb') as data:
+            s3.upload_fileobj(data, BUCKET_NAME, object_name, ExtraArgs={"Metadata": {"bpm": str(bpm)}})
+
+        logging.info(f"Uploaded {object_name} to S3 with BPM metadata: {bpm}")
+
+        # Clean up local file
+        os.remove(tmp_filepath)
+
+        socketio.emit('mp3ReadyForPlayback', {'mp3_url': track_data['mp3_url'], 'track_data': track_data}, room=sid)
+        socketio.emit('updateCurrentSong', {'currentSong': track_data}, room=sid)
+
+    except Exception as e:
+        logging.error(f"Error in download_mp3_and_analyze: {str(e)}")
+        socketio.emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Failed to download and analyze YouTube link: {str(e)}'}, room=sid)
+
+def analyze_bpm(mp3_file):
+    try:
+        # Load the MP3 file and analyze the tempo
+        y, sr = librosa.load(mp3_file, sr=None)
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        if isinstance(tempo, np.ndarray):
+            tempo = tempo[0]  # If tempo is returned as an array, take the first value
+        print(f"Analyzed BPM: {tempo}")
+        return int(round(tempo))
+    except Exception as e:
+        print(f"Error analyzing BPM: {str(e)}")
+        return 90  # Return a default BPM if analysis fails
+
 def get_cat_colors():
-    base_path = os.path.join('app', 'static', 'img', 'cats')
-    if not os.path.exists(base_path):
-        return []
+    base_path = os.path.join('static/img/cats')
+    print(f"Base path: {base_path}")
     dirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+    print(f"Cat colors: {dirs}")
     return dirs
 
 def sanitize_volume_input(volume):
@@ -443,30 +619,32 @@ def sanitize_volume_input(volume):
     except ValueError:
         return None
 
+def is_within_length_limit(track_length_seconds):
+    return track_length_seconds <= MAX_SONG_LENGTH
+
 def is_valid_youtube_link(link):
     regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/(watch\?v=|embed/|v/|.+\?v=|.+&v=|playlist\?list=|.*list=)([a-zA-Z0-9_-]{11}|[a-zA-Z0-9_-]+)')
     return bool(regex.match(link))
 
 def parse_youtube_link(youtube_link, emit_func, sid):
     try:
-        response = requests.get(youtube_link)
-        if response.status_code != 200:
+        ydl_opts = {}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(youtube_link, download=False)
+            track_name = info_dict.get('title', 'YouTube Video')
+            artist_name = info_dict.get('uploader', 'Unknown Artist')
+            track_length_seconds = info_dict.get('duration', 0)
+            video_id = info_dict.get('id')
+        
+        if not is_within_length_limit(track_length_seconds):
+            max_length_formatted = formatTime(MAX_SONG_LENGTH)
+            emit_func('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Track length {formatTime(track_length_seconds)} exceeds maximum allowed length {max_length_formatted}'}, room=sid)
             return None
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        title_tag = soup.find('meta', {'name': 'title'})
-        track_name = title_tag['content'] if title_tag else 'YouTube Video'
-        channel_tag = soup.find('link', {'itemprop': 'name'})
-        artist_name = channel_tag['content'] if channel_tag else 'Unknown Artist'
-        duration_tag = soup.find('meta', {'itemprop': 'duration'})
-        track_length = parse_duration(duration_tag['content']) if duration_tag else 'Unknown'
-
-        video_id = youtube_link.split('v=')[1].split('&')[0]
 
         track_data = {
             'track_name': track_name,
             'artist_name': artist_name,
-            'track_length': track_length,
+            'track_length': track_length_seconds,
             'cover_url': f'https://img.youtube.com/vi/{video_id}/0.jpg',
             'track_id': video_id,
             'uri': youtube_link,
@@ -475,63 +653,54 @@ def parse_youtube_link(youtube_link, emit_func, sid):
         }
 
         return track_data
+
     except Exception as e:
+        emit_func('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Failed to process YouTube link: {str(e)}'}, room=sid)
         return None
 
-def get_youtube_playlist_tracks(link):
+def get_youtube_playlist_tracks(link, default_bpm):
+    tracks = []
+    unsuccessful_count = 0
+
     try:
-        response = requests.get(link)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        scripts = soup.find_all('script')
-
-        tracks = []
-        for script in scripts:
-            if 'ytInitialData' in script.text:
-                initial_data = script.string
-                break
-        else:
-            raise ValueError("ytInitialData not found in page scripts")
-
-        playlist_info = re.search(r'ytInitialData\s*=\s*(\{.*?\});', initial_data)
-        if not playlist_info:
-            raise ValueError("Playlist info not found in ytInitialData")
-
-        playlist_json = json.loads(playlist_info.group(1))
-        playlist_items = playlist_json['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
-
-        for item in playlist_items:
-            video_info = item.get('playlistVideoRenderer', {})
-            video_id = video_info.get('videoId')
-            track_name = video_info.get('title', {}).get('runs', [{}])[0].get('text', 'Unknown Title')
-            artist_name = video_info.get('shortBylineText', {}).get('runs', [{}])[0].get('text', 'Unknown Artist')
-            duration_text = video_info.get('lengthText', {}).get('simpleText', '0:00')
-            track_length = parse_duration_in_seconds(duration_text)
-
-            tracks.append({
-                'track_name': track_name,
-                'artist_name': artist_name,
-                'track_length': track_length,
-                'cover_url': f'https://img.youtube.com/vi/{video_id}/0.jpg',
-                'track_id': video_id,
-                'uri': f'https://www.youtube.com/watch?v={video_id}',
-                'bpm': 'Unknown',
-                'source': 'youtube'
-            })
-
-        return tracks
+        ydl_opts = {
+            'extract_flat': True,  # Do not download, only extract metadata
+            'quiet': True
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            playlist_info = ydl.extract_info(link, download=False)
+            for entry in playlist_info['entries']:
+                video_link = f"https://www.youtube.com/watch?v={entry['id']}"
+                track_data = parse_youtube_link(video_link, emit, request.sid)
+                
+                if track_data:
+                    track_length_seconds = track_data['track_length']
+                    if is_within_length_limit(track_length_seconds):
+                        track_data['bpm'] = default_bpm if default_bpm else '90'  # Default to 90 if no BPM is provided
+                        tracks.append(track_data)
+                    else:
+                        unsuccessful_count += 1
+                else:
+                    unsuccessful_count += 1
 
     except Exception as e:
-        return []
+        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Failed to process YouTube playlist: {str(e)}'}, room=request.sid)
+
+    return tracks, unsuccessful_count
 
 def parse_duration(duration_str):
-    match = re.match(r'PT(?:(\d+)M)?(?:(\d+)S)?', duration_str)
+    match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
     if match:
-        minutes = int(match.group(1)) if match.group(1) else 0
-        seconds = int(match.group(2)) if match.group(2) else 0
-        return f"{minutes}:{seconds:02d}"
+        hours = int(match.group(1)) if match.group(1) else 0
+        minutes = int(match.group(2)) if match.group(2) else 0
+        seconds = int(match.group(3)) if match.group(3) else 0
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
     return 'Unknown'
 
 def parse_duration_in_seconds(duration_str):
+    if isinstance(duration_str, int):
+        return duration_str
+
     match = re.match(r'(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
     if match:
         hours = int(match.group(1)) if match.group(1) else 0

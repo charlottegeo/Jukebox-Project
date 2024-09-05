@@ -1,17 +1,29 @@
-FROM python:3.11.5-alpine
+FROM python:3.11-slim
 LABEL maintainer="Charlotte George <cngg805@gmail.com>"
 
 WORKDIR /app
 
-RUN apk update && apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
     libc-dev \
-    libldap \
-    openldap-dev \
-    cyrus-sasl-dev \
-    chrony
+    libldap2-dev \
+    libsasl2-dev \
+    ffmpeg \
+    llvm \
+    llvm-dev \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify ffmpeg and ffprobe installation
+RUN ffmpeg -version && ffprobe -version
+
+ENV LLVM_CONFIG=/usr/bin/llvm-config
+
+RUN pip3 install --no-cache-dir numpy==2.0.1
+
 COPY requirements.txt /app
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --prefer-binary -r requirements.txt
 
 COPY . /app
 
