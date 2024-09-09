@@ -1,4 +1,3 @@
-<!-- display.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,6 +5,7 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
@@ -68,9 +68,9 @@
                             };
                         </script>
                     </div>
-                    <div id="mp3-player-wrapper" style="display:none;">
-                        <audio id="mp3-player" controls></audio>
-                    </div>                    
+                    <div id="youtube-player-wrapper" style="display:none;">
+                        <iframe id="youtube-player" width="560" height="315" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                    </div>
                     <section class="admin">
                         <button id="startButton" class="start-button">Start</button>
                         <button id="playQueue" class="play-queue-button">Play Queue</button>
