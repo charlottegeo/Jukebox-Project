@@ -10,7 +10,7 @@ socketio = SocketIO(async_mode='gevent')
 def create_app():
     static_folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../static')
     
-    app = Flask(__name__, static_folder=static_folder_path)
+    app = Flask(__name__, static_folder=static_folder_path, static_url_path='/static')
     app.config.from_object(Config)
     app.secret_key = app.config['SECRET_KEY']
 
