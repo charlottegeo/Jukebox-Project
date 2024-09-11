@@ -1,30 +1,43 @@
-FROM python:3.11-slim
+FROM alpine:3.18
+
 LABEL maintainer="Charlotte George <cngg805@gmail.com>"
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install necessary libraries and dependencies, including Sox, scikit-learn, and ffmpeg
+RUN apk add --no-cache \
+    python3 \
+    python3-dev \
+    py3-pip \
     gcc \
     g++ \
-    libc-dev \
-    libldap2-dev \
-    libsasl2-dev \
-    ffmpeg \
-    llvm \
-    llvm-dev \
+    musl-dev \
+    libffi-dev \
+    libsndfile \
+    openldap-dev \
+    libsasl \
     make \
-    && rm -rf /var/lib/apt/lists/*
+    bash \
+    wget \
+    sox \
+    py3-scikit-learn \
+    llvm15-dev \
+    ffmpeg
 
-# Verify ffmpeg and ffprobe installation
-RUN ffmpeg -version && ffprobe -version
+# Ensure pip is upgraded
+RUN python3 -m ensurepip && \
+    pip3 install --upgrade pip
 
-ENV LLVM_CONFIG=/usr/bin/llvm-config
+# Set the LLVM path
+ENV PATH="/usr/lib/llvm15/bin:${PATH}"
 
-RUN pip3 install --no-cache-dir numpy==2.0.1
-
+# Install Python dependencies
 COPY requirements.txt /app
-RUN pip3 install --no-cache-dir --prefer-binary -r requirements.txt
+RUN pip3 install --upgrade --no-deps librosa \
+    && pip3 install --upgrade --no-cache-dir -r requirements.txt
 
+# Copy application code
 COPY . /app
 
-CMD ["gunicorn", "app:create_app()", "--bind=0.0.0.0:8080", "--worker-class=gevent", "--timeout=120", "--keep-alive=5"]
+# Run the application with Gunicorn
+CMD ["gunicorn", "app:create_app()", "--bind=0.0.0.0:8080", "--worker-class=gevent", "--workers=3"]
