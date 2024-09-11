@@ -2,15 +2,13 @@
 <html>
 <head>
     <title>CatJam Display</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
     <link rel="manifest" href="/static/img/site.webmanifest">
+    <!-- Plyr CSS -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
 </head>
 <body>
     <div class="container">
@@ -38,47 +36,114 @@
                 <div class="song">
                     <div id="spotify-player-wrapper">
                         <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
-                        <script>
-                            var EmbedController;
-                            window.onSpotifyIframeApiReady = (IFrameAPI) => {
-                                let element = document.getElementById('spotify-player');
-                                let options = {
-                                    width: 0,
-                                    height: 0,
-                                    uri: null,
-                                };
-                                let callback = (controller) => {
-                                    EmbedController = controller;
-                                    EmbedController.addListener('playback_update', e => {
-                                        socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
-                                        if (e.data.position == e.data.duration && e.data.duration != 0) {
-                                            console.log('Spotify song ended');
-                                            isPlaying = false;
-                                            defaultFrame();
-                                            clearInterval(animationInterval);
-                                            resetPlayerUI();
-                                            socket.emit('removeFirstSong');
-                                            socket.emit('get_next_song');
-                                        }
-                                        var progress = (e.data.position / e.data.duration) * 100;
-                                        document.getElementById('progressBar').value = progress;
-                                    });
-                                };
-                                IFrameAPI.createController(element, options, callback);
-                            };
-                        </script>
                     </div>
                     <div id="youtube-player-wrapper" style="display:none;">
-                        <iframe id="youtube-player" width="560" height="315" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                        <!-- Plyr video player container -->
+                        <div class="plyr__video-embed" id="youtube-player">
+                            <iframe src="https://www.youtube.com/embed/VIDEO_ID" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                        </div>
                     </div>
                     <section class="admin">
                         <button id="startButton" class="start-button">Start</button>
                         <button id="playQueue" class="play-queue-button">Play Queue</button>
-                        <button id="skipSongBtn" class="skip-song-button" style="display: none;">Skip Song</button> <!-- Added Skip Button -->
                     </section>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Load scripts at the end of the body -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
+    <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+
+    <!-- Plyr JS -->
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        var EmbedController;
+        var player;  // Declare player variable at the top
+    
+        window.onSpotifyIframeApiReady = (IFrameAPI) => {
+            let element = document.getElementById('spotify-player');
+            let options = {
+                width: 0,
+                height: 0,
+                uri: null,
+            };
+            let callback = (controller) => {
+                EmbedController = controller;
+                EmbedController.addListener('playback_update', e => {
+                    socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
+                    if (e.data.position == e.data.duration && e.data.duration != 0) {
+                        console.log('Spotify song ended');
+                        isPlaying = false;
+                        defaultFrame();
+                        clearInterval(animationInterval);
+                        resetPlayerUI();
+                        socket.emit('removeFirstSong');
+                        socket.emit('get_next_song');
+                    }
+                    var progress = (e.data.position / e.data.duration) * 100;
+                    document.getElementById('progressBar').value = progress;
+                });
+            };
+            IFrameAPI.createController(element, options, callback);
+        };
+    
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ensure player initialization happens before adding listeners
+            if (document.querySelector('#youtube-player')) {
+                player = new Plyr('#youtube-player', {
+                    controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen']
+                });
+    
+                // Add event listener once the player is initialized
+                if (player) {
+                    player.on('timeupdate', event => {
+                        const currentTime = player.currentTime;  // Current time in seconds
+                        const duration = player.duration;        // Total duration in seconds
+                        console.log(`Current Time: ${formatTime(currentTime)}, Duration: ${formatTime(duration)}`);
+    
+                        // Update progress bar and timestamps
+                        document.getElementById('progressBar').value = (currentTime / duration) * 100;
+                        document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
+                        document.getElementById('duration').textContent = formatTime(duration);
+                    });
+    
+                    player.on('ended', function () {
+                        console.log('YouTube video ended');
+                        isPlaying = false;
+                        resetPlayerUI();
+                        socket.emit('removeFirstSong');
+                        socket.emit('get_next_song');
+                    });
+                }
+            }
+        });
+    
+        // Helper function to format time in mm:ss format
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        }
+    
+        // Play YouTube song by updating the iframe src
+        window.playYouTubeSong = function (song) {
+            if (validateYouTubeTrackID(song.track_id)) {
+                const iframe = document.querySelector('#youtube-player iframe');
+                iframe.src = `https://www.youtube.com/embed/${song.track_id}?autoplay=1`;
+                console.log('Playing YouTube video:', song.track_id);
+            } else {
+                console.error('Invalid YouTube track ID:', song.track_id);
+            }
+        };
+    
+        window.validateYouTubeTrackID = function (track_id) {
+            const regex = /^[a-zA-Z0-9_-]{11}$/;
+            return regex.test(track_id);
+        };
+    </script>    
 </body>
 </html>
