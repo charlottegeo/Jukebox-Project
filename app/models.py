@@ -1,5 +1,5 @@
 class Song:
-    def __init__(self, track_name, artist_name, track_length, cover_url, track_id, uri, bpm, uid, source, wav_url=None):
+    def __init__(self, track_name, artist_name, track_length, cover_url, track_id, uri, bpm, uid, source, wav_url=None, mp3_url=None):
         self.track_name = track_name
         self.artist_name = artist_name
         self.track_length = track_length
@@ -9,7 +9,6 @@ class Song:
         self.bpm = bpm
         self.uid = uid
         self.source = source
-        self.wav_url = wav_url  # Optional attribute for YouTube songs
 
     def to_dict(self):
         song_dict = {
@@ -23,8 +22,6 @@ class Song:
             'uid': self.uid,
             'source': self.source
         }
-        if self.wav_url:  # Only include wav_url if it exists
-            song_dict['wav_url'] = self.wav_url
         return song_dict
 
     @classmethod
@@ -39,7 +36,6 @@ class Song:
             bpm=data['bpm'],
             uid=data['uid'],
             source=data['source'],
-            wav_url=data.get('wav_url')  # Get wav_url if it exists in the data
         )
 
 class UserQueue:

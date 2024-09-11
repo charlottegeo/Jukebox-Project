@@ -31,7 +31,7 @@ def create_main_blueprint(auth):
         return redirect(url_for('main.index'))
 
     @main.route('/static/audio/<filename>', methods=['GET', 'DELETE'])
-    def handle_wav_file(filename):
+    def handle_mp3_file(filename):
         file_path = os.path.join('app', 'static', 'audio', filename)
 
         if request.method == 'GET':
