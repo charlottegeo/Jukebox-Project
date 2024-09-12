@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 from dotenv import load_dotenv
-from flask_socketio import SocketIO, emit, disconnect, join_room
+from flask_socketio import SocketIO, emit, disconnect, join_room, leave_room
 from flask import current_app, session, request, url_for
 import paramiko
 import re
@@ -25,7 +25,6 @@ from .util import csh_user_auth
 load_dotenv()
 token = get_token()
 
-# Set AudioSegment to use Sox for conversions
 AudioSegment.converter = which("ffmpeg")
 
 # Configuration variables
@@ -67,6 +66,9 @@ def handle_connect():
     if uid not in user_order:
         user_order.append(uid)
     
+    user_color = user_colors.get(uid, "White")
+    emit('updateUserCatColor', {'color': user_color}, room=request.sid)
+
     emit('message', {'message': 'Connected to server'}, room=request.sid)
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
@@ -76,6 +78,7 @@ def handle_disconnect():
     uid = session.get('uid')
     if uid in user_order:
         user_order.remove(uid)
+    leave_room('music_room')
 
 @socketio.on('join_room')
 def handle_join_room(data):
@@ -86,7 +89,7 @@ def handle_join_room(data):
 @socketio.on('youtubePlayerReady')
 @authenticated_only
 def handle_youtube_player_ready():
-    emit('youtubePlayerIsReady', to='music_room')  # Broadcast to all clients
+    emit('youtubePlayerIsReady', to='music_room')
 
 @socketio.on('searchTracks')
 @authenticated_only
@@ -106,6 +109,7 @@ def handle_add_song_to_queue(data):
     track = data.get('track')
     uid = session.get('uid')
 
+    
     if track:
         track_length_seconds = track.get('track_length')
         if track_length_seconds is not None:
@@ -295,8 +299,11 @@ def handle_user_color_change(data):
     selected_color = data.get('color')
 
     if uid:
+        # Persist the color in user_colors
         user_colors[uid] = selected_color
         emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': f'Color changed to {selected_color}.'}, room=request.sid)
+        
+        emit('colorChangedForUser', {'uid': uid, 'color': selected_color}, to='music_room')
     else:
         emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'User not authenticated.'}, room=request.sid)
 
@@ -429,7 +436,8 @@ def handle_add_youtube_link_to_queue(data):
                 'track_id': video_id,
                 'uri': youtube_link,
                 'bpm': '90',
-                'source': 'youtube'
+                'source': 'youtube',
+                'uid': uid
             }
             add_song_to_user_queue(uid, track_data)
             emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'YouTube link added to queue, analyzing BPM...'}, room=request.sid)
@@ -506,7 +514,6 @@ def play_next_song():
             next_song = user_queue.remove_song()
             currentPlayingSong = next_song.to_dict()
 
-            # Emit to all connected clients
             socketio.emit('next_song', {'nextSong': currentPlayingSong}, to='music_room')
             socketio.emit('updateCurrentSong', {'currentSong': currentPlayingSong}, to='music_room')
 
@@ -544,12 +551,22 @@ def download_audio_and_analyze(app_ctx, track_data, sid):
             wav_filepath = tmp_filepath.replace('.mp3', '.wav')
             audio.export(wav_filepath, format="wav")
 
+            os.remove(tmp_filepath)
             # Analyze BPM directly from the WAV file using librosa
             bpm = analyze_bpm_librosa(wav_filepath)
             track_data['bpm'] = bpm
 
+            uid = track_data['uid']
+            for song in user_queues[uid].queue:
+                if song.track_id == track_data['track_id']:
+                    song.bpm = bpm
+                    break
+            
+            socketio.emit('updateSongBpm', {'track_id': track_data['track_id'], 'bpm': bpm}, room=sid)
+
             # Remove the temporary WAV file after analysis
             os.remove(wav_filepath)
+
         except Exception as e:
             logging.error(f"Error in download_audio_and_analyze: {str(e)}")
             socketio.emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Failed to download and analyze YouTube link: {str(e)}. Please yell at @ccyborgg'}, room=sid)
@@ -559,11 +576,13 @@ def analyze_bpm_librosa(audio_file):
         logging.info(f"Analyzing BPM using librosa for file: {audio_file}")
         y, sr = librosa.load(audio_file)
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-        logging.info(f"Analyzed BPM using librosa: {tempo}")
-        return float(tempo)
+
+        bpm = float(tempo) if isinstance(tempo, np.ndarray) else tempo
+        logging.info(f"Analyzed BPM using librosa: {bpm}")
+        return bpm
     except Exception as e:
         logging.error(f"Error analyzing BPM with librosa: {str(e)}")
-        return 90
+        return 90 
 
 def get_cat_colors():
     base_path = os.path.join('static/img/cats')

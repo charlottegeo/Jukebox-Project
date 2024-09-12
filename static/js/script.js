@@ -5,6 +5,7 @@ var pingInterval = null;
 var typingTimer;
 var socket;
 var pendingSong = null;
+var currentSong = null;
 var player; // Plyr instance for YouTube
 var frame0 = "/static/img/cats/White/PusayLeft.png";
 var frame1 = "/static/img/cats/White/PusayCenter.png";
@@ -14,12 +15,30 @@ var song_placeholder = "/static/img/song_placeholder.png";
 document.addEventListener('DOMContentLoaded', function () {
     const socketProtocol = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
     socket = io.connect(socketProtocol + window.location.host, {
-        transports: ['websocket', 'polling'],
-        upgrade: false,
+        transports: ['websocket'],
         pingInterval: 25000,
         pingTimeout: 60000
     });
+    const savedColor = sessionStorage.getItem('catColor') || "White";  // Default to White if no color is saved
+    updateCatColor(savedColor);
+    socket.emit('userColorChange', { color: savedColor });
 
+    const catColorDropdown = document.getElementById('catColorDropdown');
+    if (catColorDropdown) {
+        catColorDropdown.addEventListener('change', function () {
+            var selectedColor = this.value;
+            sessionStorage.setItem('catColor', selectedColor); 
+            socket.emit('userColorChange', { color: selectedColor });
+    
+            if (isPlaying) {
+                updateCatColor(selectedColor);
+            }
+        });
+    } else {
+        console.error('catColorDropdown not found');
+    }
+    
+    
     if(window.location.pathname === '/display') {
         // Initialize Plyr for YouTube player
         player = new Plyr('#youtube-player', {
@@ -29,14 +48,14 @@ document.addEventListener('DOMContentLoaded', function () {
             player.on('timeupdate', function () {
                 const currentTime = player.currentTime;
                 const duration = player.duration;
-                console.log(`Current Time: ${formatTime(currentTime)}, Duration: ${formatTime(duration)}`);
-
-                // Update the progress bar and timestamps
-                document.getElementById('progressBar').value = (currentTime / duration) * 100;
-                document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
-                document.getElementById('duration').textContent = formatTime(duration);
+                if (!isNaN(currentTime) && !isNaN(duration)) {
+                    // Update progress bar and timestamps
+                    document.getElementById('progressBar').value = (currentTime / duration) * 100;
+                    document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
+                    document.getElementById('duration').textContent = formatTime(duration);
+                }
             });
-
+    
             player.on('ended', function () {
                 console.log('YouTube video ended');
                 isPlaying = false;
@@ -53,6 +72,8 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('Socket.IO connected');
         if (window.location.pathname === '/display') {
             socket.emit('join_room', { room: 'music_room' });
+            console.log('Display page joined music_room');
+            socket.emit('get_current_song');
         }
         if (window.location.pathname === '/') {
             socket.emit('get_user_queue');
@@ -66,6 +87,22 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Session expired or invalid token. Please login again.');
             window.location.href = '/';
         }
+        setTimeout(() => {
+            if (socket.connected === false) {
+                console.log('Retrying connection...');
+                socket.connect();
+            }
+        }, 1000);
+    });
+
+    socket.on('reconnect', function () {
+        console.log('Reconnected to the server');
+        // Rejoin the room
+        if (window.location.pathname === '/display') {
+            socket.emit('join_room', { room: 'music_room' });
+        }
+        // Request the current song or queue status
+        socket.emit('get_current_song');
     });
 
     socket.on('searchResults', function (data) {
@@ -88,8 +125,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    socket.on('updateSongBpm', function (data) {
+        if (currentSong && currentSong.track_id === data.track_id) {
+            currentSong.bpm = data.bpm;
+            animateFrames(data.bpm);
+        }
+    });
+
     socket.on('queueUpdated', function (data) {
         console.log('Queue updated, checking if playback should start.');
+        socket.emit('get_user_queue');
         if (!isPlaying) {
             console.log('No song is currently playing, requesting next song.');
             socket.emit('get_next_song');
@@ -103,6 +148,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (window.location.pathname === '/display') {
             document.getElementById('progressTimestamp').innerText = data.time;
         }
+    });
+
+    socket.on('updateUserCatColor', function(data) {
+        const selectedColor = data.color;
+        sessionStorage.setItem('catColor', selectedColor);
+        updateCatColor(selectedColor);
     });
 
     socket.on('checkIfPlaying', function (data) {
@@ -151,6 +202,16 @@ document.addEventListener('DOMContentLoaded', function () {
     socket.on('color_changed', function (data) {
         if (window.location.pathname === '/admin') {
             document.getElementById('catColorDropdown').value = data.color;
+        }
+    });
+
+    socket.on('colorChangedForUser', function(data) {
+        const uid = data.uid;
+        const color = data.color;
+    
+        // If the current song is from this user, update the cat color
+        if (currentSong && currentSong.uid === uid) {
+            updateCatColor(color);
         }
     });
 
@@ -339,6 +400,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         document.getElementById('catColorDropdown').addEventListener('change', function () {
             var selectedColor = this.value;
+            sessionStorage.setItem('catColor', selectedColor); 
             socket.emit('userColorChange', { color: selectedColor });
         });
         document.getElementById('setVolumeBtn').addEventListener('click', function () {
@@ -389,12 +451,6 @@ function updateUserQueueDisplay(queue) {
                 ${song.track_name}<br>
                 By: ${song.artist_name}<br>
                 <button onclick="removeSongFromQueue(${index})">Remove</button>
-                <br>
-                BPM: ${
-                    song.source === 'youtube' ? 
-                    `<input type="number" class="bpm-input" value="${song.bpm || 90}" onchange="updateSongBpm(${index}, this.value)">` :
-                    `${song.bpm}`
-                }
             </div>
         `;
         songContainer.appendChild(overlay);
@@ -439,6 +495,18 @@ function removeSongFromQueue(index) {
 function populateCatColorDropdown() {
     console.log('Requesting cat colors from server');
     socket.emit('get_cat_colors');
+}
+
+function updateCatColor(color) {
+    frame0 = `/static/img/cats/${color}/PusayLeft.png`;
+    frame1 = `/static/img/cats/${color}/PusayCenter.png`;
+    frame2 = `/static/img/cats/${color}/PusayRight.png`;
+    const catjam = document.getElementById('catjam');
+    if (catjam) {
+        catjam.src = frame1; // Set initial frame
+    } else {
+        console.error('catjam element not found');
+    }
 }
 
 function spawnMessage(color, message) {
@@ -644,6 +712,8 @@ function playSong(song = null) {
     }
 
     console.log('Playing:', song.track_name, 'by', song.artist_name);
+
+    currentSong = song;
 
     togglePlayerVisibility(song.source);  // Toggle the correct player based on the source
 

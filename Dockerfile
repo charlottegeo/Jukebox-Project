@@ -40,4 +40,4 @@ RUN pip3 install --upgrade --no-deps librosa \
 COPY . /app
 
 # Run the application with Gunicorn
-CMD ["gunicorn", "app:create_app()", "--bind=0.0.0.0:8080", "--worker-class=gevent", "--workers=3"]
+CMD ["gunicorn", "app:create_app()", "--bind=0.0.0.0:8080", "--worker-class=gevent", "--workers=2"]

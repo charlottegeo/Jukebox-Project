@@ -100,15 +100,15 @@
     
                 // Add event listener once the player is initialized
                 if (player) {
-                    player.on('timeupdate', event => {
-                        const currentTime = player.currentTime;  // Current time in seconds
-                        const duration = player.duration;        // Total duration in seconds
-                        console.log(`Current Time: ${formatTime(currentTime)}, Duration: ${formatTime(duration)}`);
-    
-                        // Update progress bar and timestamps
-                        document.getElementById('progressBar').value = (currentTime / duration) * 100;
-                        document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
-                        document.getElementById('duration').textContent = formatTime(duration);
+                    player.on('timeupdate', function () {
+                        const currentTime = player.currentTime;
+                        const duration = player.duration;
+                        if (!isNaN(currentTime) && !isNaN(duration)) {
+                            // Update progress bar and timestamps
+                            document.getElementById('progressBar').value = (currentTime / duration) * 100;
+                            document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
+                            document.getElementById('duration').textContent = formatTime(duration);
+                        }
                     });
     
                     player.on('ended', function () {
@@ -118,6 +118,7 @@
                         socket.emit('removeFirstSong');
                         socket.emit('get_next_song');
                     });
+
                 }
             }
         });
