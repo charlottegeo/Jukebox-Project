@@ -40,7 +40,6 @@ document.addEventListener('DOMContentLoaded', function () {
     
     
     if(window.location.pathname === '/display') {
-        // Initialize Plyr for YouTube player
         player = new Plyr('#youtube-player', {
             controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen']
         });
@@ -49,7 +48,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 const currentTime = player.currentTime;
                 const duration = player.duration;
                 if (!isNaN(currentTime) && !isNaN(duration)) {
-                    // Update progress bar and timestamps
                     document.getElementById('progressBar').value = (currentTime / duration) * 100;
                     document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
                     document.getElementById('duration').textContent = formatTime(duration);
@@ -97,11 +95,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     socket.on('reconnect', function () {
         console.log('Reconnected to the server');
-        // Rejoin the room
         if (window.location.pathname === '/display') {
             socket.emit('join_room', { room: 'music_room' });
         }
-        // Request the current song or queue status
         socket.emit('get_current_song');
     });
 
@@ -119,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
         isPlaying = true;
         toggleSkipButton();
         if (data.nextSong) {
-            playSong(data.nextSong);  // Unified function to handle song playback
+            playSong(data.nextSong);
         } else {
             console.log('No next song available');
         }
@@ -209,7 +205,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const uid = data.uid;
         const color = data.color;
     
-        // If the current song is from this user, update the cat color
         if (currentSong && currentSong.uid === uid) {
             updateCatColor(color);
         }
@@ -503,7 +498,7 @@ function updateCatColor(color) {
     frame2 = `/static/img/cats/${color}/PusayRight.png`;
     const catjam = document.getElementById('catjam');
     if (catjam) {
-        catjam.src = frame1; // Set initial frame
+        catjam.src = frame1;
     } else {
         console.error('catjam element not found');
     }
@@ -715,7 +710,7 @@ function playSong(song = null) {
 
     currentSong = song;
 
-    togglePlayerVisibility(song.source);  // Toggle the correct player based on the source
+    togglePlayerVisibility(song.source);
 
     if (song.source === 'spotify') {
         playSpotifySong(song.track_id);

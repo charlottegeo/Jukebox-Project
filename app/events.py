@@ -125,7 +125,7 @@ def handle_add_song_to_queue(data):
                 emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
             
             if not isPlaying:
-                check_and_play_next_song()  # Start the next song if nothing is playing
+                check_and_play_next_song()
         else:
             emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Track length not provided'}, room=request.sid)
     else:
@@ -137,7 +137,7 @@ def handle_add_playlist_to_queue(data):
     link = data.get('link')
     source = data.get('source')
     uid = session.get('uid')
-    default_bpm = data.get('bpm', 90)  # Default BPM to 90 if not provided
+    default_bpm = data.get('bpm', 90)
 
     unsuccessful_count = 0
     successful_count = 0
@@ -153,7 +153,6 @@ def handle_add_playlist_to_queue(data):
     for track in tracks:
         track_length_seconds = parse_duration_in_seconds(track['track_length'])
 
-        # Check if the song length is within the allowed limit
         if is_within_length_limit(track_length_seconds):
             track['track_length'] = track_length_seconds
             add_song_to_user_queue(uid, track)
@@ -162,9 +161,8 @@ def handle_add_playlist_to_queue(data):
         else:
             unsuccessful_count += 1
 
-    check_and_play_next_song()  # Check to start playing the next song
+    check_and_play_next_song()
 
-    # Emit a message summarizing the results
     if successful_count > 0:
         emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': f'Successfully added {successful_count} tracks to queue. {unsuccessful_count} tracks were skipped due to length limit.'}, room=request.sid)
     else:
@@ -188,7 +186,6 @@ def handle_add_album_to_queue(data):
     for track in tracks:
         track_length_seconds = parse_duration_in_seconds(track['track_length'])
 
-        # Check if the song length is within the allowed limit
         if is_within_length_limit(track_length_seconds):
             track['track_length'] = track_length_seconds
             add_song_to_user_queue(uid, track)
@@ -199,7 +196,6 @@ def handle_add_album_to_queue(data):
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
     check_and_play_next_song()
 
-    # Emit a message summarizing the results
     if successful_count > 0:
         emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': f'Successfully added {successful_count} tracks to queue. {unsuccessful_count} tracks were skipped due to length limit.'}, room=request.sid)
     else:
@@ -299,7 +295,6 @@ def handle_user_color_change(data):
     selected_color = data.get('color')
 
     if uid:
-        # Persist the color in user_colors
         user_colors[uid] = selected_color
         emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': f'Color changed to {selected_color}.'}, room=request.sid)
         
@@ -408,12 +403,11 @@ def handle_set_song_length_limit(data):
 @socketio.on('addYoutubeLinkToQueue')
 def handle_add_youtube_link_to_queue(data):
     youtube_link = data.get('youtube_link')
-    youtube_bpm = data.get('bpm', 90)  # Default to 90 BPM if not provided
+    youtube_bpm = data.get('bpm', 90)
     uid = session.get('uid')
 
     if youtube_link and uid:
         try:
-            # Fetch YouTube video metadata
             yt = YouTube(youtube_link)
             track_length_seconds = yt.length
             video_id = yt.video_id
@@ -421,13 +415,11 @@ def handle_add_youtube_link_to_queue(data):
             track_name = yt.title
             artist_name = yt.author
 
-            # Check track length
             if not is_within_length_limit(track_length_seconds):
                 max_length_formatted = formatTime(MAX_SONG_LENGTH)
                 emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Track length {formatTime(track_length_seconds)} exceeds maximum allowed length {max_length_formatted}'}, room=request.sid)
                 return
 
-            # Add song to the queue immediately with loading state
             track_data = {
                 'track_name': track_name,
                 'artist_name': artist_name,
@@ -442,7 +434,6 @@ def handle_add_youtube_link_to_queue(data):
             add_song_to_user_queue(uid, track_data)
             emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'YouTube link added to queue, analyzing BPM...'}, room=request.sid)
 
-            # Capture the current app context and pass it to the background task
             app_ctx = current_app._get_current_object()
             socketio.start_background_task(target=download_audio_and_analyze, app_ctx=app_ctx, track_data=track_data, sid=request.sid)
             emit('queueUpdated', room=request.sid)
@@ -461,7 +452,6 @@ def add_song_to_user_queue(uid, song):
     if uid not in user_order:
         user_order.append(uid)
 
-    # Add song to the queue
     user_queues[uid].add_song(Song(
         track_name=song['track_name'],
         artist_name=song['artist_name'],
@@ -474,7 +464,6 @@ def add_song_to_user_queue(uid, song):
         source=song['source']
     ))
 
-    # Log the queue after adding a song
     logging.info(f"Song added to queue for user {uid}: {user_queues[uid].get_queue()}")
     emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
 
@@ -530,29 +519,24 @@ def play_next_song():
 def download_audio_and_analyze(app_ctx, track_data, sid):
     with app_ctx.app_context():
         try:
-            # Create a temporary file to store the downloaded audio
             with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
                 tmp_filepath = tmp_file.name
 
-            # Download audio using pytubefix
             yt = YouTube(track_data['uri'])
             stream = yt.streams.get_audio_only()
             stream.download(output_path=os.path.dirname(tmp_filepath), filename=os.path.basename(tmp_filepath))
 
-            # Validate that the file is not corrupt
             if not os.path.exists(tmp_filepath) or os.path.getsize(tmp_filepath) == 0:
                 logging.error(f"Downloaded file size: {os.path.getsize(tmp_filepath)}")
                 raise Exception("Downloaded file is invalid or corrupt.")
             else:
                 logging.info(f"Downloaded file size: {os.path.getsize(tmp_filepath)}")
 
-            # Convert the downloaded audio to WAV using Pydub for BPM analysis
             audio = AudioSegment.from_file(tmp_filepath)
             wav_filepath = tmp_filepath.replace('.mp3', '.wav')
             audio.export(wav_filepath, format="wav")
 
             os.remove(tmp_filepath)
-            # Analyze BPM directly from the WAV file using librosa
             bpm = analyze_bpm_librosa(wav_filepath)
             track_data['bpm'] = bpm
 
@@ -564,7 +548,6 @@ def download_audio_and_analyze(app_ctx, track_data, sid):
             
             socketio.emit('updateSongBpm', {'track_id': track_data['track_id'], 'bpm': bpm}, room=sid)
 
-            # Remove the temporary WAV file after analysis
             os.remove(wav_filepath)
 
         except Exception as e:

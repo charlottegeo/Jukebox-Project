@@ -52,17 +52,15 @@
         </div>
     </div>
 
-    <!-- Load scripts at the end of the body -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
     <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 
-    <!-- Plyr JS -->
     <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>
         var EmbedController;
-        var player;  // Declare player variable at the top
+        var player;
     
         window.onSpotifyIframeApiReady = (IFrameAPI) => {
             let element = document.getElementById('spotify-player');
@@ -92,19 +90,16 @@
         };
     
         document.addEventListener('DOMContentLoaded', function () {
-            // Ensure player initialization happens before adding listeners
             if (document.querySelector('#youtube-player')) {
                 player = new Plyr('#youtube-player', {
                     controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen']
                 });
     
-                // Add event listener once the player is initialized
                 if (player) {
                     player.on('timeupdate', function () {
                         const currentTime = player.currentTime;
                         const duration = player.duration;
                         if (!isNaN(currentTime) && !isNaN(duration)) {
-                            // Update progress bar and timestamps
                             document.getElementById('progressBar').value = (currentTime / duration) * 100;
                             document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
                             document.getElementById('duration').textContent = formatTime(duration);
@@ -123,14 +118,12 @@
             }
         });
     
-        // Helper function to format time in mm:ss format
         function formatTime(seconds) {
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = Math.floor(seconds % 60);
             return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
         }
     
-        // Play YouTube song by updating the iframe src
         window.playYouTubeSong = function (song) {
             if (validateYouTubeTrackID(song.track_id)) {
                 const iframe = document.querySelector('#youtube-player iframe');
