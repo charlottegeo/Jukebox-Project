@@ -97,9 +97,9 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('Reconnected to the server');
         if (window.location.pathname === '/display') {
             socket.emit('join_room', { room: 'music_room' });
+            socket.emit('get_current_song');
         }
-        socket.emit('get_current_song');
-    });
+    });    
 
     socket.on('searchResults', function (data) {
         console.log('Received:', data);
@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     socket.on('next_song', function (data) {
+        console.log('Received emit:', data);
         console.log('Next song:', data.nextSong);
         isPlaying = true;
         toggleSkipButton();
@@ -747,6 +748,7 @@ function playSpotifySong(track_id) {
 function playYouTubeSong(song) {
     if (player && validateYouTubeTrackID(song.track_id)) {
         console.log('Playing YouTube video:', song.track_id);
+        
         player.source = {
             type: 'video',
             sources: [
@@ -756,11 +758,31 @@ function playYouTubeSong(song) {
                 }
             ]
         };
+
+        player.on('timeupdate', function () {
+            const currentTime = player.currentTime;
+            const duration = player.duration;
+            if (!isNaN(currentTime) && !isNaN(duration)) {
+                document.getElementById('progressBar').value = (currentTime / duration) * 100;
+                document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
+                document.getElementById('duration').textContent = formatTime(duration);
+            }
+        });
+
+        player.on('ended', function () {
+            console.log('YouTube video ended');
+            isPlaying = false;
+            resetPlayerUI();
+            socket.emit('removeFirstSong');
+            socket.emit('get_next_song');
+        });
+
         player.play();
     } else {
         console.error('Invalid YouTube track ID:', song.track_id);
     }
 }
+
 
 function validateYouTubeTrackID(track_id) {
     const regex = /^[a-zA-Z0-9_-]{11}$/;
