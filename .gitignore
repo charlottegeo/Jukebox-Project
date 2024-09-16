@@ -1,7 +1,3 @@
 .env
-.flaskenv
-*.pyc
-venv/
-flaskenv/
 node_modules/
 dist/
