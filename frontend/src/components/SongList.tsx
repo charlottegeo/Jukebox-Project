@@ -1,11 +1,5 @@
 import React from 'react';
-
-interface Song {
-    track_name: string;
-    artist_name: string;
-    track_length: string;
-    cover_url: string;
-}
+import { Song } from '../types';
 
 interface SongListProps {
     songs: Song[];
@@ -14,16 +8,14 @@ interface SongListProps {
 
 const SongList: React.FC<SongListProps> = ({ songs, onSelect }) => {
     return (
-        <div>
+        <ul>
             {songs.map((song, index) => (
-                <div key={index} onClick={() => onSelect(song)}>
-                    <img src={song.cover_url} alt={song.track_name} width="50"/>
-                    <div>{song.track_name}</div>
-                    <div>{song.artist_name}</div>
+                <li key={index} onClick={() => onSelect(song)}>
+                    <div><strong>{song.track_name}</strong> by {song.artist_name}</div>
                     <div>{song.track_length}</div>
-                </div>
+                </li>
             ))}
-        </div>
+        </ul>
     );
 };
 
