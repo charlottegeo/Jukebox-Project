@@ -1,6 +1,6 @@
 import React from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import { v4 as uuidv4 } from 'uuid'; // Correct import for v4
+import { v4 as uuidv4 } from 'uuid';
 import { Song } from '../types';
 
 interface UserQueueProps {
@@ -31,7 +31,7 @@ const UserQueue: React.FC<UserQueueProps> = ({ queue = [], onClearQueue, onRemov
                         display: 'flex',
                         alignItems: 'center',
                         marginBottom: '10px',
-                        background: '#1e1e1e', // even darker gray background
+                        background: '#1e1e1e',
                         padding: '10px',
                         borderRadius: '5px',
                         boxShadow: '0 2px 5px rgba(0,0,0,0.3)',

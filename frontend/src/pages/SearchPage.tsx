@@ -30,11 +30,17 @@ const SearchPage: React.FC = () => {
     }, [socket, uid]);
 
     const handleSearch = (input: string, source: string) => {
-        socket?.emit('searchTracks', { track_name: input, source });
-        socket?.on('searchResults', (data: { results: Song[] }) => {
-            setSongs(data.results);
-        });
+        if (source === 'spotifyLink' || source === 'youtubeLink') {
+            socket?.emit('addLinkToQueue', { link: input, uid });
+        } else {
+            // If it's not a link, treat it as a search query
+            socket?.emit('searchTracks', { track_name: input, source });
+            socket?.on('searchResults', (data: { results: Song[] }) => {
+                setSongs(data.results);
+            });
+        }
     };
+    
 
     const handleSelectSong = (song: Song) => {
         socket?.emit('addSongToQueue', { uid, song });
@@ -53,7 +59,7 @@ const SearchPage: React.FC = () => {
     const handleReorderQueue = (newQueue: Song[]) => {
         setQueue(newQueue);
         socket?.emit('reorderQueue', { uid, queue: newQueue });
-    };    
+    };
 
     return (
         <div>

@@ -1,4 +1,6 @@
-import { SpotifyApi, Market, AudioFeatures } from "@spotify/web-api-ts-sdk";
+import { SpotifyApi, Market } from "@spotify/web-api-ts-sdk";
+import { Song } from "./interfaces";
+import { v4 as uuidv4 } from 'uuid';
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -7,29 +9,31 @@ const clientSecret = process.env.SPOTIFY_CLIENT_SECRET as string;
 const spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret);
 
 /**
- * 
- * @param query - Search query
- * @param limit - Maximum number of results 
- * @param types - Types of search results to return 
- * @returns - Search results
+ * Search for Spotify tracks.
  */
 export const searchSpotifyTracks = async (
     query: string,
     limit = 5,
     types: ('track' | 'album' | 'artist')[] = ['track']
-) => {
+): Promise<Song[]> => {
     try {
         const searchResult = await spotifyApi.search(query, types, 'US' as Market);
-
         const trimmedResults = searchResult.tracks?.items.slice(0, limit);
 
-        return trimmedResults?.map((track) => ({
-            track_name: track.name,
-            artist_name: track.artists.map((artist) => artist.name).join(', '),
-            track_length: formatTrackLength(track.duration_ms),
-            cover_url: track.album?.images[0]?.url || '',
-            track_id: track.id,
-        }));
+        return await Promise.all(trimmedResults?.map(async (track) => {
+            const audioFeatures = await getAudioFeaturesForTrack(track.id);
+            return {
+                id: uuidv4(),
+                track_name: track.name,
+                artist_name: track.artists.map((artist) => artist.name).join(', '),
+                track_length: formatTrackLength(track.duration_ms),
+                cover_url: track.album?.images[0]?.url || '',
+                track_id: track.id,
+                bpm: audioFeatures?.tempo || 90,
+                uri: track.uri,
+                source: 'spotify'
+            };
+        }) ?? []);
     } catch (error) {
         console.error('Error searching tracks on Spotify:', error);
         return [];
@@ -37,9 +41,77 @@ export const searchSpotifyTracks = async (
 };
 
 /**
- * 
- * @param trackId - Spotify track ID
- * @returns - Audio features
+ * Handle Spotify links (track, album, playlist).
+ */
+export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
+    try {
+        if (link.includes('/track/')) {
+            const trackId = link.split('/track/')[1].split('?')[0];
+            const track = await spotifyApi.tracks.get(trackId);
+            const audioFeatures = await getAudioFeaturesForTrack(trackId);
+            return [{
+                id: uuidv4(),
+                track_name: track.name,
+                artist_name: track.artists.map((artist) => artist.name).join(', '),
+                track_length: formatTrackLength(track.duration_ms),
+                cover_url: track.album?.images[0]?.url || '',
+                track_id: track.id,
+                bpm: audioFeatures?.tempo || 90,
+                uri: track.uri,
+                source: 'spotify'
+            }];
+        } else if (link.includes('/album/')) {
+            const albumId = link.split('/album/')[1].split('?')[0];
+            const album = await spotifyApi.albums.get(albumId);
+            const tracks = album.tracks.items;
+            const albumCoverUrl = album.images[0]?.url || ''; // Get the album cover once
+
+            const songs: Song[] = await Promise.all(tracks.map(async (track) => {
+                const audioFeatures = await getAudioFeaturesForTrack(track.id);
+                return {
+                    id: uuidv4(),
+                    track_name: track.name,
+                    artist_name: track.artists.map((artist) => artist.name).join(', '),
+                    track_length: formatTrackLength(track.duration_ms),
+                    cover_url: albumCoverUrl, // Use the same album cover for all tracks
+                    track_id: track.id,
+                    bpm: audioFeatures?.tempo || 90,
+                    uri: track.uri,
+                    source: 'spotify'
+                };
+            }));
+            return songs;
+        } else if (link.includes('/playlist/')) {
+            const playlistId = link.split('/playlist/')[1].split('?')[0];
+            const playlist = await spotifyApi.playlists.getPlaylist(playlistId);
+            const tracks = playlist.tracks.items;
+            const songs: Song[] = await Promise.all(tracks.map(async (item) => {
+                const track = item.track;
+                const audioFeatures = await getAudioFeaturesForTrack(track.id);
+                return {
+                    id: uuidv4(),
+                    track_name: track.name,
+                    artist_name: track.artists.map((artist) => artist.name).join(', '),
+                    track_length: formatTrackLength(track.duration_ms),
+                    cover_url: track.album?.images[0]?.url || '',
+                    track_id: track.id,
+                    bpm: audioFeatures?.tempo || 90,
+                    uri: track.uri,
+                    source: 'spotify'
+                };
+            }));
+            return songs;
+        } else {
+            throw new Error('Invalid Spotify link');
+        }
+    } catch (error) {
+        console.error('Error handling Spotify link:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get audio features for a track.
  */
 export const getAudioFeaturesForTrack = async (trackId: string) => {
     try {
@@ -52,9 +124,7 @@ export const getAudioFeaturesForTrack = async (trackId: string) => {
 };
 
 /**
- * 
- * @param durationMs - Track duration in milliseconds
- * @returns - Formatted track length in minutes and seconds
+ * Format track length in mm:ss.
  */
 const formatTrackLength = (durationMs: number): string => {
     const minutes = Math.floor(durationMs / 60000);

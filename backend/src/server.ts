@@ -2,21 +2,22 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { searchSpotifyTracks } from './spotify';
+import { searchSpotifyTracks, handleSpotifyLink } from './spotify';
+import { searchYouTube, handleYouTubeLink } from './youtube';
 import { Song, UserQueue } from './interfaces';
-import { createClient } from 'redis'; // Import Redis
+import { createClient } from 'redis';
+import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 app.use(cors());
 
-// Initialize Redis client
 const redisClient = createClient();
 redisClient.connect().catch(console.error);
 
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173', // React app URL
+    origin: 'http://localhost:5173',
     methods: ['GET', 'POST'],
   },
 });
@@ -48,7 +49,7 @@ async function playNextSong() {
       if (reply) {
         const userQueue: Song[] = JSON.parse(reply);
         currentPlayingSong = userQueue.shift() ?? null;
-        await redisClient.set(nextUser, JSON.stringify(userQueue)); // Save updated queue
+        await redisClient.set(nextUser, JSON.stringify(userQueue));
         io.emit('next_song', { nextSong: currentPlayingSong });
         isPlaying = true;
       } else {
@@ -75,7 +76,7 @@ io.on('connection', (socket) => {
       const reply = await redisClient.get(uid);
       let userQueue: Song[] = reply ? JSON.parse(reply) : [];
       userQueue.push(song);
-      await redisClient.set(uid, JSON.stringify(userQueue)); // Save updated queue in Redis
+      await redisClient.set(uid, JSON.stringify(userQueue));
       io.to(socket.id).emit('updateUserQueue', { queue: userQueue });
       if (!isPlaying) {
         playNextSong();
@@ -102,7 +103,7 @@ io.on('connection', (socket) => {
       if (reply) {
         let userQueue: Song[] = JSON.parse(reply);
         userQueue.splice(index, 1);
-        await redisClient.set(uid, JSON.stringify(userQueue)); // Save updated queue
+        await redisClient.set(uid, JSON.stringify(userQueue));
         io.to(socket.id).emit('updateUserQueue', { queue: userQueue });
       }
     } catch (err) {
@@ -113,7 +114,7 @@ io.on('connection', (socket) => {
   socket.on('reorderQueue', async (data) => {
     const { uid, queue } = data;
     try {
-      await redisClient.set(uid, JSON.stringify(queue)); // Save reordered queue
+      await redisClient.set(uid, JSON.stringify(queue));
       io.to(socket.id).emit('updateUserQueue', { queue });
     } catch (err) {
       console.error('Error reordering queue:', err);
@@ -134,14 +135,43 @@ io.on('connection', (socket) => {
   });
 
   socket.on('searchTracks', async (data) => {
-    const { track_name, source, limit } = data;
+    const { track_name, source } = data;
     if (source === 'spotify') {
-      const searchResults = await searchSpotifyTracks(track_name, limit || 5);
+      const searchResults = await searchSpotifyTracks(track_name, 5) ?? [];
+      socket.emit('searchResults', { results: await Promise.all(searchResults) });
+    } else if (source === 'youtube') {
+      const searchResults = await searchYouTube(track_name, 5);
       socket.emit('searchResults', { results: searchResults });
-    } else {
-      socket.emit('searchResults', { results: [] }); // Handle other sources or default case
     }
   });
+
+  socket.on('addLinkToQueue', async (data) => {
+    const { link, uid } = data;
+    try {
+        let songs: Song[] = [];
+        
+        if (link.includes('spotify')) {
+            songs = await handleSpotifyLink(link);
+        } else if (link.includes('youtube')) {
+            songs = await handleYouTubeLink(link);
+        } else {
+            throw new Error('Invalid link format');
+        }
+        
+        const reply = await redisClient.get(uid);
+        let userQueue: Song[] = reply ? JSON.parse(reply) : [];
+        userQueue.push(...songs);
+        await redisClient.set(uid, JSON.stringify(userQueue));
+        io.to(socket.id).emit('updateUserQueue', { queue: userQueue });
+
+        if (!isPlaying) {
+            playNextSong();
+        }
+    } catch (err) {
+        console.error('Error adding link to queue:', err);
+    }
+});
+
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
