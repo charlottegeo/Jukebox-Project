@@ -1,6 +1,7 @@
-import youtubeSearchApi from 'youtube-search-api';
 import { Song } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
+const youtubeSearchApi = require("youtube-search-api");
+const ytdl = require('ytdl-core'); 
 
 /**
  * Search YouTube based on a query.
@@ -32,33 +33,48 @@ export const searchYouTube = async (query: string, limit = 5): Promise<Song[]> =
  */
 export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
     try {
-        if (link.includes('watch?v=')) {
-            const videoId = link.split('watch?v=')[1];
-            const videoDetails = await youtubeSearchApi.GetVideoDetails(videoId); // Use GetVideoDetails
+        let videoId: string | null = null;
 
+        // Check for various YouTube link formats
+        if (link.includes('watch?v=')) {
+            videoId = link.split('watch?v=')[1].split('&')[0]; // Extract the video ID from full YouTube URL
+        } else if (link.includes('youtu.be/')) {
+            videoId = link.split('youtu.be/')[1].split('?')[0]; // Extract the video ID from shortened youtu.be URL, strip any query parameters
+        }
+
+        if (videoId) {
+            const videoDetails = await youtubeSearchApi.GetVideoDetails(videoId);
+            console.log('Video details:', videoDetails);
+            const videoInfo = await ytdl.getInfo(videoId);
+            const duration = videoInfo.videoDetails.lengthSeconds; // Get duration in seconds
+            const formattedDuration = formatYouTubeDuration(duration); // Format into mm:ss
             return [{
                 id: uuidv4(),
                 track_name: videoDetails.title || 'Unknown Title',
-                artist_name: videoDetails.channel || 'Unknown Artist',
-                track_length: 'Unknown',
-                cover_url: videoDetails.thumbnail.url || '',
+                artist_name: videoDetails.channel || videoDetails.shortBylineText || 'Unknown Artist',
+                track_length: formattedDuration,
+                cover_url: videoDetails.thumbnail.thumbnails.sort((a: any, b: any) => b.width - a.width)[0].url,
                 track_id: videoDetails.id,
                 bpm: 90,
                 uri: `https://www.youtube.com/watch?v=${videoDetails.id}`,
                 source: 'youtube'
             }];
         } else if (link.includes('playlist?list=')) {
-            const playlistId = link.split('playlist?list=')[1];
-            const playlistData = await youtubeSearchApi.GetPlaylistData(playlistId, 50); // Fetch up to 50 videos
+            const playlistId = link.split('playlist?list=')[1].split('&')[0];
+            const playlistData = await youtubeSearchApi.GetPlaylistData(playlistId);
             const videos = playlistData.items;
 
             const songs: Song[] = await Promise.all(videos.map(async (item: any) => {
                 const videoDetails = await youtubeSearchApi.GetVideoDetails(item.id);
+                const videoInfo = await ytdl.getInfo(item.id);
+                const duration = videoInfo.videoDetails.lengthSeconds; // Get duration in seconds
+                const formattedDuration = formatYouTubeDuration(duration); // Format into mm:ss
+
                 return {
                     id: uuidv4(),
                     track_name: item.title || 'Unknown Title',
-                    artist_name: videoDetails.channel || 'Unknown Artist',
-                    track_length: item.length?.simpleText || 'Unknown',
+                    artist_name: videoDetails.channel || item.shortBylineText || 'Unknown Artist',
+                    track_length: formattedDuration,
                     cover_url: item.thumbnail.thumbnails[0]?.url || '',
                     track_id: item.id,
                     bpm: 90,

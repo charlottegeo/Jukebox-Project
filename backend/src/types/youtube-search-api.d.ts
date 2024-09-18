@@ -18,6 +18,9 @@ declare module 'youtube-search-api' {
     interface VideoDetails {
         id: string;
         title: string;
+        length?: {
+            simpleText: string;
+        };
         thumbnail: {
             url: string;
         };
@@ -26,6 +29,7 @@ declare module 'youtube-search-api' {
         channelId: string;
         description: string;
         keywords: string[];
+        shortBylineText: string;
     }
 
     interface SearchResponse {
