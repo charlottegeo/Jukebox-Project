@@ -8,9 +8,6 @@ const clientId = process.env.SPOTIFY_CLIENT_ID as string;
 const clientSecret = process.env.SPOTIFY_CLIENT_SECRET as string;
 const spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret);
 
-/**
- * Search for Spotify tracks.
- */
 export const searchSpotifyTracks = async (
     query: string,
     limit = 5,
@@ -40,9 +37,6 @@ export const searchSpotifyTracks = async (
     }
 };
 
-/**
- * Handle Spotify links (track, album, playlist).
- */
 export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
     try {
         if (link.includes('/track/')) {
@@ -110,22 +104,17 @@ export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
     }
 };
 
-/**
- * Get audio features for a track.
- */
 export const getAudioFeaturesForTrack = async (trackId: string) => {
     try {
-        const audioFeatures = await spotifyApi.tracks.audioFeatures(trackId);
-        return audioFeatures;
+      const audioFeatures = await spotifyApi.tracks.audioFeatures(trackId);
+      return audioFeatures;
     } catch (error) {
-        console.error('Error getting audio features for track:', error);
-        return null;
+      console.error(`Error getting audio features for track ${trackId}:`, error);
+      return { tempo: 90 };
     }
-};
+  };
+  
 
-/**
- * Format track length in mm:ss.
- */
 const formatTrackLength = (durationMs: number): string => {
     const minutes = Math.floor(durationMs / 60000);
     const seconds = Math.floor((durationMs % 60000) / 1000).toString().padStart(2, '0');

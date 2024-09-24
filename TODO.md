@@ -1,3 +1,7 @@
+### General Integration
+- [ ] Implement authenticated_only for the following:
+    - [ ] Searching for tracks
+
 ### YouTube Integration
 - [X] Make it so that when a youtube video is submitted, the initial bpm is 90.
     - [X] When BPM analysis is done, update the bpm with this value.

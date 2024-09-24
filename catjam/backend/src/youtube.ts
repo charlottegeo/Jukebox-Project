@@ -3,9 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 const youtubeSearchApi = require("youtube-search-api");
 const ytdl = require('ytdl-core'); 
 
-/**
- * Search YouTube based on a query.
- */
 export const searchYouTube = async (query: string, limit = 5): Promise<Song[]> => {
     try {
         const result = await youtubeSearchApi.GetListByKeyword(query, false, limit, [{ type: 'video' }]);
@@ -28,18 +25,14 @@ export const searchYouTube = async (query: string, limit = 5): Promise<Song[]> =
     }
 };
 
-/**
- * Handle YouTube link: individual video or playlist.
- */
 export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
     try {
         let videoId: string | null = null;
 
-        // Check for various YouTube link formats
         if (link.includes('watch?v=')) {
-            videoId = link.split('watch?v=')[1].split('&')[0]; // Extract the video ID from full YouTube URL
+            videoId = link.split('watch?v=')[1].split('&')[0];
         } else if (link.includes('youtu.be/')) {
-            videoId = link.split('youtu.be/')[1].split('?')[0]; // Extract the video ID from shortened youtu.be URL, strip any query parameters
+            videoId = link.split('youtu.be/')[1].split('?')[0];
         }
 
         if (videoId) {
@@ -93,10 +86,6 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
     }
 };
 
-
-/**
- * Format the video duration into mm:ss.
- */
 const formatYouTubeDuration = (duration: string): string => {
     const seconds = parseInt(duration, 10);
     const minutes = Math.floor(seconds / 60);

@@ -53,26 +53,6 @@ def create_main_blueprint(auth):
     def logout():
         return redirect(url_for('main.index'))
 
-    @main.route('/static/audio/<filename>', methods=['GET', 'DELETE'])
-    def handle_mp3_file(filename):
-        file_path = os.path.join('app', 'static', 'audio', filename)
-
-        if request.method == 'GET':
-            if os.path.exists(file_path):
-                return send_from_directory('app/static/audio', filename)
-            else:
-                abort(404)
-
-        if request.method == 'DELETE':
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    return jsonify({"message": "File deleted successfully."}), 200
-                else:
-                    return jsonify({"message": "File not found."}), 404
-            except Exception as e:
-                return jsonify({"message": f"An error occurred: {str(e)}"}), 500
-
     return main
 
 def oidc_callback(auth_response):

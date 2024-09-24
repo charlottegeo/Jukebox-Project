@@ -20,5 +20,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "../../CSH-React-Boilerplate/src/pages/DisplayPage.tsx", "../../CSH-React-Boilerplate/src/pages/SearchPage.tsx", "../../CSH-React-Boilerplate/src/components/UserQueue.tsx", "../../CSH-React-Boilerplate/src/components/SongList.tsx", "../../CSH-React-Boilerplate/src/components/SearchBar.tsx", "../../CSH-React-Boilerplate/src/hooks/useSocket.ts"]
 }

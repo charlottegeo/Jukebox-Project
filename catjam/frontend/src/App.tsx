@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import SearchPage from './pages/SearchPage';
-import DisplayPage from './pages/DisplayPage';
-
+import SearchPage from '../../../CSH-React-Boilerplate/src/pages/SearchPage';
+import DisplayPage from '../../../CSH-React-Boilerplate/src/pages/DisplayPage';
+import './index.css';
 const App: React.FC = () => {
   return (
     <Router>
