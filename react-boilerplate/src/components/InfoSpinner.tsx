@@ -17,7 +17,7 @@ const InfoSpinner: React.FC<InfoSpinnerProps> = ({
             <Spinner size={'sm'} color='primary'>
                 <span className='sr-only'>Loading...</span>
             </Spinner>
-            <span className='spinner-text'>{children ?? ''}</span>
+            <span className='spinner-text'>{children?.toString() ?? ''}</span>
         </div>
     )
 }
