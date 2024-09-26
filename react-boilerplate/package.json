@@ -23,6 +23,7 @@
     "bootstrap": "^5.3.3",
     "csh-material-bootstrap": "^4.6.2",
     "css-select": "^5.1.0",
+    "dotenv-webpack": "^8.1.0",
     "nth-check": "^2.1.0",
     "postcss": "^8.4.47",
     "react": "^18.3.1",
