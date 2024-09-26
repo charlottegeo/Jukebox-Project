@@ -10,28 +10,27 @@ import AuthenticationError from './callbacks/AuthenticationError'
 import Loading from './callbacks/Loading'
 import SessionLost from './callbacks/SessionLost'
 
-
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 )
-
 // handle security in here, and routing in app
+
 root.render(
   <>
-    {SSOEnabled ? (
-      <OidcProvider
-        configuration={configuration}
-        authenticatingComponent={Authenticating}
-        authenticatingErrorComponent={AuthenticationError}
-        loadingComponent={Loading}
-        sessionLostComponent={SessionLost}
-      >
-        <OidcSecure>
-          <App />
-        </OidcSecure>
-      </OidcProvider>
-    ) : (
-      <App />
-    )}
+    {
+      SSOEnabled ?
+        <OidcProvider
+          configuration={configuration}
+          authenticatingComponent={Authenticating}
+          authenticatingErrorComponent={AuthenticationError}
+          loadingComponent={Loading}
+          sessionLostComponent={SessionLost}
+        >
+          < OidcSecure >
+            <App />
+          </OidcSecure >
+        </OidcProvider >
+        : <App />
+    }
   </>
-);
+)
