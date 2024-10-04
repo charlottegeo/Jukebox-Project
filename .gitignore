@@ -2,7 +2,6 @@
 gradlew
 gradlew.bat
 DEdDASS.iml
-package-lock.json
 
 # testing
 /coverage
