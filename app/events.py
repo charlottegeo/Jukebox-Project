@@ -25,8 +25,6 @@ from .util import csh_user_auth
 load_dotenv()
 token = get_token()
 
-AudioSegment.converter = which("ffmpeg")
-
 # Configuration variables
 isPlaying = False
 SSH_HOST = os.getenv('SSH_HOST')
@@ -54,62 +52,16 @@ def authenticated_only(f):
     return wrapped
 
 # Event handlers
-@socketio.on('connect')
-@authenticated_only
-def handle_connect():
-    uid = session.get('uid')
-    
-    join_room('music_room')
-
-    if uid not in user_queues:
-        user_queues[uid] = UserQueue(uid)
-    if uid not in user_order:
-        user_order.append(uid)
-    
-    user_color = user_colors.get(uid, "White")
-    emit('updateUserCatColor', {'color': user_color}, room=request.sid)
-
-    emit('message', {'message': 'Connected to server'}, room=request.sid)
-    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
-
-@socketio.on('disconnect')
-@authenticated_only
-def handle_disconnect():
-    uid = session.get('uid')
-    if uid in user_order:
-        user_order.remove(uid)
-    leave_room('music_room')
-
-@socketio.on('join_room')
-def handle_join_room(data):
-    room = data.get('room')
-    join_room(room)
-    logging.info(f'Client joined room: {room}')
-
 @socketio.on('youtubePlayerReady')
 @authenticated_only
 def handle_youtube_player_ready():
     emit('youtubePlayerIsReady', to='music_room')
-
-@socketio.on('searchTracks')
-@authenticated_only
-def handle_search_tracks(data):
-    track_name = data.get('track_name')
-    source = data.get('source', 'spotify')
-    try:
-        result_array = search_for_tracks(token, track_name, 5)
-        search_results = [track.to_dict(source=source) for track in result_array]
-        emit('searchResults', {'results': search_results}, room=request.sid)
-    except Exception as e:
-        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': str(e)}, room=request.sid)
 
 @socketio.on('addSongToQueue')
 @authenticated_only
 def handle_add_song_to_queue(data):
     track = data.get('track')
     uid = session.get('uid')
-
-    
     if track:
         track_length_seconds = track.get('track_length')
         if track_length_seconds is not None:
@@ -349,32 +301,6 @@ def handle_clear_all_queues():
         user_queues[uid].queue = []
     emit('queueUpdated', to='music_room')
 
-@socketio.on('updateSongBpm')
-@authenticated_only
-def handle_update_song_bpm(data):
-    song_index = data.get('index')
-    new_bpm = data.get('bpm')
-    uid = session.get('uid')
-
-    if uid in user_queues:
-        try:
-            new_bpm = int(new_bpm)
-            if new_bpm <= 0:
-                raise ValueError("BPM must be a positive integer.")
-        except ValueError as e:
-            emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': str(e)}, room=request.sid)
-            return
-        
-        user_queue = user_queues[uid]
-        if 0 <= song_index < len(user_queue.queue):
-            user_queue.queue[song_index].bpm = new_bpm
-            emit('message', {'action': 'spawnMessage', 'color': 'green', 'message': 'Song BPM updated.'}, room=request.sid)
-            emit('updateUserQueue', {'queue': user_queue.get_queue()}, room=request.sid)
-        else:
-            emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'Invalid song index.'}, room=request.sid)
-    else:
-        emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': 'User not authenticated or queue not found.'}, room=request.sid)
-
 @socketio.on('reorderQueue')
 @authenticated_only
 def handle_reorder_queue(data):
@@ -446,27 +372,6 @@ def handle_add_youtube_link_to_queue(data):
 
 # Helper functions
 
-def add_song_to_user_queue(uid, song):
-    if uid not in user_queues:
-        user_queues[uid] = UserQueue(uid)
-    if uid not in user_order:
-        user_order.append(uid)
-
-    user_queues[uid].add_song(Song(
-        track_name=song['track_name'],
-        artist_name=song['artist_name'],
-        track_length=song['track_length'],
-        cover_url=song['cover_url'],
-        track_id=song['track_id'],
-        uri=song['uri'],
-        bpm=song['bpm'],
-        uid=uid,
-        source=song['source']
-    ))
-
-    logging.info(f"Song added to queue for user {uid}: {user_queues[uid].get_queue()}")
-    emit('updateUserQueue', {'queue': user_queues[uid].get_queue()}, room=request.sid)
-
 def get_next_user():
     if user_order:
         user_order.append(user_order.pop(0))
@@ -516,57 +421,6 @@ def play_next_song():
         socketio.emit('queue_empty', to='music_room')
         isPlaying = False
 
-def download_audio_and_analyze(app_ctx, track_data, sid):
-    with app_ctx.app_context():
-        try:
-            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
-                tmp_filepath = tmp_file.name
-
-            yt = YouTube(track_data['uri'])
-            stream = yt.streams.get_audio_only()
-            stream.download(output_path=os.path.dirname(tmp_filepath), filename=os.path.basename(tmp_filepath))
-
-            if not os.path.exists(tmp_filepath) or os.path.getsize(tmp_filepath) == 0:
-                logging.error(f"Downloaded file size: {os.path.getsize(tmp_filepath)}")
-                raise Exception("Downloaded file is invalid or corrupt.")
-            else:
-                logging.info(f"Downloaded file size: {os.path.getsize(tmp_filepath)}")
-
-            audio = AudioSegment.from_file(tmp_filepath)
-            wav_filepath = tmp_filepath.replace('.mp3', '.wav')
-            audio.export(wav_filepath, format="wav")
-
-            os.remove(tmp_filepath)
-            bpm = analyze_bpm_librosa(wav_filepath)
-            track_data['bpm'] = bpm
-
-            uid = track_data['uid']
-            for song in user_queues[uid].queue:
-                if song.track_id == track_data['track_id']:
-                    song.bpm = bpm
-                    break
-            
-            socketio.emit('updateSongBpm', {'track_id': track_data['track_id'], 'bpm': bpm}, room=sid)
-
-            os.remove(wav_filepath)
-
-        except Exception as e:
-            logging.error(f"Error in download_audio_and_analyze: {str(e)}")
-            socketio.emit('message', {'action': 'spawnMessage', 'color': 'red', 'message': f'Failed to download and analyze YouTube link: {str(e)}. Please yell at @ccyborgg'}, room=sid)
-
-def analyze_bpm_librosa(audio_file):
-    try:
-        logging.info(f"Analyzing BPM using librosa for file: {audio_file}")
-        y, sr = librosa.load(audio_file)
-        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-
-        bpm = float(tempo) if isinstance(tempo, np.ndarray) else tempo
-        logging.info(f"Analyzed BPM using librosa: {bpm}")
-        return bpm
-    except Exception as e:
-        logging.error(f"Error analyzing BPM with librosa: {str(e)}")
-        return 90 
-
 def get_cat_colors():
     base_path = os.path.join('static/img/cats')
     dirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
@@ -584,10 +438,6 @@ def sanitize_volume_input(volume):
 
 def is_within_length_limit(track_length_seconds):
     return track_length_seconds <= MAX_SONG_LENGTH
-
-def is_valid_youtube_link(link):
-    regex = re.compile(r'^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/(watch\?v=|embed/|v/|.+\?v=|.+&v=|playlist\?list=|.*list=)([a-zA-Z0-9_-]{11}|[a-zA-Z0-9_-]+)')
-    return bool(regex.match(link))
 
 def parse_youtube_link(youtube_link, emit_func, sid):
     try:

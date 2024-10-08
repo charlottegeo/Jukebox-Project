@@ -1,0 +1,52 @@
+version: '3'
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend:/app
+    environment:
+      - VITE_SSO_CLIENT_ID=${VITE_SSO_CLIENT_ID}
+      - VITE_SSO_AUTHORITY=${VITE_SSO_AUTHORITY}
+      - VITE_SSO_ENABLED=${VITE_SSO_ENABLED}
+      - HTTPS=${HTTPS}
+      - VITE_FRONTEND_PORT=${VITE_FRONTEND_PORT}
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL}
+      - VITE_SPOTIFY_CLIENT_ID=${VITE_SPOTIFY_CLIENT_ID}
+      - VITE_SPOTIFY_CLIENT_SECRET=${VITE_SPOTIFY_CLIENT_SECRET}
+      - VITE_SPOTIFY_REDIRECT_URI=${VITE_SPOTIFY_REDIRECT_URI}
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=True
+      - FRONTEND_URL=${FRONTEND_URL}
+      - SPOTIFY_CLIENT_ID=${VITE_SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${VITE_SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_REDIRECT_URI=${VITE_SPOTIFY_REDIRECT_URI}
+      - SSH_HOST=${SSH_HOST}
+      - SSH_USER=${SSH_USER}
+      - SSH_PASSWORD=${SSH_PASSWORD}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PWD=${ADMIN_PWD}
+      - BACKEND_PORT=${BACKEND_PORT}
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

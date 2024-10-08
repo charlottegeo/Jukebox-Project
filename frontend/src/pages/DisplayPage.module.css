@@ -1,0 +1,62 @@
+.container {
+  text-align: center;
+  padding: 20px;
+  background-color: #282c34;
+  color: white;
+  height: 100vh; /* Full viewport height */
+  width: 100vw; /* Full viewport width */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.title {
+  font-size: 2em;
+  margin-bottom: 20px;
+}
+
+.songInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.coverImage {
+  max-width: 100%;
+  width: 200px;
+  height: 200px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.trackName {
+  font-size: 1.5em;
+  margin: 10px 0;
+}
+
+.artistName {
+  font-size: 1.2em;
+  color: #bbb;
+}
+
+.noSong {
+  font-size: 1.5rem;
+  color: gray;
+}
+
+.playButton {
+  padding: 10px 20px;
+  font-size: 1.2rem;
+  background-color: #61dafb;
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.playButton:hover {
+  background-color: #21a1f1;
+}
