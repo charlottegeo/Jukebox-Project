@@ -20,7 +20,7 @@ dotenv.config();
 const app = express();
 const apiRouter = express.Router();
 const PORT = process.env.BACKEND_PORT || 3001;
-const corsOrigins = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:8080', 'http://frontend:8080'];
+const corsOrigins = process.env.CORS_ORIGINS?.split(',') || [process.env.FRONTEND_URL || 'localhost:8080'];
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
