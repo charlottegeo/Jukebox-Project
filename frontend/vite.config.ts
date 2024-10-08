@@ -28,5 +28,6 @@ export default defineConfig({
       },
     },    
   },
+  cacheDir: '/tmp/.vite',
 });
 
