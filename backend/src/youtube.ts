@@ -12,7 +12,6 @@ export const searchYouTube = async (query: string, limit = 5): Promise<Song[]> =
             track_length: item.length?.simpleText || 'Unknown',
             cover_url: item.thumbnail.thumbnails[0].url,
             track_id: item.id,
-            bpm: 90,
             uri: `https://www.youtube.com/watch?v=${item.id}`,
             source: 'youtube' as const,
             id: uuidv4()
@@ -48,7 +47,6 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
                 track_length: formattedDuration,
                 cover_url: videoDetails.thumbnail.url,
                 track_id: videoDetails.id,
-                bpm: 90,
                 uri: `https://www.youtube.com/watch?v=${videoDetails.id}`,
                 source: 'youtube'
             }];
@@ -70,7 +68,6 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
                     track_length: formattedDuration,
                     cover_url: item.thumbnail.url || '',
                     track_id: item.id,
-                    bpm: 90,
                     uri: `https://www.youtube.com/watch?v=${item.id}`,
                     source: 'youtube'
                 };
