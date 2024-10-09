@@ -26,7 +26,6 @@ export const searchSpotifyTracks = async (
       const trimmedResults = searchResult.tracks?.items.slice(0, limit);
   
       return await Promise.all(trimmedResults?.map(async (track) => {
-        const audioFeatures = await getAudioFeaturesForTrack(track.id);
         return {
           id: uuidv4(),
           track_name: track.name,
@@ -34,7 +33,6 @@ export const searchSpotifyTracks = async (
           track_length: formatTrackLength(track.duration_ms),
           cover_url: track.album?.images[0]?.url || '',
           track_id: track.id,
-          bpm: audioFeatures?.tempo || 90,
           uri: track.uri,
           source: 'spotify'
         };
@@ -50,7 +48,6 @@ export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
         if (link.includes('/track/')) {
             const trackId = link.split('/track/')[1].split('?')[0];
             const track = await spotifyApi.tracks.get(trackId);
-            const audioFeatures = await getAudioFeaturesForTrack(trackId);
             return [{
                 id: uuidv4(),
                 track_name: track.name,
@@ -58,7 +55,6 @@ export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
                 track_length: formatTrackLength(track.duration_ms),
                 cover_url: track.album?.images[0]?.url || '',
                 track_id: track.id,
-                bpm: audioFeatures?.tempo || 90,
                 uri: track.uri,
                 source: 'spotify'
             }];
@@ -69,7 +65,6 @@ export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
             const albumCoverUrl = album.images[0]?.url || ''; // Get the album cover once
 
             const songs: Song[] = await Promise.all(tracks.map(async (track) => {
-                const audioFeatures = await getAudioFeaturesForTrack(track.id);
                 return {
                     id: uuidv4(),
                     track_name: track.name,
@@ -77,7 +72,6 @@ export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
                     track_length: formatTrackLength(track.duration_ms),
                     cover_url: albumCoverUrl, // Use the same album cover for all tracks
                     track_id: track.id,
-                    bpm: audioFeatures?.tempo || 90,
                     uri: track.uri,
                     source: 'spotify'
                 };
@@ -89,7 +83,6 @@ export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
             const tracks = playlist.tracks.items;
             const songs: Song[] = await Promise.all(tracks.map(async (item) => {
                 const track = item.track;
-                const audioFeatures = await getAudioFeaturesForTrack(track.id);
                 return {
                     id: uuidv4(),
                     track_name: track.name,
@@ -97,7 +90,6 @@ export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
                     track_length: formatTrackLength(track.duration_ms),
                     cover_url: track.album?.images[0]?.url || '',
                     track_id: track.id,
-                    bpm: audioFeatures?.tempo || 90,
                     uri: track.uri,
                     source: 'spotify'
                 };
@@ -111,16 +103,6 @@ export const handleSpotifyLink = async (link: string): Promise<Song[]> => {
         throw error;
     }
 };
-
-export const getAudioFeaturesForTrack = async (trackId: string) => {
-    try {
-      const audioFeatures = await spotifyApi.tracks.audioFeatures(trackId);
-      return audioFeatures;
-    } catch (error) {
-      console.error(`Error getting audio features for track ${trackId}:`, error);
-      return { tempo: 90 };
-    }
-  };
   
 
 const formatTrackLength = (durationMs: number): string => {

@@ -7,7 +7,6 @@ export interface Song {
     track_length: string;
     cover_url: string;
     track_id: string;
-    bpm: number;
     uri: string;
     source: 'spotify' | 'youtube';
 }
