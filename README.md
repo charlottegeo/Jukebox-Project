@@ -1,11 +1,11 @@
 # CatJam
 
-An online jukebox application for creating a shared/collaborative music queue.
+An online jukebox application for creating a collaborative music queue through a round-robin system.
 Made with Flask, Python, and HTML/CSS/JS.
 
 Developed by Charlotte George, Matt Marafino, Saavan Tandon, and Jinna Smail as part of the CSHacks and Opcommathon hackathons.
 
-Available at [catjam.csh.rit.edu](catjam.csh.rit.edu).
+Available at [catjam.csh.rit.edu](catjam.csh.rit.edu). Note: The site is behind authentication and is only available to CSH members.
 
 ## Features
 - Search for songs + add songs and playlists to a personal queue
@@ -13,10 +13,11 @@ Available at [catjam.csh.rit.edu](catjam.csh.rit.edu).
 - Manage queues in admin panel
 - Spotify API and YouTube API integration
 - Updates queue in real time for users
+- Real-time BPM analysis
 
 ## Installation
 
-In your terminal, clone into the repo, set up your virtual environment, and then run `pip install -r requirements.txt`.
+In your terminal, clone into the repo.
 Make a new .env file that looks like this:
 
 ```
@@ -38,8 +39,6 @@ Replace the `CLIENT_ID` and `CLIENT_SECRET` values with your Spotify client ID a
 `SECRET_KEY` is just a Flask secret key.
 
 To get your client ID and secret, head to https://developer.spotify.com/dashboard and make a new app. When you're done, go to Settings to find your ID and secret. In order for your creds to work properly, you'll need to add `http://localhost:8080/callback` to the Redirect URIs in your Spotify app settings.
-
-**Note: You MUST have a Spotify Premium account to access certain parts of the API that are used here. The current version of catjam uses my client ID + secret as a temporary measure.**
 
 
 ## Usage

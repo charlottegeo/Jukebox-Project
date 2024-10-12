@@ -16,12 +16,12 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_BACKEND_URL || 'http://catjam-backend:3001',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
       },
       '/socket.io': {
-        target: process.env.VITE_BACKEND_URL || 'http://catjam-backend:3001',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3001',
         ws: true,
         changeOrigin: true,
         secure: false,

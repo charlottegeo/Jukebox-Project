@@ -190,8 +190,7 @@ const playNextSong = async () => {
 io.on('connection', (socket) => {
   socket.on('user_info', (data) => {
     const userInfo = data.userInfo;
-    console.log('User info:', userInfo);
-    if (userInfo && userInfo.preferred_username !== 'foolish'){
+    if (userInfo){
       const uid = userInfo.preferred_username;
 
       if (uid) {

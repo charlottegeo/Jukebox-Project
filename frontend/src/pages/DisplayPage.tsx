@@ -110,39 +110,48 @@ const DisplayPage: React.FC = () => {
 
   useEffect(() => {
     if (!youtubeApiLoaded || !youtubePlayerRef.current) return;
-
-    window.onYouTubeIframeAPIReady = () => {
-      const element = youtubePlayerRef.current;
-
-      if (element) {
-        const player = new window.YT.Player(element, {
-          videoId: currentSong?.track_id || '',
-          events: {
-            'onReady': (event: any) => {
-              setYouTubePlayer(player);
-              if (currentSong?.source === 'youtube') {
-                event.target.playVideo(); // Automatically start playing
-                console.log('YouTube player started');
-              }
-            },
-            'onStateChange': (event: any) => {
-              if (event.data === window.YT.PlayerState.ENDED) {
-                playNextSong();
-              }
-              if (event.data === window.YT.PlayerState.PLAYING) {
-                trackYouTubeProgress(event.target);
-              }
-            },
-          },
-        });
-
-        setYouTubePlayer(player);
-      } else {
-        console.error('YouTube player element not found.');
-      }
-    };
+  
+    if (!window.onYouTubeIframeAPIReady) {
+      window.onYouTubeIframeAPIReady = () => {
+        initializeYouTubePlayer();
+      };
+    } else {
+      initializeYouTubePlayer();
+    }
   }, [youtubeApiLoaded, currentSong]);
-
+  
+  const initializeYouTubePlayer = () => {
+    const element = youtubePlayerRef.current;
+  
+    if (element) {
+      console.log('YouTube player element found.');
+      const player = new window.YT.Player(element, {
+        videoId: currentSong?.track_id || '',
+        events: {
+          'onReady': (event: any) => {
+            setYouTubePlayer(player);
+            if (currentSong?.source === 'youtube') {
+              event.target.playVideo(); // Automatically start playing
+              console.log('YouTube player started');
+            }
+          },
+          'onStateChange': (event: any) => {
+            if (event.data === window.YT.PlayerState.ENDED) {
+              playNextSong();
+            }
+            if (event.data === window.YT.PlayerState.PLAYING) {
+              trackYouTubeProgress(event.target);
+            }
+          },
+        },
+      });
+  
+      setYouTubePlayer(player);
+    } else {
+      console.error('YouTube player element not found.');
+    }
+  };
+  
   const trackYouTubeProgress = (player: any) => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current as unknown as number);
@@ -167,14 +176,18 @@ const DisplayPage: React.FC = () => {
       spotifyPlayer.play(); // Automatically play
       setProgress(0);
     }
-
+  
     if (currentSong?.source === 'youtube' && youtubePlayer) {
-      youtubePlayer.loadVideoById(currentSong.track_id);
-      youtubePlayer.playVideo(); // Automatically play
-      setProgress(0);
+      if (typeof youtubePlayer.loadVideoById === 'function') {
+        youtubePlayer.loadVideoById(currentSong.track_id);
+        youtubePlayer.playVideo(); // Automatically play
+        setProgress(0);
+      } else {
+        console.error('YouTube player is not initialized properly.');
+      }
     }
   }, [currentSong, spotifyPlayer, youtubePlayer]);
-
+  
   // Function to play the next song
   const playNextSong = () => {
     console.log('Fetching the next song...');
