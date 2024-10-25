@@ -15,9 +15,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         if (isLink(searchInput)) {
-            onSearch(searchInput, searchSource + 'Link'); //Pass spotifyLink or youtubeLink
+            onSearch(searchInput, searchSource + 'Link');
         } else {
-            // Treat it as a search request
             onSearch(searchInput, searchSource);
         }
     };
@@ -27,7 +26,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
             <div className="search-source">
                 <select value={searchSource} onChange={(e) => setSearchSource(e.target.value)}>
                     <option value="spotify">Spotify</option>
-                    <option value="youtube">YouTube</option>
+                    { /*<option value="youtube">YouTube</option> */}
                 </select>
             </div>
             <form onSubmit={handleSearch}>
