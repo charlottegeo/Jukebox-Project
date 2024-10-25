@@ -2,6 +2,7 @@ import { Song } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import * as youtubeSearchApi from "youtube-search-api";
 import * as ytdl from 'ytdl-core';
+import { exec } from 'child_process';
 
 export const searchYouTube = async (query: string, limit = 5): Promise<Song[]> => {
     try {
@@ -14,7 +15,9 @@ export const searchYouTube = async (query: string, limit = 5): Promise<Song[]> =
             track_id: item.id,
             uri: `https://www.youtube.com/watch?v=${item.id}`,
             source: 'youtube' as const,
-            id: uuidv4()
+            id: uuidv4(),
+            bpm: null,
+            submittedBy: 'Unknown'
         }));
 
         return videos;
@@ -38,8 +41,8 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
             const videoDetails = await youtubeSearchApi.GetVideoDetails(videoId);
             console.log('Video details:', videoDetails);
             const videoInfo = await ytdl.getInfo(videoId);
-            const duration = videoInfo.videoDetails.lengthSeconds; // Get duration in seconds
-            const formattedDuration = formatYouTubeDuration(duration); // Format into mm:ss
+            const duration = videoInfo.videoDetails.lengthSeconds;
+            const formattedDuration = formatYouTubeDuration(duration);
             return [{
                 id: uuidv4(),
                 track_name: videoDetails.title || 'Unknown Title',
@@ -48,7 +51,9 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
                 cover_url: videoDetails.thumbnail.url,
                 track_id: videoDetails.id,
                 uri: `https://www.youtube.com/watch?v=${videoDetails.id}`,
-                source: 'youtube'
+                source: 'youtube',
+                bpm: null,
+                submittedBy: 'Unknown'
             }];
         } else if (link.includes('playlist?list=')) {
             const playlistId = link.split('playlist?list=')[1].split('&')[0];
@@ -58,8 +63,8 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
             const songs: Song[] = await Promise.all(videos.map(async (item: any) => {
                 const videoDetails = await youtubeSearchApi.GetVideoDetails(item.id);
                 const videoInfo = await ytdl.getInfo(item.id);
-                const duration = videoInfo.videoDetails.lengthSeconds; // Get duration in seconds
-                const formattedDuration = formatYouTubeDuration(duration); // Format into mm:ss
+                const duration = videoInfo.videoDetails.lengthSeconds;
+                const formattedDuration = formatYouTubeDuration(duration);
 
                 return {
                     id: uuidv4(),
@@ -69,7 +74,9 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
                     cover_url: item.thumbnail.url || '',
                     track_id: item.id,
                     uri: `https://www.youtube.com/watch?v=${item.id}`,
-                    source: 'youtube'
+                    source: 'youtube',
+                    bpm: null,
+                    submittedBy: 'Unknown'
                 };
             }));
 
@@ -82,6 +89,22 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
         throw error;
     }
 };
+
+export const downloadYouTubeAudio = (youtubeUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const command = `yt-dlp --extract-audio --audio-format mp3 -o "/app/downloads/%(id)s.%(ext)s" ${youtubeUrl}`;
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error downloading YouTube audio: ${stderr}`);
+          return reject(error);
+        }
+        const youtubeId = youtubeUrl.split('v=')[1];
+        const audioPath = `/downloads/${youtubeId}.mp3`;
+        resolve(audioPath);
+      });
+    });
+};
+
 
 const formatYouTubeDuration = (duration: string): string => {
     const seconds = parseInt(duration, 10);
