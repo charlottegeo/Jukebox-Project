@@ -9,8 +9,9 @@ import querystring from 'querystring';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { searchSpotifyTracks, handleSpotifyLink } from './spotify.js';
-import { searchYouTube, handleYouTubeLink } from './youtube.js';
+import { searchYouTube, handleYouTubeLink, downloadYouTubeAudio } from './youtube.js';
 import { Song } from './interfaces';
+import fs from 'fs'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +50,12 @@ const sessionMiddleware = session({
 app.use(sessionMiddleware);
 
 app.use('/api', apiRouter);
+app.use('/downloads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Range');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range'); 
+  next();
+}, express.static(path.join(__dirname, '../downloads')));
 
 apiRouter.get('/spotify-auth-check', (req: Request & { session: SessionData }, res: Response) => {
   const authenticated = !!req.session.spotifyRefreshToken;
@@ -157,21 +164,30 @@ const getNextUser = (): string | null => {
   return null;
 };
 
-// Function to play the next song in the queue
 const playNextSong = async () => {
+  if (isPlaying) {
+    return;
+  }
+
   const nextUser = getNextUser();
   if (nextUser) {
     const userQueue = userQueues[nextUser];
     if (userQueue && userQueue.length > 0) {
-      currentPlayingSong = userQueue.shift() ?? null;
-      console.log('Next song:', currentPlayingSong); // Log the next song details
-      io.emit('next_song', { nextSong: currentPlayingSong });
+      const nextSong = userQueue.shift();
+      currentPlayingSong = nextSong ?? null;
       io.emit('updateCurrentSong', { currentSong: currentPlayingSong });
-      io.to(nextUser).emit('updateUserQueue', { queue: userQueue });
       isPlaying = true;
-
-      if (userQueue.length === 0) {
-        io.emit('queue_empty');
+      if (nextSong?.source === 'youtube') {
+        try {
+          const audioPath = await downloadYouTubeAudio(nextSong.uri);
+          const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+          nextSong.audioPath = `${backendUrl}/downloads/${path.basename(audioPath)}`;
+          io.emit('updateCurrentSong', { currentSong: nextSong });
+        } catch (error) {
+          currentPlayingSong = null;
+          io.emit('queue_empty');
+          isPlaying = false;
+        }
       }
     } else {
       currentPlayingSong = null;
@@ -180,49 +196,51 @@ const playNextSong = async () => {
     }
   } else {
     currentPlayingSong = null;
-    isPlaying = false;
     io.emit('queue_empty');
+    isPlaying = false;
   }
 };
+
 
 
 // Socket.IO connections
 io.on('connection', (socket) => {
   socket.on('user_info', (data) => {
     const userInfo = data.userInfo;
-    if (userInfo){
+    if (userInfo) {
       const uid = userInfo.preferred_username;
-
       if (uid) {
         socket.data.uid = uid;
-  
-        if (!userQueues[uid]) {
-          userQueues[uid] = [];
-        }
-  
-        if (!userOrder.includes(uid)) {
-          userOrder.push(uid);
-        }
-  
+        if (!userQueues[uid]) userQueues[uid] = [];
+        if (!userOrder.includes(uid)) userOrder.push(uid);
         const userColor = userColors[uid] || 'White';
         socket.emit('updateUserCatColor', { color: userColor });
         socket.emit('updateUserQueue', { queue: userQueues[uid] });
       }
     }
-
   });
 
   socket.on('addSongToQueue', async (data) => {
     const { song, uid } = data;
-    console.log('Adding song to queue:', song);
-    if (uid && userQueues[uid]) {
-      userQueues[uid].push(song);
-      io.to(socket.id).emit('updateUserQueue', { queue: userQueues[uid] });
 
-      if (!isPlaying) {
-        playNextSong();
-      }
+    if (uid && userQueues[uid]) {
+        const wasQueueEmpty = userQueues[uid].length === 0;
+        song.submittedBy = uid;
+        userQueues[uid].push(song);
+
+        io.to(socket.id).emit('updateUserQueue', { queue: userQueues[uid] });
+        io.emit('queueUpdated', { queue: userQueues[uid] });
+
+        if (!isPlaying && wasQueueEmpty) {
+            playNextSong();
+        }
     }
+    
+});
+
+  socket.on('song_finished', () => {
+    isPlaying = false;
+    playNextSong();
   });
 
   socket.on('getUserQueue', (uid: string) => {
@@ -260,15 +278,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_next_song', () => {
+    console.log('Requesting next song');
     playNextSong();
   });
 
   socket.on('searchTracks', async (data) => {
-    const { track_name, source } = data;
+    const { track_name, source, uid } = data;
     if (source === 'spotify') {
-      const searchResults = (await searchSpotifyTracks(track_name, 5)) ?? [];
+      const searchResults = (await searchSpotifyTracks(track_name, 5, ['track'], uid)) ?? [];
       socket.emit('searchResults', { results: searchResults });
-    } else if (source === 'youtube') {
+    } else if (source ===   'youtube') {
       const searchResults = await searchYouTube(track_name, 5);
       socket.emit('searchResults', { results: searchResults });
     }
@@ -278,28 +297,31 @@ io.on('connection', (socket) => {
     const { link, uid } = data;
 
     if (uid) {
-      try {
-        let songs: Song[] = [];
+        try {
+            let songs: Song[] = [];
 
-        if (link.includes('spotify')) {
-          songs = await handleSpotifyLink(link);
-        } else if (link.includes('youtube')) {
-          songs = await handleYouTubeLink(link);
-        } else {
-          throw new Error('Invalid link format');
+            if (link.includes('spotify')) {
+                songs = await handleSpotifyLink(link, uid);
+            } else if (link.includes('youtube')) {
+                songs = await handleYouTubeLink(link);
+            } else {
+                throw new Error('Invalid link format');
+            }
+
+            songs.forEach(song => song.submittedBy = uid);
+
+            userQueues[uid].push(...songs);
+            io.to(socket.id).emit('updateUserQueue', { queue: userQueues[uid] });
+
+            if (!isPlaying) {
+                playNextSong();
+            }
+        } catch (err) {
+            console.error('Error adding link to queue:', err);
         }
-
-        userQueues[uid].push(...songs);
-        io.to(socket.id).emit('updateUserQueue', { queue: userQueues[uid] });
-
-        if (!isPlaying) {
-          playNextSong();
-        }
-      } catch (err) {
-        console.error('Error adding link to queue:', err);
-      }
     }
-  });
+});
+
 
   socket.on('disconnect', () => {
     const uid = socket.data.uid;
