@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import styles from './DisplayPage.module.css';
+import { createRealTimeBpmProcessor, getBiquadFilter } from 'realtime-bpm-analyzer';
 
 interface Song {
   track_name: string;
@@ -8,6 +9,9 @@ interface Song {
   cover_url: string;
   track_id: string;
   source: 'spotify' | 'youtube';
+  bpm?: number;
+  audioPath?: string;
+  submittedBy: string;
 }
 
 declare global {
@@ -17,35 +21,62 @@ declare global {
     YT: any;
   }
 }
+interface HTMLAudioElementWithSource extends HTMLAudioElement {
+  mediaSourceNode?: MediaElementAudioSourceNode;
+}
 
 const DisplayPage: React.FC = () => {
+  type PlaybackState = 'playing' | 'paused' | 'stopped' | 'queue_empty';
+  const [playbackState, setPlaybackState] = useState<PlaybackState>('queue_empty');
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [queue, setQueue] = useState<Song[]>([]);  // New state to manage the queue
   const socket = useSocket(import.meta.env.VITE_BACKEND_URL);
   const [spotifyApiLoaded, setSpotifyApiLoaded] = useState(false);
   const [spotifyPlayer, setSpotifyPlayer] = useState<any>(null);
-  const [youtubeApiLoaded, setYouTubeApiLoaded] = useState(false);
-  const [youtubePlayer, setYouTubePlayer] = useState<any>(null);
   const [progress, setProgress] = useState<number>(0);
   const [showPlayButton, setShowPlayButton] = useState(true);
-
-  const spotifyPlayerRef = useRef<HTMLDivElement | null>(null);
-  const youtubePlayerRef = useRef<HTMLDivElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [catColor, setCatColor] = useState<string>('Blue');
   const progressIntervalRef = useRef<NodeJS.Timer | null>(null);
-
+  const animationIntervalRef = useRef<NodeJS.Timer | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const bpmProcessorRef = useRef<AudioWorkletNode | null>(null);
+  const spotifyPlayerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (socket) {
       socket.emit('get_current_song');
+      
       socket.on('updateCurrentSong', (data: { currentSong: Song }) => {
         console.log('Received current song:', data.currentSong);
         setCurrentSong(data.currentSong);
+        setPlaybackState('playing'); 
+        if (data.currentSong && data.currentSong.bpm) {
+          animateFrames(data.currentSong.bpm);
+        }
+      });
+      
+      socket.on('queue_empty', () => {
+        console.log('Queue empty event received');
+        setPlaybackState('queue_empty');
+        setCurrentSong(null);  // Clear the current song when the queue is empty
+      });
+
+      socket.on('queueUpdated', (data: { queue: Song[] }) => {
+        console.log('Queue updated:', data.queue);
+        setQueue(data.queue);
+        if (playbackState === 'queue_empty' && data.queue.length > 0) {
+          playNextSong();
+        }
       });
 
       return () => {
         socket.off('updateCurrentSong');
+        socket.off('queue_empty');
+        socket.off('queueUpdated');
       };
     }
-  }, [socket]);
-
+  }, [socket, playbackState]);
   useEffect(() => {
     if (!document.getElementById('spotify-iframe-api')) {
       const script = document.createElement('script');
@@ -60,7 +91,6 @@ const DisplayPage: React.FC = () => {
 
   useEffect(() => {
     if (!spotifyApiLoaded || !spotifyPlayerRef.current || showPlayButton) return;
-
     const element = spotifyPlayerRef.current;
 
     window.onSpotifyIframeApiReady = (IFrameAPI: any) => {
@@ -71,23 +101,24 @@ const DisplayPage: React.FC = () => {
 
         const callback = (controller: any) => {
           setSpotifyPlayer(controller);
-
+        
           controller.addListener('playback_update', (e: any) => {
             const { position, duration } = e.data;
             if (duration > 0) {
               setProgress((position / duration) * 100);
             }
-
+        
             if (position >= duration && duration !== 0) {
-              console.log('Spotify song ended');
-              playNextSong();
+              handleAudioEnded();
             }
           });
-
-          if (currentSong) {
-            controller.play(); // Automatically start playing
+        
+          // Only play if there's a valid song
+          if (currentSong?.track_id) {
+            controller.loadUri(`spotify:track:${currentSong.track_id}`);
+            controller.play();
           }
-        };
+        };        
 
         IFrameAPI.createController(element, options, callback);
       } else {
@@ -95,103 +126,187 @@ const DisplayPage: React.FC = () => {
       }
     };
   }, [currentSong, spotifyApiLoaded, showPlayButton]);
-
-  useEffect(() => {
-    if (!document.getElementById('youtube-iframe-api')) {
-      const script = document.createElement('script');
-      script.id = 'youtube-iframe-api';
-      script.src = 'https://www.youtube.com/iframe_api';
-      script.onload = () => setYouTubeApiLoaded(true);
-      document.body.appendChild(script);
-    } else {
-      setYouTubeApiLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!youtubeApiLoaded || !youtubePlayerRef.current) return;
+  const setupBpmAnalyzer = async (audioElement: HTMLAudioElement) => {
+    const extendedAudioElement = audioElement as HTMLAudioElementWithSource;
   
-    if (!window.onYouTubeIframeAPIReady) {
-      window.onYouTubeIframeAPIReady = () => {
-        initializeYouTubePlayer();
-      };
-    } else {
-      initializeYouTubePlayer();
-    }
-  }, [youtubeApiLoaded, currentSong]);
+    if (!extendedAudioElement) return;
   
-  const initializeYouTubePlayer = () => {
-    const element = youtubePlayerRef.current;
+    try {
+      // Ensure all previous contexts and nodes are cleaned up properly
+      if (extendedAudioElement.mediaSourceNode) {
+        console.log("Disconnecting previous media source node");
+        extendedAudioElement.mediaSourceNode.disconnect();
+        delete extendedAudioElement.mediaSourceNode;
+      }
   
-    if (element) {
-      console.log('YouTube player element found.');
-      const player = new window.YT.Player(element, {
-        videoId: currentSong?.track_id || '',
-        events: {
-          'onReady': (event: any) => {
-            setYouTubePlayer(player);
-            if (currentSong?.source === 'youtube') {
-              event.target.playVideo(); // Automatically start playing
-              console.log('YouTube player started');
-            }
-          },
-          'onStateChange': (event: any) => {
-            if (event.data === window.YT.PlayerState.ENDED) {
-              playNextSong();
-            }
-            if (event.data === window.YT.PlayerState.PLAYING) {
-              trackYouTubeProgress(event.target);
-            }
-          },
-        },
+      if (audioContextRef.current) {
+        console.log("Closing previous AudioContext");
+        await audioContextRef.current.close();
+        audioContextRef.current = null; // Set to null to allow fresh creation
+      }
+  
+      // Create a fresh AudioContext and set it up
+      console.log("Creating new AudioContext");
+      const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
+  
+      if (audioContext.state === 'suspended') {
+        console.log("Resuming AudioContext");
+        await audioContext.resume();
+      }
+  
+      console.log("Creating media source node");
+      const source = audioContext.createMediaElementSource(extendedAudioElement);
+      extendedAudioElement.mediaSourceNode = source;
+  
+      // Set up additional nodes
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = 3;
+  
+      const bpmProcessor = await createRealTimeBpmProcessor(audioContext, {
+        continuousAnalysis: true,
+        debug: true,
+        muteTimeInIndexes: 10,
+        stabilizationTime: 5000,
       });
   
-      setYouTubePlayer(player);
-    } else {
-      console.error('YouTube player element not found.');
+      const lowpass = getBiquadFilter(audioContext);
+  
+      // Connect nodes properly
+      source.connect(gainNode).connect(lowpass).connect(bpmProcessor);
+      source.connect(audioContext.destination);
+  
+      bpmProcessor.port.onmessage = (event) => {
+        if (event.data.message === 'BPM_STABLE') {
+          const bpmCandidates = event.data.data.bpm;
+  
+          if (bpmCandidates.length > 0) {
+            const bestBpmCandidate = bpmCandidates.reduce(
+              (prev: { count: number }, current: { count: number }) =>
+                prev.count > current.count ? prev : current
+            );
+  
+            const newBpm = bestBpmCandidate.tempo;
+            console.log('Updating BPM:', newBpm);
+            animateFrames(newBpm);
+          } else {
+            console.warn('No valid BPM candidates found.');
+          }
+        }
+      };
+  
+      bpmProcessorRef.current = bpmProcessor;
+  
+    } catch (error) {
+      console.error("Error setting up BPM Analyzer:", error);
     }
   };
-  
-  const trackYouTubeProgress = (player: any) => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current as unknown as number);
+  useEffect(() => {
+    if (currentSong?.source === 'youtube' && audioRef.current) {
+      setupBpmAnalyzer(audioRef.current);
     }
-  
-    progressIntervalRef.current = setInterval(() => {
-      const currentTime = player.getCurrentTime();
-      const duration = player.getDuration();
-      if (duration > 0) {
-        setProgress((currentTime / duration) * 100);
+
+    // Cleanup the effect when the song changes or the component unmounts
+    return () => {
+      if (audioContextRef.current) {
+        console.log("Closing AudioContext during cleanup");
+        audioContextRef.current.close();
+        audioContextRef.current = null;
       }
-  
-      if (player.getPlayerState() !== window.YT.PlayerState.PLAYING) {
-        clearInterval(progressIntervalRef.current as unknown as number);
+
+      if (audioRef.current) {
+        const extendedAudioElement = audioRef.current as HTMLAudioElementWithSource;
+        if (extendedAudioElement.mediaSourceNode) {
+          console.log("Disconnecting media source node during cleanup");
+          extendedAudioElement.mediaSourceNode.disconnect();
+          delete extendedAudioElement.mediaSourceNode;
+        }
       }
-    }, 1000);
-  };
+
+      if (bpmProcessorRef.current) {
+        console.log("Disconnecting BPM processor during cleanup");
+        bpmProcessorRef.current.disconnect();
+      }
+    };
+  }, [currentSong]);
 
   useEffect(() => {
-    if (currentSong?.source === 'spotify' && spotifyPlayer) {
-      spotifyPlayer.loadUri(`spotify:track:${currentSong.track_id}`);
-      spotifyPlayer.play(); // Automatically play
-      setProgress(0);
-    }
-  
-    if (currentSong?.source === 'youtube' && youtubePlayer) {
-      if (typeof youtubePlayer.loadVideoById === 'function') {
-        youtubePlayer.loadVideoById(currentSong.track_id);
-        youtubePlayer.playVideo(); // Automatically play
-        setProgress(0);
-      } else {
-        console.error('YouTube player is not initialized properly.');
+    console.log('Current Song Changed:', currentSong);
+    
+    if (currentSong) {
+      if (currentSong.source === 'spotify' && spotifyPlayer) {
+        spotifyPlayer.loadUri(`spotify:track:${currentSong.track_id}`);
+        setPlaybackState('playing');
+        spotifyPlayer.play();
       }
+      if (currentSong.source === 'youtube' && audioRef.current) {
+        audioRef.current.src = currentSong.audioPath as string;
+        audioRef.current.load();
+        audioRef.current.play().catch(error => {
+          console.error("Audio play failed:", error);
+        });
+      }
+      setProgress(0);
+      setIsPlaying(true);
+    } else {
+      setPlaybackState('queue_empty');
     }
-  }, [currentSong, spotifyPlayer, youtubePlayer]);
+  }, [currentSong, spotifyPlayer]);
   
-  // Function to play the next song
+
+  const handleAudioEnded = () => {
+    console.log('Audio finished playing');
+    setIsPlaying(false);  // Reset client-side isPlaying state
+    resetCatAnimation();  // Reset the cat animation after the song ends
+    socket?.emit('song_finished');  // Notify server that the song finished
+  };
+  
+
   const playNextSong = () => {
-    console.log('Fetching the next song...');
     socket?.emit('get_next_song');
+    setPlaybackState('playing');
+  };
+
+  const calculateFrameDuration = (bpm: number): number => {
+    const bps = bpm / 60;
+    return 1 / (2 * bps);
+  };
+
+  const animateFrames = (bpm: number) => {
+    if (animationIntervalRef.current) {
+      clearInterval(animationIntervalRef.current as unknown as number);
+    }
+
+    const frames = ['PusayLeft', 'PusayCenter', 'PusayRight'];
+    let frameIndex = 0;
+    let increment = true;
+
+    const frameDuration = calculateFrameDuration(bpm);
+
+    animationIntervalRef.current = setInterval(() => {
+      setCatImage(frames[frameIndex]);
+      if (increment) {
+        frameIndex++;
+      } else {
+        frameIndex--;
+      }
+      if (frameIndex === frames.length - 1) {
+        increment = false;
+      }
+      if (frameIndex === 0) {
+        increment = true;
+      }
+    }, frameDuration * 1000);
+  };
+
+  const setCatImage = (frame: string) => {
+    const imgSrc = `/images/cats/${catColor}/${frame}.png`;
+    (document.getElementById('catjam') as HTMLImageElement).src = imgSrc;
+  };
+
+  const resetCatAnimation = () => {
+    clearInterval(animationIntervalRef.current as unknown as number);
+    setCatImage('PusayCenter');
   };
 
   const handlePlayButtonClick = () => {
@@ -199,7 +314,18 @@ const DisplayPage: React.FC = () => {
   };
 
   const renderPlayer = () => {
-    if (!currentSong) return <div>No player available</div>;
+    if (!currentSong) {
+      return (
+        <div className={styles.placeholder}>
+          <img
+            src="/images/song_placeholder.png"
+            alt="No song playing"
+            className={styles.placeholderImage}
+          />
+          <p>No song is currently playing.</p>
+        </div>
+      );
+    }
 
     if (currentSong.source === 'spotify') {
       return (
@@ -209,11 +335,31 @@ const DisplayPage: React.FC = () => {
       );
     }
 
-    if (currentSong.source === 'youtube') {
+    if (currentSong.source === 'youtube' && currentSong.audioPath) {
       return (
-        <div id="youtube-player-wrapper">
-          <div id="youtube-player" ref={youtubePlayerRef}></div>
-        </div>
+        <audio
+          controls
+          autoPlay
+          ref={audioRef}
+          onEnded={handleAudioEnded}
+          onTimeUpdate={() => {
+            if (audioRef.current) {
+              const duration = audioRef.current.duration || 0;
+              const currentTime = audioRef.current.currentTime || 0;
+
+              if (duration > 0) {
+                const progress = (currentTime / duration) * 100;
+                setProgress(progress);
+              } else {
+                setProgress(0);
+              }
+            }
+          }}
+          crossOrigin="anonymous"
+        >
+          <source src={currentSong.audioPath} type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
       );
     }
 
@@ -228,26 +374,53 @@ const DisplayPage: React.FC = () => {
           Play
         </button>
       )}
-      {currentSong ? (
+
+      <label htmlFor="catColorSelect">Choose Cat Color: </label>
+      <select id="catColorSelect" value={catColor} onChange={(e) => setCatColor(e.target.value)}>
+        <option value="Blue">Blue</option>
+        <option value="White">White</option>
+        <option value="Orange">Orange</option>
+        <option value="Red">Red</option>
+      </select>
+
+      <div className={styles.songInfoContainer}>
+        {/* Song Info */}
         <div className={styles.songInfo}>
-          <img
-            src={currentSong.cover_url}
-            alt={currentSong.track_name}
-            className={styles.coverImage}
-          />
-          <h2 className={styles.trackName}>{currentSong.track_name}</h2>
-          <p className={styles.artistName}>{currentSong.artist_name}</p>
-          <div className={styles.progressContainer}>
-            <progress id="progressBar" value={progress} max="100"></progress>
-            <div className={styles.progressText}>{progress.toFixed(2)}%</div>
-          </div>
-          {renderPlayer()}
+          {currentSong ? (
+            <>
+              <img
+                src={currentSong.cover_url}
+                alt={currentSong.track_name}
+                className={styles.coverImage}
+              />
+              <h2 className={styles.trackName}>{currentSong.track_name}</h2>
+              <p className={styles.artistName}>{currentSong.artist_name}</p>
+              <p className={styles.submittedBy}>Submitted by: {currentSong.submittedBy}</p> {/* Display submittedBy */}
+              <div className={styles.progressContainer}>
+                <progress id="progressBar" value={progress} max="100"></progress>
+              </div>
+              {renderPlayer()}
+            </>
+          ) : (
+            <div className={styles.placeholder}>
+              <img
+                src="/images/song_placeholder.png"
+                alt="No song playing"
+                className={styles.placeholderImage}
+              />
+              <p>No song is currently playing.</p>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className={styles.noSong}>No song playing</div>
-      )}
+
+        {/* Cat Animation */}
+        <div className={styles.catContainer}>
+          <img id="catjam" src={`/images/cats/${catColor}/PusayCenter.png`} alt="Cat Jam" />
+        </div>
+      </div>
     </div>
   );
 };
+
 
 export default DisplayPage;
