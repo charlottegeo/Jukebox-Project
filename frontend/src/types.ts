@@ -9,9 +9,9 @@ export interface Song {
     track_id: string;
     uri: string;
     source: 'spotify' | 'youtube';
+    audioPath?: string;
+    submittedBy: string; // Added this field
 }
-
-
 
 export interface UserQueue {
     uid: string;

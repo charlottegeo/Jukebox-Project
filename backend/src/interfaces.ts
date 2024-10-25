@@ -10,6 +10,9 @@ export interface Song {
     track_id: string;
     uri: string;
     source: 'spotify' | 'youtube';
+    bpm: number | null;
+    submittedBy: string;
+    audioPath?: string;
 }
 
 
