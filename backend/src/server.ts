@@ -175,24 +175,31 @@ const playNextSong = async () => {
     if (userQueue && userQueue.length > 0) {
       const nextSong = userQueue.shift();
       currentPlayingSong = nextSong ?? null;
-      io.emit('updateCurrentSong', { currentSong: currentPlayingSong });
-      isPlaying = true;
-      if (nextSong?.source === 'youtube') {
-        try {
-          const audioPath = await downloadYouTubeAudio(nextSong.uri);
-          const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-          nextSong.audioPath = `${backendUrl}/downloads/${path.basename(audioPath)}`;
-          io.emit('updateCurrentSong', { currentSong: nextSong });
-        } catch (error) {
-          currentPlayingSong = null;
-          io.emit('queue_empty');
-          isPlaying = false;
+      
+      if (currentPlayingSong) {
+        io.emit('updateCurrentSong', { currentSong: currentPlayingSong });
+        isPlaying = true;
+        
+        if (nextSong?.source === 'youtube') {
+          try {
+            const audioPath = await downloadYouTubeAudio(nextSong.uri);
+            const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+            nextSong.audioPath = `${backendUrl}/downloads/${path.basename(audioPath)}`;
+            io.emit('updateCurrentSong', { currentSong: nextSong });
+          } catch (error) {
+            console.error('Error downloading YouTube audio:', error);
+            currentPlayingSong = null;
+            io.emit('queue_empty');
+            isPlaying = false;
+          }
         }
       }
     } else {
-      currentPlayingSong = null;
-      io.emit('queue_empty');
-      isPlaying = false;
+      if (!hasAnyQueueLeft()) {
+        currentPlayingSong = null;
+        io.emit('queue_empty');
+        isPlaying = false;
+      }
     }
   } else {
     currentPlayingSong = null;
@@ -200,6 +207,11 @@ const playNextSong = async () => {
     isPlaying = false;
   }
 };
+
+const hasAnyQueueLeft = (): boolean => {
+  return Object.values(userQueues).some(queue => queue.length > 0);
+};
+
 
 
 

@@ -47,14 +47,21 @@ const DisplayPage: React.FC = () => {
     if (socket) {
       socket.emit('get_current_song');
       
-      socket.on('updateCurrentSong', (data: { currentSong: Song }) => {
+      socket.on('updateCurrentSong', (data: { currentSong: Song | null }) => {
         console.log('Received current song:', data.currentSong);
-        setCurrentSong(data.currentSong);
-        setPlaybackState('playing'); 
-        if (data.currentSong && data.currentSong.bpm) {
-          animateFrames(data.currentSong.bpm);
+        if (data.currentSong) {
+          setCurrentSong(data.currentSong);
+          setPlaybackState('playing');
+          if (data.currentSong.bpm) {
+            animateFrames(data.currentSong.bpm);
+          }
+        } else {
+          console.log('Queue is empty, setting current song to null.');
+          setCurrentSong(null);
+          setPlaybackState('queue_empty');
         }
       });
+      
       
       socket.on('queue_empty', () => {
         console.log('Queue empty event received');
