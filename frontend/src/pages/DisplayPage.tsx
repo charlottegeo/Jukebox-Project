@@ -29,7 +29,7 @@ const DisplayPage: React.FC = () => {
   type PlaybackState = 'playing' | 'paused' | 'stopped' | 'queue_empty';
   const [playbackState, setPlaybackState] = useState<PlaybackState>('queue_empty');
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
-  const [queue, setQueue] = useState<Song[]>([]);  // New state to manage the queue
+  const [queue, setQueue] = useState<Song[]>([]);
   const socket = useSocket(import.meta.env.VITE_BACKEND_URL);
   const [spotifyApiLoaded, setSpotifyApiLoaded] = useState(false);
   const [spotifyPlayer, setSpotifyPlayer] = useState<any>(null);
@@ -59,7 +59,7 @@ const DisplayPage: React.FC = () => {
       socket.on('queue_empty', () => {
         console.log('Queue empty event received');
         setPlaybackState('queue_empty');
-        setCurrentSong(null);  // Clear the current song when the queue is empty
+        setCurrentSong(null);
       });
 
       socket.on('queueUpdated', (data: { queue: Song[] }) => {
@@ -113,7 +113,6 @@ const DisplayPage: React.FC = () => {
             }
           });
         
-          // Only play if there's a valid song
           if (currentSong?.track_id) {
             controller.loadUri(`spotify:track:${currentSong.track_id}`);
             controller.play();
@@ -132,7 +131,6 @@ const DisplayPage: React.FC = () => {
     if (!extendedAudioElement) return;
   
     try {
-      // Ensure all previous contexts and nodes are cleaned up properly
       if (extendedAudioElement.mediaSourceNode) {
         console.log("Disconnecting previous media source node");
         extendedAudioElement.mediaSourceNode.disconnect();
@@ -142,10 +140,9 @@ const DisplayPage: React.FC = () => {
       if (audioContextRef.current) {
         console.log("Closing previous AudioContext");
         await audioContextRef.current.close();
-        audioContextRef.current = null; // Set to null to allow fresh creation
+        audioContextRef.current = null;
       }
   
-      // Create a fresh AudioContext and set it up
       console.log("Creating new AudioContext");
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
@@ -159,7 +156,6 @@ const DisplayPage: React.FC = () => {
       const source = audioContext.createMediaElementSource(extendedAudioElement);
       extendedAudioElement.mediaSourceNode = source;
   
-      // Set up additional nodes
       const gainNode = audioContext.createGain();
       gainNode.gain.value = 3;
   
@@ -172,7 +168,6 @@ const DisplayPage: React.FC = () => {
   
       const lowpass = getBiquadFilter(audioContext);
   
-      // Connect nodes properly
       source.connect(gainNode).connect(lowpass).connect(bpmProcessor);
       source.connect(audioContext.destination);
   
@@ -206,7 +201,6 @@ const DisplayPage: React.FC = () => {
       setupBpmAnalyzer(audioRef.current);
     }
 
-    // Cleanup the effect when the song changes or the component unmounts
     return () => {
       if (audioContextRef.current) {
         console.log("Closing AudioContext during cleanup");
@@ -256,9 +250,9 @@ const DisplayPage: React.FC = () => {
 
   const handleAudioEnded = () => {
     console.log('Audio finished playing');
-    setIsPlaying(false);  // Reset client-side isPlaying state
-    resetCatAnimation();  // Reset the cat animation after the song ends
-    socket?.emit('song_finished');  // Notify server that the song finished
+    setIsPlaying(false);
+    resetCatAnimation();
+    socket?.emit('song_finished');
   };
   
 
