@@ -58,7 +58,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('YouTube video ended');
                 isPlaying = false;
                 resetPlayerUI();
-                socket.emit('removeFirstSong');
                 socket.emit('get_next_song');
             });
         } else {
@@ -773,7 +772,6 @@ function playYouTubeSong(song) {
             console.log('YouTube video ended');
             isPlaying = false;
             resetPlayerUI();
-            socket.emit('removeFirstSong');
             socket.emit('get_next_song');
         });
 
