@@ -233,17 +233,22 @@ const DisplayPage: React.FC = () => {
 
   useEffect(() => {
     console.log('Current Song Changed:', currentSong);
-    
+  
     if (currentSong) {
       if (currentSong.source === 'spotify' && spotifyPlayer) {
-        spotifyPlayer.loadUri(`spotify:track:${currentSong.track_id}`);
+        console.log('Attempting to load URI:', `spotify:track:${currentSong.track_id}`);
+        try {
+          spotifyPlayer.loadUri(`spotify:track:${currentSong.track_id}`);
+          spotifyPlayer.play();
+        } catch (error) {
+          console.error("Error loading Spotify track:", error);
+        }
         setPlaybackState('playing');
-        spotifyPlayer.play();
       }
       if (currentSong.source === 'youtube' && audioRef.current) {
         audioRef.current.src = currentSong.audioPath as string;
         audioRef.current.load();
-        audioRef.current.play().catch(error => {
+        audioRef.current.play().catch((error) => {
           console.error("Audio play failed:", error);
         });
       }
@@ -302,7 +307,7 @@ const DisplayPage: React.FC = () => {
 
   const setCatImage = (frame: string) => {
     const imgSrc = `/images/cats/${catColor}/${frame}.png`;
-    (document.getElementById('catjam') as HTMLImageElement).src = imgSrc;
+    (document.getElementById('pusay') as HTMLImageElement).src = imgSrc;
   };
 
   const resetCatAnimation = () => {
@@ -330,7 +335,7 @@ const DisplayPage: React.FC = () => {
 
     if (currentSong.source === 'spotify') {
       return (
-        <div id="spotify-player-wrapper">
+        <div id="spotify-player-wrapper" key={currentSong?.track_id}>
           <div id="spotify-player" ref={spotifyPlayerRef}></div>
         </div>
       );
@@ -416,7 +421,7 @@ const DisplayPage: React.FC = () => {
 
         {/* Cat Animation */}
         <div className={styles.catContainer}>
-          <img id="catjam" src={`/images/cats/${catColor}/PusayCenter.png`} alt="Cat Jam" />
+          <img id="pusay" src={`/images/cats/${catColor}/PusayCenter.png`} alt="Pusay cat" />
         </div>
       </div>
     </div>
