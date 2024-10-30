@@ -49,7 +49,11 @@
   font-size: 1.2rem;
   color: #bbb;
 }
-
+.submittedBy {
+  font-size: 1.2rem;
+  color: #bbb;
+  font-weight: 50%;
+}
 .progressContainer {
   width: 80%; /* Progress bar within song info */
   margin-top: 20px;
