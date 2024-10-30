@@ -33,10 +33,6 @@ const NavBar: React.FunctionComponent = () => {
                                 <NavLink to='/' className='nav-link'>
                                     Home
                                 </NavLink>
-                                {/* Make this visible only to users with admin access */}
-                                <NavLink to='/admin' className='nav-link'>
-                                    Admin Panel (WIP)
-                                </NavLink>
                             </NavItem>
                             {
                                 // to add stuff to the navbar, add a NavItem tag with a NavLink to the route
