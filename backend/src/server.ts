@@ -178,6 +178,7 @@ const playNextSong = async () => {
       
       if (currentPlayingSong) {
         io.emit('updateCurrentSong', { currentSong: currentPlayingSong });
+        io.emit('updateUserQueue', { queue: userQueue, uid: nextUser });
         isPlaying = true;
         
         if (nextSong?.source === 'youtube') {

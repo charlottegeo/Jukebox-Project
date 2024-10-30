@@ -22,10 +22,12 @@ const SearchPage: React.FC = () => {
       socket?.emit('getUserQueue', uid);
     }
 
-    const handleUpdateQueue = (data: { queue: Song[] }) => {
-      setQueue(data.queue);
+    const handleUpdateQueue = (data: { queue: Song[], uid: string }) => {
+      if (data.uid === uid) {
+        setQueue(data.queue);
+      }
     };
-
+    
     const handleSearchResults = (data: { results: Song[] }) => {
       setSongs(data.results);
     };
