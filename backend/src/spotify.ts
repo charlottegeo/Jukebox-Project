@@ -7,18 +7,13 @@ dotenv.config();
 
 const clientId = process.env.SPOTIFY_CLIENT_ID as string;
 const clientSecret = process.env.SPOTIFY_CLIENT_SECRET as string;
-const clientSpotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret);
+const spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret);
 
 const redirectUri = process.env.SPOTIFY_REDIRECT_URI as string;
-export const spotifyApi = SpotifyApi.withUserAuthorization(
-  clientId,
-  clientSecret,
-  [redirectUri]
-);
 
 const getSpotifyBPM = async (trackId: string): Promise<number | null> => {
   try {
-    const features = await clientSpotifyApi.tracks.audioFeatures(trackId);
+    const features = await spotifyApi.tracks.audioFeatures(trackId);
     return features.tempo ?? null;
   } catch (error) {
     console.error('Error fetching BPM for Spotify track:', error);
@@ -33,7 +28,7 @@ export const searchSpotifyTracks = async (
   submittedBy: string
 ): Promise<Song[]> => {
   try {
-    const searchResult = await clientSpotifyApi.search(query, types, 'US' as Market);
+    const searchResult = await spotifyApi.search(query, types, 'US' as Market);
     const trimmedResults = searchResult.tracks?.items.slice(0, limit);
 
     return await Promise.all(trimmedResults?.map(async (track) => {
