@@ -1,12 +1,12 @@
 @critical
 ✔ fix playback issues on display page @done(24-10-21 04:17)
 ✔ fix issue on search page where you must refresh to see your updated queue (in the case where your song was loaded into display page) @done(24-10-24 08:34)
-
-@high
-✔ get username to add to queue (i think i do need socketio session for this) @done(24-10-25 19:12)
 ☐ add all necessary round robin queue-related functions
 ☐ test round robin with 1 or 2 other people
+@high
+✔ get username to add to queue (i think i do need socketio session for this) @done(24-10-25 19:12)
 ☐ make an isAdmin boolean to determine when a user logs in if they are an admin based on if they are in the rtp or eboard groups or if their username is ccyborgg
+☐ Only show admin panel if the user is an admin
 ☐ when a youtube song loads from the queue, load the song info but have a loading animation while waiting for the song to download + load
 
 @low
@@ -40,8 +40,7 @@
     ☐ automatically calls next song if the threshold is met
 ☐ Add check for song length limit + reject song from being added if it is above the current limit
     ☐ Maybe display the current limit on the search page
-
-
+☐ On search page, show number of active users (and maybe number of songs in queue)
 Note: When testing round robin with 1 or 2 other people, also get feedback about UI and navigating the page
 If one of the other people is an RTP or eboard member, ask them about the admin functions and if anything should be added or removed
 
