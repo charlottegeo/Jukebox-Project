@@ -170,6 +170,13 @@ const playNextSong = async () => {
     return;
   }
 
+  if (!hasAnyQueueLeft()) {
+    currentPlayingSong = null;
+    io.emit('queue_empty');
+    isPlaying = false;
+    return;
+  }
+
   const nextUser = getNextUser();
   if (nextUser) {
     const userQueue = userQueues[nextUser];
@@ -193,19 +200,16 @@ const playNextSong = async () => {
             console.error('Error downloading YouTube audio:', error);
             currentPlayingSong = null;
             io.emit('queue_empty');
-            isPlaying = false; 
+            isPlaying = false;
           }
         }
       }
     } else {
       playNextSong();
     }
-  } else {
-    currentPlayingSong = null;
-    io.emit('queue_empty');
-    isPlaying = false;
   }
 };
+
 
 const hasAnyQueueLeft = (): boolean => {
   return Object.values(userQueues).some(queue => queue.length > 0);

@@ -103,6 +103,8 @@ const DisplayPage: React.FC = () => {
     window.onSpotifyIframeApiReady = (IFrameAPI: any) => {
       if (element) {
         const options = {
+          width: 0,
+          height: 0,
           uri: currentSong ? `spotify:track:${currentSong.track_id}` : '',
         };
 
@@ -380,14 +382,6 @@ const DisplayPage: React.FC = () => {
           Play
         </button>
       )}
-
-      <label htmlFor="catColorSelect">Choose Cat Color: </label>
-      <select id="catColorSelect" value={catColor} onChange={(e) => setCatColor(e.target.value)}>
-        <option value="Blue">Blue</option>
-        <option value="White">White</option>
-        <option value="Orange">Orange</option>
-        <option value="Red">Red</option>
-      </select>
 
       <div className={styles.songInfoContainer}>
         {/* Song Info */}
