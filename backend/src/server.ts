@@ -148,6 +148,7 @@ interface UserQueueData {
 
 const userQueues: UserQueueData = {};
 const userColors: { [key: string]: string } = {};
+const disconnectTimers: { [key: string]: NodeJS.Timeout } = {};
 let userOrder: string[] = [];
 let isPlaying = false;
 let currentPlayingSong: Song | null = null;
@@ -172,15 +173,16 @@ const playNextSong = async () => {
   const nextUser = getNextUser();
   if (nextUser) {
     const userQueue = userQueues[nextUser];
+    
     if (userQueue && userQueue.length > 0) {
       const nextSong = userQueue.shift();
       currentPlayingSong = nextSong ?? null;
-      
+
       if (currentPlayingSong) {
         io.emit('updateCurrentSong', { currentSong: currentPlayingSong });
         io.emit('updateUserQueue', { queue: userQueue, uid: nextUser });
         isPlaying = true;
-        
+
         if (nextSong?.source === 'youtube') {
           try {
             const audioPath = await downloadYouTubeAudio(nextSong.uri);
@@ -191,16 +193,12 @@ const playNextSong = async () => {
             console.error('Error downloading YouTube audio:', error);
             currentPlayingSong = null;
             io.emit('queue_empty');
-            isPlaying = false;
+            isPlaying = false; 
           }
         }
       }
     } else {
-      if (!hasAnyQueueLeft()) {
-        currentPlayingSong = null;
-        io.emit('queue_empty');
-        isPlaying = false;
-      }
+      playNextSong();
     }
   } else {
     currentPlayingSong = null;
@@ -213,9 +211,6 @@ const hasAnyQueueLeft = (): boolean => {
   return Object.values(userQueues).some(queue => queue.length > 0);
 };
 
-
-
-
 // Socket.IO connections
 io.on('connection', (socket) => {
   socket.on('user_info', (data) => {
@@ -224,11 +219,29 @@ io.on('connection', (socket) => {
       const uid = userInfo.preferred_username;
       if (uid) {
         socket.data.uid = uid;
-        if (!userQueues[uid]) userQueues[uid] = [];
-        if (!userOrder.includes(uid)) userOrder.push(uid);
+
+        if (disconnectTimers[uid]) {
+          clearTimeout(disconnectTimers[uid]);
+          delete disconnectTimers[uid];
+        }
+
+        const wasQueueEmpty = !hasAnyQueueLeft();
+
+        if (!userQueues[uid]) {
+          userQueues[uid] = [];
+        }
+
+        if (!userOrder.includes(uid)) {
+          userOrder.push(uid);
+        }
+
         const userColor = userColors[uid] || 'White';
         socket.emit('updateUserCatColor', { color: userColor });
         socket.emit('updateUserQueue', { queue: userQueues[uid] });
+
+        if (wasQueueEmpty && !isPlaying && userQueues[uid].length > 0) {
+          playNextSong();
+        }
       }
     }
   });
@@ -336,12 +349,15 @@ io.on('connection', (socket) => {
 });
 
 
-  socket.on('disconnect', () => {
-    const uid = socket.data.uid;
-    if (uid) {
+socket.on('disconnect', () => {
+  const uid = socket.data.uid;
+  if (uid) {
+    disconnectTimers[uid] = setTimeout(() => {
       userOrder = userOrder.filter((userId) => userId !== uid);
-    }
-  });
+      delete disconnectTimers[uid];
+    }, 60000);
+  }
+});
 });
 
 server.listen(PORT, () => {
