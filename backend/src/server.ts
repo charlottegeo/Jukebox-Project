@@ -241,8 +241,7 @@ io.on('connection', (socket) => {
         song.submittedBy = uid;
         userQueues[uid].push(song);
 
-        io.to(socket.id).emit('updateUserQueue', { queue: userQueues[uid] });
-        io.emit('queueUpdated', { queue: userQueues[uid] });
+        socket.emit('updateUserQueue', { queue: userQueues[uid], uid });
 
         if (!isPlaying && wasQueueEmpty) {
             playNextSong();
@@ -265,26 +264,27 @@ io.on('connection', (socket) => {
     const { uid, index } = data;
 
     if (uid && userQueues[uid]) {
-      userQueues[uid].splice(index, 1);
-      io.to(socket.id).emit('updateUserQueue', { queue: userQueues[uid] });
+        userQueues[uid].splice(index, 1);
+        socket.emit('updateUserQueue', { queue: userQueues[uid], uid });
     }
-  });
+});
 
   socket.on('reorderQueue', (data: { uid: string; queue: Song[] }) => {
     const { uid, queue } = data;
 
     if (uid) {
-      userQueues[uid] = queue;
-      io.to(socket.id).emit('updateUserQueue', { queue });
+        userQueues[uid] = queue;
+        socket.emit('updateUserQueue', { queue, uid });
     }
   });
 
   socket.on('clearUserQueue', (uid: string) => {
     if (uid && userQueues[uid]) {
-      userQueues[uid] = [];
-      io.to(socket.id).emit('updateUserQueue', { queue: [] });
+        userQueues[uid] = [];
+        socket.emit('updateUserQueue', { queue: [], uid });
     }
-  });
+});
+
 
   socket.on('get_current_song', () => {
     socket.emit('updateCurrentSong', { currentSong: currentPlayingSong });
