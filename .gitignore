@@ -32,3 +32,4 @@ downloads
 .vscode
 .env
 /secrets
+docker-compose.yml
