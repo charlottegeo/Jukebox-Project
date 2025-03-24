@@ -1,0 +1,605 @@
+html {
+    font-family: 'Akshar Unicode', sans-serif;
+    font-weight: bold;
+    /*color: #9055a2;*/
+    color: #F5F5F5;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/*header {
+    height: 5%;
+    font-size: 30px;
+    padding-left: 5%;
+    word-break: break-all;
+}*/
+
+/*IGOR CHANGES: Created a new Hamburger icon (currently doesn't do anything,
+as well as three flexboxes. The first stores the Title and Cat GIF, the second
+contains the Extra Song Info and the Album Cover, then there are the buttons underneath,
+and then finally there is a third flex box that will contain the Queue*/
+#hamburger-icon {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+}
+
+#flexbox-top, #flexbox-middle, #flexbox-bottom, .admin {
+    display: flex;
+    text-align: center;
+    justify-content: center;
+    flex-direction: space-between;
+    gap: 5px;
+    align-items: center;
+}
+
+#flexbox-middle {
+    /*Stretch to fit screen*/
+    height: 100%;
+    width: 100%;
+}
+
+#flexbox-middle-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+#flexbox-middle img, #flexbox-middle div {
+    margin-bottom: 5px;
+}
+
+#queue-header {
+    color: #a5c4d4;
+}
+
+button {
+    background-color: #f7b2bd;
+}
+
+button:hover {
+    background-color: #a5c4d4;
+}
+
+/*Igor changes end here. Hopefully didn't fuck anything up*/
+    
+body { 
+   /*background-image: url('../../templates/pusayBG.png'); */
+    background-color: #2F2F2F;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    margin: auto;
+    overflow: hidden;
+}
+
+b {
+    color: #F5F5F5;
+}
+
+p {
+    color: #F5F5F5;
+}
+
+h1 {
+    height: 5%;
+    text-align: center;
+    font-size: 60px;
+    padding-left: 2%;
+    color: #f7b2bd;
+}
+
+h2 {
+    text-align: center;
+    justify-content: center;
+}
+
+footer {
+    background-color: #2F2F2F;
+    width: 100%;
+    box-sizing: border-box;
+    color: #BBBBBB;
+    text-align: center;
+}
+
+input {
+    display: block;
+    width: 80%;
+    height: 30px;
+    padding: 10px;
+    margin: 5px auto 22px auto; /* top and bottom margins are 5px and 22px, left and right margins are set to auto */
+    border: none;
+    border-radius: 25px;
+    font-weight: bold;
+}
+#songName { 
+    color: #FFCFDC;
+}
+
+#artistName { 
+    color: #FF8FAD;
+}
+
+.results {
+    color: #BBBBBB;
+}
+
+#dropdown {
+    display: none;
+    position: relative;
+    width: 50%;
+    margin-left: 25%; 
+    max-height: 180px;
+    overflow-y: auto; 
+}
+
+
+#dropdown.show {
+    display: block;  /* show the dropdown when the .show class is added */
+}
+
+#dropdown .item {
+    display: flex;  /* use flexbox to layout the item */
+    flex-direction: auto;  /* stack the .item elements vertically */
+    align-items: center;  /* center the text and image vertically */
+    padding: 10px;  /* add some padding */
+    cursor: pointer;  /* change the cursor when hovering over the item */
+    background-color: #D9D9D9;  /* add a grey background color */
+    width: 100%;
+}
+
+#dropdown .item:hover {
+    background-color: #898989;  /* change the background color when hovering over the item */
+}
+#dropdown .item img {
+    width: 50px;  /* set the width of the album cover */
+    margin-right: 10px;  /* add some space between the album cover and the text */
+}
+.selected {
+    width: 50%;
+    margin-left: 25%;
+}
+#info-text {
+    color: #BBBBBB;
+    text-align: center;
+    padding-top: 10%;
+    padding-bottom: 2%;
+}
+#selected-item {
+    align-items: center;
+    padding: 10px;
+    background-color: #D9D9D9;
+    width: 100%;
+    display : none;
+}
+#selected-img {
+    width: 50px;
+    margin-right: 10px;
+}
+#selected-imgtext {
+    display: flex;
+
+}
+#selected-text{
+    display: flex;
+    flex-direction: column;
+}
+
+#selected-track-length {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    margin-left: auto;
+    color: #696969;
+}
+#add-button {
+    margin-left: 25%;
+    margin-right: auto;
+    width: 50%;
+    padding: 10px;
+    margin-top: 5%;
+    text-align: center;
+    background-color: #D9D9D9;
+    border-radius: 25px;
+    color: #1e1e1e;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
+}
+.queue {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    padding-bottom: 2%;
+    color: #BBBBBB;
+}
+#queuelist {
+    display: flex;
+    flex-direction: row;
+    width: 80%;
+    height: auto;
+    margin: 0 auto;
+    overflow-x : auto;
+    white-space: nowrap;
+    align-items: center;
+    margin-left: 5%;
+    margin-right: auto;
+    padding-bottom: 2%;
+    color: #BBBBBB;
+}
+#queuelist img {
+    margin-right: 10px;
+    flex: 0 0 auto;
+}
+.sidebarbtn {
+    background-color: #2F2F2F;
+    border: none;
+    color: #BBBBBB;
+    padding: 15px 32px;
+    text-align: right;
+    text-decoration: none;
+    display: float;
+    font-size: 70px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    border-radius: 25px;
+    margin-bottom: 2%;
+}
+.sidebar {
+    width: 250px;
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    background-color: #636363;
+    padding: 20px;
+    box-sizing: border-box;
+    transition: transform 0.3s ease-in-out;
+    overflow: auto;
+}
+
+.sidebar input {
+    margin-bottom: 10px;
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sidebar button {
+    width: 100%;
+    padding: 10px;
+    background-color: #2F2F2F;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.error{
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    display: none;
+}
+
+#song {
+    display: flex;
+    flex-direction: column;
+}
+
+.queue-header {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    padding-left: 5%;
+    color: #BBBBBB;
+    text-decoration: underline;
+}
+#catjam {
+    animation: catjam 1s steps(23) infinite;
+    width: 500px;
+    height: 500px;
+    object-fit: cover; /* Will crop the image to fit the content box */
+    object-position: center;
+    margin-top: 5%;
+}
+
+#flexbox-middle-right {
+    width: 50%;
+    height: 50%;
+    display: flex;
+}
+.timeText {
+    color: #BBBBBB;
+    font-size: 12px;
+    margin-left: auto;
+    margin-right: 5%;
+}
+
+#progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+#progressBar {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.timeText {
+    flex-shrink: 0;
+}
+
+progress[value] {
+    -webkit-appearance: none; /* Chrome, Safari, Opera */
+    appearance: none;
+}
+
+progress[value]::-webkit-progress-bar {
+    background-color: #eee; /* Background of the bar */
+}
+
+progress[value]::-webkit-progress-value {
+    background-color: #9055A2; /* Progress indicator color */
+}
+
+progress[value]::-moz-progress-bar {
+    background-color: #9055A2; /* Progress indicator color for Firefox */
+}
+
+
+#song-list {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 10%;
+    align-items: center;
+    margin-left: 5%;
+    margin-right: auto;
+    padding-bottom: 2%;
+    color: #BBBBBB;
+}
+#song-list img {
+    width: 50px;
+    margin-right: 10px;
+}
+
+#playQueue {
+    opacity: 0;
+}
+
+
+@media (max-width: 1024px) {
+    html, body {
+        overflow: auto;
+    }
+}
+@media (min-width: 1025px) {
+    body,
+    .container {
+        overflow: auto;
+    }
+}
+#artist_name, #song_title, #submitter_uid {
+    font-size: 20px;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden; 
+    text-overflow: ellipsis;
+    max-width: 90%;
+    margin: auto;
+}
+
+.song-container {
+    position: relative;
+    display: inline-block;
+    width: 10%;
+    margin: 0;
+    padding: 0;
+}
+
+.song-container img {
+    width: 100%;
+    display: block;
+    margin: 0 auto;
+}
+
+.overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    width: 100%;
+    transition: .5s ease;
+    opacity: 0;
+    font-size: 90%;
+    padding: 20px;
+    text-align: center;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+
+.song-container:hover .overlay {
+    opacity: 1;
+    pointer-events: auto; 
+}
+.profile {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    text-align: center;
+}
+
+.profile-dropdown {
+    display: none;
+    position: absolute;
+    top: 60px;
+    right: 0;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.profile-dropdown.show {
+    display: block;
+}
+
+.profile img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.profile-dropdown button {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.profile-dropdown button:hover {
+    background-color: #f1f1f1;
+}
+
+@media (max-width: 768px) {
+    .search-source,
+    .search,
+    .selected,
+    .user-queue,
+    .current-song {
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+    }
+
+    #searchbar,
+    #youtube-link {
+        width: 100%;
+    }
+
+    #selected-item {
+        flex-direction: column;
+    }
+
+    #selected-imgtext {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #add-button {
+        width: 100%;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.song-container.added {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.song-container.removed {
+    animation: fadeOut 0.5s ease-in-out;
+    display: none; 
+}
+
+.bpm-input {
+    width: 50px;
+    margin-top: 5px;
+    padding: 2px;
+}
+
+#message-container {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 300px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.5s, fadeOut 0.5s 4.5s;
+    opacity: 1;
+}
+
+.message-box.red {
+    background-color: #ff4d4f;
+}
+
+
+.message-box.green {
+    background-color: #52c41a;
+}
+
+.message-box.blue {
+    background-color: #1890ff;
+}
+
+.message-box .close-btn {
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.song-container.highlight {
+    border: 2px solid #00BFFF;
+    position: relative;
+}
+
+.song-container.highlight::before {
+    content: "UP NEXT";
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #00BFFF;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: bold;
+    font-size: 12px;
+}

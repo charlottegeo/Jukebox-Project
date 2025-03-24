@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
+    <link rel="manifest" href="/static/img/site.webmanifest">
+</head>
+<body>
+    <div class="admin-container">
+        <h1>Admin Panel</h1>
+        <button id="clearAllQueuesBtn" class="clear-all-queues-button">Clear All Queues</button>
+        <div id="specific-queue-controls">
+            <input type="text" id="user-id-input" placeholder="Enter user ID">
+            <button id="clearSpecificQueueBtn">Clear Specific Queue</button>
+        </div>
+
+        <button id="pausePlayBtn" class="pause-play-button">Pause</button>
+        <button id="skipSongBtn" class="skip-song-button">Skip Song</button>
+        <button id="refreshDisplayBtn" class="refresh-display-button">Refresh Display</button>
+        <select id="catColorDropdown">
+            <!-- Options will be dynamically added here -->
+        </select>
+        <div class="volume-control">
+            <label for="volumeSlider">Volume:</label>
+            <input type="range" id="volumeSlider" min="0" max="100" value="50">
+            <button id="setVolumeBtn">Set Volume</button>
+        </div>
+        <div class="song-length-limit">
+            <label for="songLengthInput">Song Length Limit (in M:SS or H:MM:SS):</label>
+            <input type="text" id="songLengthInput" placeholder="MM:SS or HH:MM:SS">
+            <button id="setSongLengthBtn">Set Song Length Limit</button>
+        </div>
+        <section class="queue-user-count">
+            <h2>Queue/User Count</h2>
+            <button onclick="getQueueUserCount()">Refresh Count</button>
+            <div id="queue-user-count"></div>
+        </section>        
+    </div>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

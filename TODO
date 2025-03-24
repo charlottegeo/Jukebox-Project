@@ -1,0 +1,63 @@
+@critical
+✔ fix playback issues on display page @done(24-10-21 04:17)
+✔ fix issue on search page where you must refresh to see your updated queue (in the case where your song was loaded into display page) @done(24-10-24 08:34)
+☐ add all necessary round robin queue-related functions
+☐ test round robin with 1 or 2 other people
+☐ It seems that the round robin system is broken?
+    ☐ From what i can tell, it is rotating between users but playing all the user's songs before switching
+    ☐ It should be playing the first song 
+    ☐ Ok it is working now? But i want to make sure that the logic is sound
+    ☐ Potentially it has something to do with users not having their pages open
+✔ Fix spotify api call so the audiofeatures call is only made once a song is loaded into the display page @done(24-11-08 06:04)
+✔ make sure queue updates visually when albums and playlists and songs added from links are added @done(24-11-08 07:17)
+✔ When page refreshes, show the queue that was there before the refresh @done(24-11-08 07:26)
+@high
+✔ get username to add to queue (i think i do need socketio session for this) @done(24-10-25 19:12)
+☐ make an isAdmin boolean to determine when a user logs in if they are an admin based on if they are in the rtp or eboard groups or if their username is ccyborgg
+☐ Only show admin panel if the user is an admin
+☐ when a song loads from the queue, load the song info but have a loading animation while waiting for the song to download + load
+☐ Add a 1m grace period if a user disconnects before they are removed from the round robin system (not removing their queue, just removing their username from the round robin rotation)
+☐ If a user is removed from the round robin system, keep their queue in the system, but remove their username from the round robin rotation
+☐ make sure when a user refreshes the page, their queue is still there
+☐ Show global queue (accessible to all users?)
+
+@low
+☐ admin commands
+    ✔ force skip song @done(24-11-01 10:24)
+    ☐ pause/play
+    ☐ view active users
+    ☐ possibly view (not edit) queues?
+    ✔ refresh display (in case something breaks? might not need this if you ensure no bugs in queue playback) @done(24-11-01 10:43)
+    ☐ adjust volume with SSH (or a simpler/more secure way?)
+    ☐ adjust song length limit (hard max length of 10 minutes, no minimum length)
+☐ make display page authenticated in some way, separated from the sso on the search page.
+☐ ensure that display page login is not added to queue
+☐ put the proper functions as auth only (refer to events.py)
+☐ add dropdown to search page (and remove the one from display page) to update user color (the color for a given user)
+☐ make cat animation update with new color when color is changed
+☐ when a song loads from the queue, update the cat animation to reflect the new user's color
+☐ if a user whose song is currently playing changes their color, update the cat animation to reflect the new color
+☐ Store user color in session so if they refresh the page or leave and come back, their color is still the same
+✔ make admin panel a popup or dropdown (or even a sidebar), instead of a separate page? @done(24-11-08 18:11)
+☐ make it so you need to click song twice to add to queue
+    ☐ highlight selected song when first clicked
+    ☐ if the user clicks a different song, highlight that one instead, removing previously selected
+    ☐ de-select if the user clicks on something other than the songs
+☐ highlight the first song in the next user's queue to indicate that their song is up next
+    ☐ if the user re-orders their queue, indicate the new upcoming song
+☐ have a grace period of ~10 seconds if a user disconnects before they are removed from the round robin system (keep their queue, just remove username from the round robin rotation system)
+☐ add message popup like in your flask version
+    ☐ used to indicate that songs are rejected due to invalid link or being over the limit
+    ☐ used to show how many songs from a playlist or album were successfully added to the queue
+☐ implement vote-to-skip, with the threshold being 1 if there is only 1 user in the queue, or a little over half of the number of users in the queue
+    ☐ automatically calls next song if the threshold is met
+☐ Add check for song length limit + reject song from being added if it is above the current limit
+    ☐ Maybe display the current limit on the search page
+☐ On search page, show number of active users (and maybe number of songs in queue)
+☐ Add a "times clicked" button just for ella
+☐ Show the order in numbers of the user's queue and/or show some way to indicate that you can click + drag the queue to re-order it
+☐ Improve UI and fix buttons for mobile devices
+☐ "For mobile UI have the add the queue be a toggle so you can only press it once? Just a suggestion."
+☐ I noticed that the light/dark mode switcher isn't always visible when the page loads
+3Note: When testing round robin with 1 or 2 other people, also get feedback about UI and navigating the page
+If one of the other people is an RTP or eboard member, ask them about the admin functions and if anything should be added or removed

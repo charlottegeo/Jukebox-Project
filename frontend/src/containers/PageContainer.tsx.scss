@@ -1,0 +1,32 @@
+.full-screen {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-color);
+}
+
+.page {
+  margin: 0;
+  padding-top: 56px;
+  min-height: 100vh;
+  width: 100vw;
+  background: var(--background-color);
+  display: flex;
+  flex-direction: column;
+
+  .container-fluid {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+.full-container {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CatJam Display</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon-16x16.png">
+    <link rel="manifest" href="/static/img/site.webmanifest">
+    <!-- Plyr CSS -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div id="flexbox-middle">
+                <div id="flexbox-middle-left">
+                    <h2>Now Playing</h2>
+                    <img id="album-cover" src="/static/img/song_placeholder.png" width="250" height="250">
+                    <div id="artist_name">Artist Name</div>
+                    <div id="song_title">Song Title</div>
+                    <div id="submitter_uid">Submitted By: -</div>
+                    <div id="progress">
+                        <div id="progressTimestamp" class="timeText">0:00</div>
+                        <progress id="progressBar" value="0" max="100"></progress>
+                        <div id="duration" class="timeText">0:00</div>
+                    </div>
+                </div>
+                <div id="flexbox-middle-right">
+                    <img id="catjam" src="/static/img/cats/White/PusayCenter.png" width="250" height="250">
+                </div>
+            </div>
+        </header>
+        <div class="container">
+            <div class="section">
+                <div class="song">
+                    <div id="spotify-player-wrapper">
+                        <iframe id="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="0" height="0" frameborder="0" allowtransparency="true" allow="encrypted-media; autoplay"></iframe>
+                    </div>
+                    <div id="youtube-player-wrapper" style="display:none;">
+                        <!-- Plyr video player container -->
+                        <div class="plyr__video-embed" id="youtube-player">
+                            <iframe src="https://www.youtube.com/embed/VIDEO_ID" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                    <section class="admin">
+                        <button id="startButton" class="start-button">Start</button>
+                        <button id="playQueue" class="play-queue-button">Play Queue</button>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
+    <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        var EmbedController;
+        var player;
+    
+        window.onSpotifyIframeApiReady = (IFrameAPI) => {
+            let element = document.getElementById('spotify-player');
+            let options = {
+                width: 0,
+                height: 0,
+                uri: null,
+            };
+            let callback = (controller) => {
+                EmbedController = controller;
+                EmbedController.addListener('playback_update', e => {
+                    socket.emit('secondsToMinutes', { 'seconds': parseInt(e.data.position / 1000, 10) });
+                    if (e.data.position == e.data.duration && e.data.duration != 0) {
+                        console.log('Spotify song ended');
+                        isPlaying = false;
+                        defaultFrame();
+                        clearInterval(animationInterval);
+                        resetPlayerUI();
+                        socket.emit('removeFirstSong');
+                        socket.emit('get_next_song');
+                    }
+                    var progress = (e.data.position / e.data.duration) * 100;
+                    document.getElementById('progressBar').value = progress;
+                });
+            };
+            IFrameAPI.createController(element, options, callback);
+        };
+        
+        document.addEventListener('DOMContentLoaded', function () {
+            if (document.querySelector('#youtube-player')) {
+                player = new Plyr('#youtube-player', {
+                    controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen']
+                });
+    
+                if (player) {
+                    player.on('timeupdate', function () {
+                        const currentTime = player.currentTime;
+                        const duration = player.duration;
+                        if (!isNaN(currentTime) && !isNaN(duration)) {
+                            document.getElementById('progressBar').value = (currentTime / duration) * 100;
+                            document.getElementById('progressTimestamp').textContent = formatTime(currentTime);
+                            document.getElementById('duration').textContent = formatTime(duration);
+                        }
+                    });
+    
+                    player.on('ended', function () {
+                        console.log('YouTube video ended');
+                        isPlaying = false;
+                        resetPlayerUI();
+                        socket.emit('removeFirstSong');
+                        socket.emit('get_next_song');
+                    });
+
+                }
+            }
+        });
+    
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+        }
+    
+        window.playYouTubeSong = function (song) {
+            if (validateYouTubeTrackID(song.track_id)) {
+                const iframe = document.querySelector('#youtube-player iframe');
+                iframe.src = `https://www.youtube.com/embed/${song.track_id}?autoplay=1`;
+                console.log('Playing YouTube video:', song.track_id);
+            } else {
+                console.error('Invalid YouTube track ID:', song.track_id);
+            }
+        };
+    
+        window.validateYouTubeTrackID = function (track_id) {
+            const regex = /^[a-zA-Z0-9_-]{11}$/;
+            return regex.test(track_id);
+        };
+    </script>    
+</body>
+</html>

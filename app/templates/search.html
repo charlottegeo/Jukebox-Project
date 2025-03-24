@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CatJam</title>
+    <link rel="stylesheet" href="../static/css/styles.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="../static/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../static/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../static/img/favicon-16x16.png">
+    <link rel="manifest" href="/static/img/site.webmanifest">
+</head>
+<body>
+    <div class="container">
+        <header style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>CatJam</h1>
+            <div class="profile">
+                <img id="profile-pic" src="{{ auth_dict['picture'] }}" alt="Profile Picture">
+                <div class="profile-dropdown">
+                    <a class="dropdown-item" href="/logout">Logout</a>
+                    <div class="cat-color-selection">
+                        <label for="catColorDropdown">Select Cat Color:</label>
+                        <select id="catColorDropdown">
+                            <!-- Options will be dynamically populated -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <section>
+            <div class="search-source">
+                <select id="search-source">
+                    <option value="spotify">Spotify</option>
+                    <option value="youtube">YouTube</option>
+                </select>
+            </div>
+            <div class="search">
+                <input type="text" id="searchbar" name="song" placeholder="Search for a song here (Press enter to search)">
+                <input type="text" id="youtube-link" name="youtube-link" placeholder="Enter YouTube link here" style="display:none;">
+                <input type="number" id="youtube-bpm" name="youtube-bpm" placeholder="Enter BPM" value="90" style="display:none;">
+            </div>
+            <div id="dropdown" aria-labelledby="searchbar"></div>
+            <div class="selected" aria-labelledby="searchbar">
+                <div id="info-text"></div>
+                <div id="selected-song">
+                    <div id="selected-item">
+                        <div id="selected-imgtext">
+                            <img id="selected-img">
+                            <div id="selected-text">
+                                <div id="selected-track-name"></div>
+                                <div id="selected-artist-name"></div>
+                            </div>
+                        </div>
+                        <div id="selected-track-length"></div>
+                    </div>
+                </div>
+                <button id="add-button" onclick="submitSong()">Add to Queue</button>
+            </div>
+            <div id="resulttext"></div>
+        </section>
+        
+        <section class="user-queue">
+            <h2>Your Queue</h2>
+            <button onclick="clearQueue()">Clear My Queue</button>
+            <div id="user-queue-list"></div>
+        </section>
+        <section class="current-song">
+            <h2>Currently Playing</h2>
+            <div id="current-song-info">
+                <img id="current-album-cover" src="/static/img/song_placeholder.png" alt="Album Cover" width="100" height="100">
+                <div id="current-artist-name">Artist Name</div>
+                <div id="current-song-title">Song Title</div>
+            </div>
+        </section>        
+        <section class="vote-skip">
+            <button onclick="voteToSkip()">Vote to Skip</button>
+        </section>
+    </div>
+    <div id="message-container"></div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <script src="../static/js/script.js"></script>
+</body>
+</html>
