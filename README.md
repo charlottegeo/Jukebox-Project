@@ -23,7 +23,7 @@ Fill in the docker-compose.yml with your credentials.
 Reach out to an RTP to get OIDC credentials to enable CSH authentication.
 Replace the `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` values with your Spotify client ID and secret.
 
-To get your client ID and secret, head to https://developer.spotify.com/dashboard and make a new app. When you're done, go to Settings to find your ID and secret. In order for your creds to work properly, you'll need to add `http://localhost:8080/callback` to the Redirect URIs in your Spotify app settings.
+To get your client ID and secret, head to https://developer.spotify.com/dashboard and make a new app. When you're done, go to Settings to find your ID and secret. In order for your creds to work properly in dev, you'll need to add `http://localhost:8080/callback` to the Redirect URIs in your Spotify app settings.
 
 
 ## Usage
