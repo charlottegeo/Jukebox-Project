@@ -7,14 +7,14 @@ export default defineConfig({
   publicDir: 'public',
   plugins: [react()],
   build: {
-    outDir: '../backend/public',
+    outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,
   },
   server: {
     port: 8080,
     host: true,
-    allowedHosts: ['catjam.csh.rit.edu', 'localhost'],
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS?.split(',') || ['http://localhost:8080'],
     proxy: {
       '/api': {
         target: process.env.VITE_BACKEND_URL || 'http://localhost:3001',

@@ -1,0 +1,166 @@
+// Slider styles mixin
+@mixin slider-base {
+  height: 4px;
+  background: var(--tertiary-color);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+
+  &:hover {
+    .handle {
+      transform: scale(1);
+    }
+  }
+}
+
+@mixin slider-fill {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+@mixin slider-handle {
+  position: absolute;
+  right: -6px;
+  top: -4px;
+  width: 12px;
+  height: 12px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  transform: scale(0);
+  transition: transform 0.2s ease;
+}
+
+// Button styles mixin
+@mixin control-button {
+  background: none;
+  border: none;
+  padding: var(--spacing-sm);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: var(--text-color-lightened);
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// Text truncation mixin
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Flex layout mixins
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Animation mixins
+@mixin slide-animation($distance: 72px) {
+  &-enter {
+    transform: translateY($distance);
+    opacity: 0;
+  }
+
+  &-enter-active {
+    transform: translateY(0);
+    opacity: 1;
+    transition: all 0.3s ease;
+  }
+
+  &-exit {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  &-exit-active {
+    transform: translateY($distance);
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+}
+
+// Text mixins
+@mixin multi-line-truncate($lines) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// Card mixin
+@mixin card {
+  background: var(--secondary-color);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: var(--transition-normal);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+// Media query mixins
+@mixin mobile {
+  @media (max-width: $breakpoint-sm) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: $breakpoint-sm) and (max-width: $breakpoint-lg) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: $breakpoint-lg) {
+    @content;
+  }
+}
+
+// Scrollbar mixin
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--secondary-color);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--tertiary-color);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--tertiary-color-darkened);
+    }
+  }
+} 

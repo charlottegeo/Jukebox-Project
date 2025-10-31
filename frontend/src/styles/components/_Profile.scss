@@ -1,0 +1,71 @@
+@use '../_mixins.scss' as *;
+
+.navbar-user {
+  @include flex-center;
+  gap: var(--spacing-sm);
+  color: var(--text-color);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition-normal);
+
+  &:hover {
+    color: var(--text-color-lightened);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  img {
+    border: 2px solid var(--text-color-lightened);
+    transition: var(--transition-normal);
+  }
+
+  &:hover img {
+    border-color: var(--text-color);
+  }
+
+  .caret {
+    margin-left: var(--spacing-sm);
+    transition: var(--transition-normal);
+  }
+
+  &:hover .caret {
+    transform: rotate(180deg);
+  }
+}
+
+.dropdown-menu {
+  background-color: var(--primary-color);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  padding: var(--spacing-sm) 0;
+  min-width: 200px;
+
+  .dropdown-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+    transition: var(--transition-normal);
+
+    &:hover {
+      color: var(--text-color-lightened);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.divider {
+      border-top: 1px solid var(--border-color);
+      margin: var(--spacing-sm) 0;
+    }
+  }
+}
+
+// Button styles for login
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition-normal);
+
+  &:hover {
+    background-color: var(--secondary-color-darkened);
+    color: var(--text-color-lightened);
+  }
+} 

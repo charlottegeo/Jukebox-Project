@@ -5,6 +5,11 @@ import SearchPage from './pages/SearchPage';
 import PageContainer from './containers/PageContainer'
 import 'csh-material-bootstrap/dist/csh-material-bootstrap.css'
 import NotFound from './pages/NotFound'
+import { OidcSecure } from '@axa-fr/react-oidc';
+import { SSOEnabled } from './configuration';
+import { MessageProvider } from './contexts/MessageContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { SocketProvider } from './contexts/SocketContext';
 
 type Props = {
   rerouteHomeOn404?: boolean
@@ -13,13 +18,37 @@ type Props = {
 const App: React.FC<Props> = ({ rerouteHomeOn404 = null }) => {
   return (
     <Router>
-      <PageContainer>
-        <Routes>
-          <Route path="/" element={<SearchPage />} />
-          <Route path='/display' element={< DisplayPage/>} />
-          <Route path='*' element={rerouteHomeOn404 ?? true ? <SearchPage /> : <NotFound />} />
-        </Routes>
-      </PageContainer>
+      <AuthProvider>
+        <SocketProvider>
+          <MessageProvider>
+            <PageContainer>
+              <Routes>
+                <Route path="/" element={
+                  SSOEnabled ? (
+                    <OidcSecure>
+                      <SearchPage />
+                    </OidcSecure>
+                  ) : (
+                    <SearchPage />
+                  )
+                } />
+                <Route path='/display' element={<DisplayPage />} />
+                <Route path='*' element={rerouteHomeOn404 ?? true ? (
+                  SSOEnabled ? (
+                    <OidcSecure>
+                      <SearchPage />
+                    </OidcSecure>
+                  ) : (
+                    <SearchPage />
+                  )
+                ) : (
+                  <NotFound />
+                )} />
+              </Routes>
+            </PageContainer>
+          </MessageProvider>
+        </SocketProvider>
+      </AuthProvider>
     </Router>
   )
 }

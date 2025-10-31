@@ -1,11 +1,12 @@
-FROM node:18-alpine
+FROM node:18-alpine as build
 WORKDIR /app
 COPY package*.json ./
-RUN apk add --no-cache curl
 RUN npm install
-RUN chown -R node:node /app && chmod -R 755 /app
 COPY . .
-USER node
+RUN npm run build
 
-EXPOSE 8080
-CMD ["npm", "run", "dev"]
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

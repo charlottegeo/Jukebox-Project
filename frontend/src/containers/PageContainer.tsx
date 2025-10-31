@@ -15,7 +15,7 @@ export const PageContainer: React.FC<Props> = ({ children }) => {
 
   return (
     <div className={isDisplayPage ? 'full-screen' : 'page'}>
-      {!isDisplayPage && <NavBar />} {/* Render NavBar only if it's not the display page */}
+      {!isDisplayPage && <NavBar />}
       <Container fluid className={isDisplayPage ? 'full-container' : ''}>
         {children}
       </Container>

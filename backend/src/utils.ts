@@ -20,7 +20,6 @@ export const cshUserAuth = (req: Request, res: Response, next: NextFunction) => 
   const last = userInfo.family_name || '';
   const picture = `https://profiles.csh.rit.edu/image/${uid}`;
   const groups = Array.isArray(userInfo.groups) ? (userInfo.groups as string[]) : [];
-
   const isEboard = groups.includes('eboard');
   const isRtp = groups.includes('rtp');
 

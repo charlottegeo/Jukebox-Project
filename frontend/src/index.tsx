@@ -1,8 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import './index.tsx.css'
+import './styles/global.scss'
 import App from './App'
-import { OidcProvider, OidcSecure } from '@axa-fr/react-oidc'
+import { OidcProvider } from '@axa-fr/react-oidc'
 import configuration from './configuration'
 import { SSOEnabled } from './configuration'
 import Authenticating from './callbacks/Authenticating'
@@ -25,10 +25,8 @@ root.render(
           loadingComponent={Loading}
           sessionLostComponent={SessionLost}
         >
-          < OidcSecure >
-            <App />
-          </OidcSecure >
-        </OidcProvider >
+          <App />
+        </OidcProvider>
         : <App />
     }
   </>

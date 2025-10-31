@@ -1,0 +1,152 @@
+@use '../_mixins.scss' as *;
+
+.song-list {
+  @include flex-column;
+  gap: var(--spacing-sm);
+  height: 100%;
+  overflow-y: auto;
+  @include custom-scrollbar;
+
+  .song-item {
+    @include flex-center;
+    background: var(--secondary-color);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md);
+    gap: var(--spacing-md);
+    transition: var(--transition-normal);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    img {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--border-radius-sm);
+      object-fit: cover;
+    }
+
+    .song-info {
+      @include flex-column;
+      flex: 1;
+      min-width: 0;
+      gap: var(--spacing-xs);
+
+      .track-name {
+        color: var(--text-color);
+        font-weight: 600;
+        @include text-truncate;
+      }
+
+      .artist-name {
+        color: var(--text-color-lightened);
+        font-size: 0.9em;
+        @include text-truncate;
+      }
+
+      .duration {
+        color: var(--text-color-lightened);
+        font-size: 0.8em;
+      }
+    }
+
+    &.spotify {
+      border-left: 4px solid #1DB954;
+    }
+
+    &.youtube {
+      border-left: 4px solid #FF0000;
+    }
+  }
+
+  .empty-state {
+    @include flex-column;
+    @include flex-center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-color-lightened);
+    background: var(--secondary-color);
+    border-radius: var(--border-radius-md);
+    height: 100%;
+
+    .icon {
+      font-size: 3em;
+      color: var(--tertiary-color);
+    }
+
+    .message {
+      font-size: 1.1em;
+    }
+  }
+
+  .loading-state {
+    @include flex-column;
+    @include flex-center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-xl);
+    color: var(--text-color-lightened);
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--tertiary-color);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .message {
+      font-size: 1.1em;
+    }
+  }
+
+  .error-state {
+    @include flex-column;
+    @include flex-center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-xl);
+    text-align: center;
+    color: var(--accent-color);
+
+    .icon {
+      font-size: 3em;
+    }
+
+    .message {
+      font-size: 1.1em;
+    }
+
+    .button {
+      @extend .button;
+      background: var(--accent-color);
+      color: var(--text-color);
+
+      &:hover {
+        background: var(--accent-color-darkened);
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+  .song-list {
+    .song-item {
+      padding: var(--spacing-sm);
+      gap: var(--spacing-sm);
+
+      img {
+        width: 40px;
+        height: 40px;
+      }
+    }
+  }
+} 

@@ -11,8 +11,8 @@
       "strict": true,
       "noEmit": false,                   
       "isolatedModules": true,
-      "typeRoots": ["node_modules/@types", "@types"],
+      "typeRoots": ["node_modules/@types", "@types"]
     },
-    "include": ["**/*.ts", "**/*.tsx"],
-  }
+    "include": ["**/*.ts", "**/*.tsx"]
+}
   

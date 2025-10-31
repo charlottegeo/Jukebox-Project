@@ -1,0 +1,136 @@
+@use './mixins';
+@import './variables';
+
+:root {
+  --primary-color: #{$primary-color};
+  --primary-color-darkened: #{$primary-color-darkened};
+  --secondary-color: #{$secondary-color};
+  --secondary-color-darkened: #{$secondary-color-darkened};
+  --tertiary-color: #{$tertiary-color};
+  --tertiary-color-darkened: #{$tertiary-color-darkened};
+  --background-color: #{$background-color};
+  --text-color: #{$text-color};
+  --text-color-lightened: #{$text-color-lightened};
+  --accent-color: #{$accent-color};
+  --accent-color-darkened: #{$accent-color-darkened};
+  --highlight-color: #{$highlight-color};
+  --highlight-color-darkened: #{$highlight-color-darkened};
+
+  --spacing-xs: #{$spacing-xs};
+  --spacing-sm: #{$spacing-sm};
+  --spacing-md: #{$spacing-md};
+  --spacing-lg: #{$spacing-lg};
+  --spacing-xl: #{$spacing-xl};
+
+  --border-radius-sm: #{$border-radius-sm};
+  --border-radius-md: #{$border-radius-md};
+  --border-radius-lg: #{$border-radius-lg};
+
+  --transition-fast: #{$transition-fast};
+  --transition-normal: #{$transition-normal};
+  --transition-slow: #{$transition-slow};
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: var(--transition-normal);
+}
+
+.app-container {
+  display: grid;
+  grid-template-areas:
+    "banner banner"
+    "queue search";
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+
+  .banner {
+    grid-area: banner;
+  }
+
+  .queue {
+    grid-area: queue;
+    height: calc(100vh - 200px);
+    overflow-y: auto;
+    @include mixins.custom-scrollbar;
+  }
+
+  .search {
+    grid-area: search;
+    height: calc(100vh - 200px);
+    overflow-y: auto;
+    @include mixins.custom-scrollbar;
+  }
+}
+
+.flex-center {
+  @include mixins.flex-center;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-1 { margin-top: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-md); }
+.mt-3 { margin-top: var(--spacing-lg); }
+.mt-4 { margin-top: var(--spacing-xl); }
+
+.mb-1 { margin-bottom: var(--spacing-sm); }
+.mb-2 { margin-bottom: var(--spacing-md); }
+.mb-3 { margin-bottom: var(--spacing-lg); }
+.mb-4 { margin-bottom: var(--spacing-xl); }
+
+.p-1 { padding: var(--spacing-sm); }
+.p-2 { padding: var(--spacing-md); }
+.p-3 { padding: var(--spacing-lg); }
+.p-4 { padding: var(--spacing-xl); }
+
+// Button base
+.button {
+  border-radius: var(--border-radius-md);
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--tertiary-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: var(--transition-normal);
+
+  &:hover {
+    background-color: var(--tertiary-color-darkened);
+    border-color: var(--accent-color);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+  }
+}
+
+@import './components/NavBar';
+@import './components/Profile';
+@import './components/SearchBar';
+@import './components/UserQueue';
+@import './components/PlaybackBanner';
+@import './components/AdminPanel';
+@import './components/SongList';
