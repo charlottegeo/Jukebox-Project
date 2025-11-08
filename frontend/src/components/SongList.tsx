@@ -22,8 +22,6 @@ const SongList: React.FC<SongListProps> = ({ songs, onSelect }) => {
     }, []);
 
     const handleSongClick = (song: Song) => {
-
-        //double click to add to queue
         if (selectedSong && selectedSong.track_id === song.track_id) {
             onSelect(song);
             setSelectedSong(null);

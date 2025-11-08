@@ -34,7 +34,7 @@ const UserQueue: React.FC<UserQueueProps> = ({
 
     const reorderableQueue = queue.map((song, index) => ({
         ...song,
-        id: `${song.id}-${index}` // make sure keys stay unique even if songs repeat
+        id: `${song.id}-${index}`
     }));
 
     return (
@@ -66,7 +66,7 @@ const UserQueue: React.FC<UserQueueProps> = ({
                     animation={200}
                     handle=".drag-handle"
                     className="sortable-list"
-                    disabled={queue.length <= 1 || isLocked} // disable drag entirely if only 1 song or queue is locked
+                    disabled={queue.length <= 1 || isLocked}
                 >
                     {queue.map((song, index) => {
                         const locked = isSongLocked(index, song);

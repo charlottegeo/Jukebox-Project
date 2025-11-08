@@ -1,4 +1,3 @@
-// Slider styles mixin
 @mixin slider-base {
   height: 4px;
   background: var(--tertiary-color);
@@ -32,7 +31,6 @@
   transition: transform 0.2s ease;
 }
 
-// Button styles mixin
 @mixin control-button {
   background: none;
   border: none;
@@ -53,14 +51,12 @@
   }
 }
 
-// Text truncation mixin
 @mixin text-truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-// Flex layout mixins
 @mixin flex-center {
   display: flex;
   align-items: center;
@@ -78,7 +74,6 @@
   justify-content: space-between;
 }
 
-// Animation mixins
 @mixin slide-animation($distance: 72px) {
   &-enter {
     transform: translateY($distance);
@@ -103,7 +98,6 @@
   }
 }
 
-// Text mixins
 @mixin multi-line-truncate($lines) {
   display: -webkit-box;
   -webkit-line-clamp: $lines;
@@ -111,7 +105,6 @@
   overflow: hidden;
 }
 
-// Card mixin
 @mixin card {
   background: var(--secondary-color);
   border-radius: var(--border-radius-md);
@@ -125,7 +118,6 @@
   }
 }
 
-// Media query mixins
 @mixin mobile {
   @media (max-width: $breakpoint-sm) {
     @content;
@@ -144,7 +136,6 @@
   }
 }
 
-// Scrollbar mixin
 @mixin custom-scrollbar {
   &::-webkit-scrollbar {
     width: 8px;

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import DisplayPage from './pages/DisplayPage';
 import SearchPage from './pages/SearchPage';
@@ -11,43 +11,50 @@ import { MessageProvider } from './contexts/MessageContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 
+export interface AdminPanelProps {
+  adminPanelOpen: boolean;
+  setAdminPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
 type Props = {
   rerouteHomeOn404?: boolean
 }
 
 const App: React.FC<Props> = ({ rerouteHomeOn404 = null }) => {
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+
   return (
     <Router>
       <AuthProvider>
-        <SocketProvider>
-          <MessageProvider>
-            <PageContainer>
+        <MessageProvider>
+          <SocketProvider>
+            <PageContainer adminPanelOpen={adminPanelOpen} setAdminPanelOpen={setAdminPanelOpen}>
               <Routes>
                 <Route path="/" element={
                   SSOEnabled ? (
                     <OidcSecure>
-                      <SearchPage />
+                      <SearchPage adminPanelOpen={adminPanelOpen} setAdminPanelOpen={setAdminPanelOpen} />
                     </OidcSecure>
                   ) : (
-                    <SearchPage />
+                    <SearchPage adminPanelOpen={adminPanelOpen} setAdminPanelOpen={setAdminPanelOpen} />
                   )
                 } />
                 <Route path='/display' element={<DisplayPage />} />
                 <Route path='*' element={rerouteHomeOn404 ?? true ? (
                   SSOEnabled ? (
                     <OidcSecure>
-                      <SearchPage />
+                      <SearchPage adminPanelOpen={adminPanelOpen} setAdminPanelOpen={setAdminPanelOpen} />
                     </OidcSecure>
                   ) : (
-                    <SearchPage />
+                    <SearchPage adminPanelOpen={adminPanelOpen} setAdminPanelOpen={setAdminPanelOpen} />
                   )
                 ) : (
                   <NotFound />
                 )} />
               </Routes>
             </PageContainer>
-          </MessageProvider>
-        </SocketProvider>
+          </SocketProvider>
+        </MessageProvider>
       </AuthProvider>
     </Router>
   )

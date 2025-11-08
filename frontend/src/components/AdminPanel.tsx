@@ -18,7 +18,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
   const [isPlaying, setIsPlaying] = useState(true);
   const [previousVolume, setPreviousVolume] = useState<number>(volume);
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
-  const [songLengthLimit, setSongLengthLimit] = useState<number>(10); // Default 10 minutes
+  const [songLengthLimit, setSongLengthLimit] = useState<number>(10);
 
   useEffect(() => {
     if (!socket) return;
@@ -36,7 +36,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
     socket.on('updateActiveUsers', handleActiveUsers);
     socket.on('updateSongLengthLimit', handleSongLengthLimit);
 
-    // Request initial data
     socket.emit('getActiveUsers');
     socket.emit('getSongLengthLimit');
 

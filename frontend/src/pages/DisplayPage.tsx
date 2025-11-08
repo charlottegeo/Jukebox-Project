@@ -1,20 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
-import { useSocket } from '../hooks/useSocket';
+import { useSocket } from '../contexts/SocketContext';
 import styles from './DisplayPage.module.css';
 import { createRealTimeBpmProcessor, getBiquadFilter } from 'realtime-bpm-analyzer';
-
-interface Song {
-  id: string;
-  track_name: string;
-  artist_name: string;
-  cover_url: string;
-  track_id: string;
-  source: 'spotify' | 'youtube';
-  bpm?: number;
-  audioPath?: string;
-  submittedBy: string;
-}
+import { Song } from '../types';
 
 declare global {
   interface Window {
@@ -28,107 +16,97 @@ interface HTMLAudioElementWithSource extends HTMLAudioElement {
   mediaSourceNode?: MediaElementAudioSourceNode;
 }
 
-//1024×600
 const DisplayPage: React.FC = () => {
-  type PlaybackState = 'playing' | 'paused' | 'stopped' | 'queue_empty';
-  const [playbackState, setPlaybackState] = useState<PlaybackState>('queue_empty');
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
-  const [queue, setQueue] = useState<Song[]>([]);
-  const [progress, setProgress] = useState<number>(0);
-  const [showPlayButton, setShowPlayButton] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [catColor, setCatColor] = useState<string>('Orange');
-  const [userColors, setUserColors] = useState<{ [key: string]: string }>({});
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [volume, setVolume] = useState<number>(100);
+  const {
+    socket,
+    currentSong,
+    currentCatColor,
+    isLoading,
+    isPaused,
+    volume,
+  } = useSocket();
 
-  const progressIntervalRef = useRef<NodeJS.Timer | null>(null);
+  const [progress, setProgress] = useState<number>(0);
   const animationIntervalRef = useRef<NodeJS.Timer | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const bpmProcessorRef = useRef<AudioWorkletNode | null>(null);
-  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const { socket, isConnected } = useSocket(import.meta.env.VITE_BACKEND_URL);
 
   useEffect(() => {
-    console.log('DisplayPage mounted');
-  }, []);
-
-  useEffect(() => {
-    console.log('Socket state changed:', { 
-      isConnected,
-      socketId: socket?.id
-    });
-
-    if (isConnected && socket) {
-      console.log('Socket connected, requesting initial data');
-      socket.emit('get_current_song');
-      socket.emit('get_user_queue');
+    if (audioRef.current) {
+      if (isPaused) {
+        audioRef.current.pause();
+      } else if (currentSong) {
+        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+      }
     }
-  }, [isConnected, socket]);
+  }, [isPaused, currentSong]);
 
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
+
+  useEffect(() => {
+    if (currentSong && currentSong.audioPath) {
+      console.log('New song detected:', currentSong.track_name);
+      if (audioRef.current) {
+        audioRef.current.src = currentSong.audioPath;
+        audioRef.current.load();
+        if (!isPaused) {
+          audioRef.current.play().catch(e => {
+            if (e.name === 'NotAllowedError') {
+              console.warn('Playback blocked by browser. Audio will start on user interaction.');
+            } else {
+              console.error('Error playing audio:', e);
+            }
+          });
+        }
+        setupBpmAnalyzer(audioRef.current);
+      }
+      setProgress(0);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.src = '';
+        audioRef.current.load();
+      }
+      setProgress(0);
+      resetCatAnimation();
+    }
+    
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(e => console.error("Error closing audio context", e));
+        audioContextRef.current = null;
+      }
+    };
+  }, [currentSong]);
+
+  useEffect(() => {
+    if (!isPaused && currentSong?.bpm) {
+      animateFrames(currentSong.bpm, currentCatColor);
+    } else {
+      resetCatAnimation();
+    }
+
+    return () => {
+      if (animationIntervalRef.current) {
+        clearInterval(animationIntervalRef.current as unknown as number);
+        animationIntervalRef.current = null;
+      }
+    };
+  }, [isPaused, currentSong?.bpm, currentCatColor]);
+
+  useEffect(() => {
+    if (!animationIntervalRef.current) {
+      setCatImage('PusayCenter', currentCatColor);
+    }
+  }, [currentCatColor]);
+  
   useEffect(() => {
     if (!socket) return;
-
-    console.log('Setting up socket listeners');
-
-    const handleServerStartup = () => {
-      setCatColor('Orange');
-      const imgElement = document.getElementById('pusay') as HTMLImageElement;
-      if (imgElement) {
-        const currentSrc = imgElement.src;
-        const frame = currentSrc.split('/').pop()?.replace('.png', '') || 'PusayCenter';
-        imgElement.src = `/images/cats/Orange/${frame}.png`;
-      }
-    };
-
-    const handleUpdateCurrentSong = (data: { currentSong: Song | null; isLoading?: boolean }) => {
-      console.log('Received updateCurrentSong event:', data);
-      if (data.currentSong) {
-        setProgress(0);
-        setCurrentSong(data.currentSong);
-        setPlaybackState('playing');
-        setIsPlaying(true);
-        
-        const songSubmitterColor = userColors[data.currentSong.submittedBy] || 'Orange';
-        console.log('Setting cat color for song:', { 
-          submitter: data.currentSong.submittedBy, 
-          color: songSubmitterColor 
-        });
-        
-        setCatColor(songSubmitterColor);
-        const imgElement = document.getElementById('pusay') as HTMLImageElement;
-        if (imgElement) {
-          const currentSrc = imgElement.src;
-          const frame = currentSrc.split('/').pop()?.replace('.png', '') || 'PusayCenter';
-          imgElement.src = `/images/cats/${songSubmitterColor}/${frame}.png`;
-        }
-        
-        setIsLoading(Boolean(data.isLoading));
-
-        if (data.currentSong.bpm && !isPlaying) {
-          animateFrames(data.currentSong.bpm, songSubmitterColor);
-        }
-      } else {
-        console.log('Queue is empty, setting current song to null.');
-        setCurrentSong(null);
-        setPlaybackState('queue_empty');
-        setIsLoading(false);
-        setProgress(0);
-        
-        if (audioRef.current) {
-          audioRef.current.src = '';
-          audioRef.current.load();
-        }
-
-        if (animationIntervalRef.current) {
-          clearInterval(animationIntervalRef.current as unknown as number);
-          animationIntervalRef.current = null;
-        }
-        setCatImage('PusayCenter');
-      }
-    };
-
+    
     const handlePreloadedNextSong = (data: { song: Song }) => {
       console.log('Received preloaded next song, beginning audio preload:', data.song);
       
@@ -137,185 +115,23 @@ const DisplayPage: React.FC = () => {
         
         preloadAudio.onerror = (e) => {
           console.error('Error preloading audio file, likely 404 not found:', data.song.audioPath, e);
-          
           socket?.emit('preload_failed', { 
             songId: data.song.id || data.song.track_id || '', 
             errorType: 'file_not_found',
             path: data.song.audioPath || ''
           });
         };
-        
-        fetch(data.song.audioPath, { method: 'HEAD' })
-          .then(response => {
-            if (response.ok) {
-              preloadAudio.src = data.song.audioPath || '';
-              preloadAudio.preload = 'auto';
-              preloadAudio.load();
-              preloadAudio.volume = 0;
-              
-              preloadAudio.play().then(() => {
-                setTimeout(() => {
-                  preloadAudio.pause();
-                  preloadAudio.currentTime = 0;
-                  console.log('Preloaded next song audio:', data.song.track_name);
-                }, 1000);
-              }).catch(err => {
-                console.error('Error playing preloaded song:', err);
-              });
-            } else {
-              console.error('File not found or not accessible:', data.song.audioPath);
-              socket?.emit('preload_failed', { 
-                songId: data.song.id || data.song.track_id || '', 
-                errorType: 'file_not_found',
-                status: response.status
-              });
-            }
-          })
-          .catch(error => {
-            console.error('Error checking file existence:', error);
-          });
+        preloadAudio.src = data.song.audioPath;
+        preloadAudio.preload = 'auto';
       } else {
         console.warn('No audio path provided for preloaded song:', data.song.track_name);
       }
     };
-
-    socket.on('updateCurrentSong', handleUpdateCurrentSong);
-    socket.on('queue_empty', () => {
-      console.log('Queue empty event received');
-      setPlaybackState('queue_empty');
-      setCurrentSong(null);
-      setIsLoading(false);
-    });
-    socket.on('updateUserQueue', (data: { queue: Song[], uid?: string }) => {
-      console.log('Received updateUserQueue event:', data);
-      setQueue(prevQueue => {
-        if (!data.uid) {
-          console.log('Replacing entire queue:', data.queue);
-          return data.queue;
-        }
-        
-        console.log('Updating queue for user:', data.uid);
-        const otherUsersQueue = prevQueue.filter(song => song.submittedBy !== data.uid);
-        const newQueue = [...otherUsersQueue, ...data.queue];
-        console.log('New queue state:', newQueue);
-        return newQueue;
-      });
-      
-      if (playbackState === 'queue_empty' && data.queue.length > 0) {
-        console.log('Queue was empty and new songs added, requesting next song');
-        playNextSong();
-      }
-    });
-    socket.on('updateUserCatColor', (data: { uid: string | null; color: string }) => {
-      console.log('Received color update:', data);
-      
-      if (data.uid === null) {
-        console.log('Server-wide color reset to:', data.color);
-        setCatColor(data.color);
-        const imgElement = document.getElementById('pusay') as HTMLImageElement;
-        if (imgElement) {
-          const currentSrc = imgElement.src;
-          const frame = currentSrc.split('/').pop()?.replace('.png', '') || 'PusayCenter';
-          imgElement.src = `/images/cats/${data.color}/${frame}.png`;
-        }
-        setUserColors({});
-        return;
-      }
-      const uid: string = data.uid;
-      setUserColors((prevColors) => ({
-        ...prevColors,
-        [uid]: data.color,
-      }));
-
-      if (currentSong?.submittedBy === uid) {
-        console.log('Updating current cat color to:', data.color);
-        setCatColor(data.color);        
-        const imgElement = document.getElementById('pusay') as HTMLImageElement;
-        if (imgElement) {
-          const currentSrc = imgElement.src;
-          const frame = currentSrc.split('/').pop()?.replace('.png', '') || 'PusayCenter';
-          imgElement.src = `/images/cats/${data.color}/${frame}.png`;
-        }
-      }
-    });
-    socket.on('toggle_pause_play', ({ isPaused }) => {
-      console.log('toggle_pause_play', isPaused);
-      setIsPlaying(!isPaused);
-      if (isPaused) {
-        audioRef.current?.pause();
-        if (animationIntervalRef.current) {
-          clearInterval(animationIntervalRef.current as unknown as number);
-          animationIntervalRef.current = null;
-        }
-      } else {
-        audioRef.current?.play();
-        if (currentSong?.bpm) {
-          animateFrames(currentSong.bpm, catColor);
-        }
-      }
-    });
+    
     socket.on('preloaded_next_song', handlePreloadedNextSong);
-    socket.on('refresh_display', () => {
-      console.log('refresh_display');
-      window.location.reload();
-    });
-    socket.on('server_startup', handleServerStartup);
-    socket.on('song_bpm_response', (data: { trackId: string; bpm: number | null }) => {
-      if (data.bpm) {
-        animateFrames(data.bpm, catColor);
-      } else {
-        console.warn('No valid BPM candidates found for track:', data.trackId);
-      }
-    });
-    socket.on('song_download_complete', () => {
-      setIsLoading(false);
-    });
-    socket.on('volume_change', (data: { volume: number }) => {
-      console.log('Volume changed:', data.volume);
-      setVolume(data.volume);
-    });
-    ``
-    return () => {
-      console.log('Cleaning up socket listeners');
-      socket.off('updateCurrentSong', handleUpdateCurrentSong);
-      socket.off('queue_empty');
-      socket.off('updateUserQueue');
-      socket.off('updateUserCatColor');
-      socket.off('pause_play');
-      socket.off('refresh_display');
-      socket.off('song_bpm_response');
-      socket.off('song_download_complete');
-      socket.off('volume_change');
-      socket.off('server_startup', handleServerStartup);
-      socket.off('preloaded_next_song', handlePreloadedNextSong);
-    };
+    return () => { socket.off('preloaded_next_song', handlePreloadedNextSong); };
   }, [socket]);
 
-
-  useEffect(() => {
-    console.log('State updated:', {
-      playbackState,
-      currentSong,
-      queueLength: queue.length,
-      isPlaying,
-      isLoading
-    });
-  }, [playbackState, currentSong, queue, isPlaying, isLoading]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume / 100;
-    }
-  }, [volume]);
-
-  const resetAndAnimateCat = () => {
-    if (animationIntervalRef.current) {
-      clearInterval(animationIntervalRef.current as unknown as NodeJS.Timeout);
-    }
-    if (currentSong?.bpm) {
-      animateFrames(currentSong.bpm, catColor);
-    }
-  };
 
   const calculateFrameDuration = (bpm: number): number => {
     const bps = bpm / 60;
@@ -325,7 +141,7 @@ const DisplayPage: React.FC = () => {
   const animateFrames = (bpm: number, colorOverride?: string) => {
     let currentFrameIndex = 0;
     let currentIncrement = true;
-    const currentColor = colorOverride ?? catColor;
+    const currentColor = colorOverride ?? currentCatColor;
     const imgElement = document.getElementById('pusay') as HTMLImageElement;
     if (imgElement) {
       const currentSrc = imgElement.src;
@@ -376,22 +192,10 @@ const DisplayPage: React.FC = () => {
     }, frameDuration * 1000);
   };
 
-  useEffect(() => {
-    console.log('Cat color changed to:', catColor);
-    if (!animationIntervalRef.current) {
-      const imgElement = document.getElementById('pusay') as HTMLImageElement;
-      if (imgElement) {
-        const currentSrc = imgElement.src;
-        const frame = currentSrc.split('/').pop()?.replace('.png', '') || 'PusayCenter';
-        imgElement.src = `/images/cats/${catColor}/${frame}.png`;
-      }
-    }
-  }, [catColor]);
-
   const setCatImage = (frame: string, colorOverride?: string) => {
     const imgElement = document.getElementById('pusay') as HTMLImageElement;
     if (imgElement) {
-      const color = colorOverride ?? catColor;
+      const color = colorOverride ?? currentCatColor;
       const imgSrc = `/images/cats/${color}/${frame}.png`;
       imgElement.src = imgSrc;
     }
@@ -404,7 +208,6 @@ const DisplayPage: React.FC = () => {
     }
     setCatImage('PusayCenter');
   };
-
 
   const setupBpmAnalyzer = async (audioElement: HTMLAudioElement) => {
     const extendedAudioElement = audioElement as HTMLAudioElementWithSource;
@@ -454,7 +257,7 @@ const DisplayPage: React.FC = () => {
 
             const newBpm = bestBpmCandidate.tempo;
             console.log('Updating BPM:', newBpm);
-            animateFrames(newBpm, catColor);
+            animateFrames(newBpm, currentCatColor);
           }
         }
       };
@@ -465,67 +268,13 @@ const DisplayPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (audioRef.current && currentSong?.audioPath) {
-      setupBpmAnalyzer(audioRef.current);
-    }
-
-    return () => {
-      if (audioContextRef.current) {
-        console.log('Closing AudioContext during cleanup');
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-
-      if (audioRef.current) {
-        const extendedAudioElement = audioRef.current as HTMLAudioElementWithSource;
-        if (extendedAudioElement.mediaSourceNode) {
-          console.log('Disconnecting media source node during cleanup');
-          extendedAudioElement.mediaSourceNode.disconnect();
-          delete extendedAudioElement.mediaSourceNode;
-        }
-      }
-
-      if (bpmProcessorRef.current) {
-        console.log('Disconnecting BPM processor during cleanup');
-        bpmProcessorRef.current.disconnect();
-      }
-    };
-  }, [currentSong?.audioPath]);
-
   const handleAudioEnded = () => {
     console.log('Audio finished playing');
-    
-    if (audioRef.current) {
-      audioRef.current.src = '';
-      audioRef.current.load();
-    }
-    
-    setIsPlaying(false);
     setProgress(0);
-    setPlaybackState('queue_empty');
-    setCurrentSong(null);
-    
-    if (animationIntervalRef.current) {
-      clearInterval(animationIntervalRef.current as unknown as number);
-      animationIntervalRef.current = null;
-    }
-    setCatImage('PusayCenter');
+    resetCatAnimation();
     socket?.emit('song_finished');
   };
 
-  const playNextSong = () => {
-    socket?.emit('get_next_song');
-    setPlaybackState('playing');
-  };
-
-  const handlePlayButtonClick = () => {
-    setShowPlayButton(false);
-  };
-
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-  };
 
   const renderPlayer = () => {
     if (!currentSong) {
@@ -538,7 +287,7 @@ const DisplayPage: React.FC = () => {
             </div>
           </div>
           <div className={styles.catContainer}>
-            <img id="pusay" src={`/images/cats/${catColor}/PusayCenter.png`} alt="Pusay" />
+            <img id="pusay" src={`/images/cats/${currentCatColor}/PusayCenter.png`} alt="Pusay" />
           </div>
         </div>
       );
@@ -559,7 +308,6 @@ const DisplayPage: React.FC = () => {
                 }
               }
             }}
-            autoPlay
             crossOrigin="anonymous"
             style={{ display: 'none' }}
           >
@@ -595,20 +343,12 @@ const DisplayPage: React.FC = () => {
             </div>
           </div>
           <div className={styles.catContainer}>
-            <img id="pusay" src={`/images/cats/${catColor}/PusayCenter.png`} alt="Dancing Cat" />
+            <img id="pusay" src={`/images/cats/${currentCatColor}/PusayCenter.png`} alt="Dancing Cat" />
           </div>
         </div>
       </>
     );
   };
-
-  const audioElement = audioRef.current;
-  if (audioElement) {
-    audioElement.onplaying = () => {
-      console.log('Audio playback has started, requesting next song preload');
-      socket?.emit('ready_for_preload');
-    };
-  }
 
   return (
     <div className={styles.container}>

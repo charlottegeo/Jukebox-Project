@@ -1,4 +1,3 @@
-// Color Palette
 $primary-color: #B0197E;
 $primary-color-darkened: #8B1461;
 $secondary-color: #1E1E2F;
@@ -13,30 +12,25 @@ $accent-color-darkened: #C41948;
 $highlight-color: #E11C52;
 $highlight-color-darkened: #B0197E;
 
-// Spacing
 $spacing-xs: 0.25rem;
 $spacing-sm: 0.5rem;
 $spacing-md: 1rem;
 $spacing-lg: 1.5rem;
 $spacing-xl: 2rem;
 
-// Border Radius
 $border-radius-sm: 4px;
 $border-radius-md: 8px;
 $border-radius-lg: 12px;
 
-// Transitions
 $transition-fast: 0.1s ease;
 $transition-normal: 0.2s ease;
 $transition-slow: 0.3s ease;
 
-// Breakpoints
 $breakpoint-sm: 576px;
 $breakpoint-md: 768px;
 $breakpoint-lg: 992px;
 $breakpoint-xl: 1200px;
 
-// Z-index
 $z-index-dropdown: 1000;
 $z-index-sticky: 1020;
 $z-index-fixed: 1030;

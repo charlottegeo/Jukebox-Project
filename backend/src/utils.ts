@@ -1,5 +1,28 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserinfoResponse } from 'openid-client';
+import { Song } from './interfaces';
+
+
+export const getSnarkyComment = (lengthInSeconds: number): string => {
+  return lengthInSeconds > 3600
+    ? '<br/>Also, over an hour long??? Greedy ahhh mf...'
+    : '';
+};
+
+export const getSongLengthInSeconds = (song: Song): number => {
+  const lengthParts = song.track_length?.split(':') || ['0', '0'];
+  let lengthInSeconds = 0;
+
+  if (lengthParts.length === 3) {
+    lengthInSeconds =
+      parseInt(lengthParts[0]) * 3600 +
+      parseInt(lengthParts[1]) * 60 +
+      parseInt(lengthParts[2]);
+  } else if (lengthParts.length === 2) {
+    lengthInSeconds = parseInt(lengthParts[0]) * 60 + parseInt(lengthParts[1]);
+  }
+  return lengthInSeconds;
+};
 
 export interface AuthDict {
   uid: string;

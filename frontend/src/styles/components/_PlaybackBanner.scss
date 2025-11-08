@@ -43,7 +43,6 @@
     }
   }
 
-  // Controls Section
   .controls {
     @include flex-center;
     gap: var(--spacing-md);
@@ -77,7 +76,6 @@
     }
   }
 
-  // Progress Section
   .progress-section {
     @include flex-center;
     gap: var(--spacing-sm);
@@ -104,7 +102,6 @@
     }
   }
 
-  // Volume Section
   .volume-section {
     @include flex-center;
     gap: var(--spacing-sm);
@@ -129,7 +126,6 @@
   }
 }
 
-// Animations
 .playback-banner {
   @include slide-animation;
 } 
