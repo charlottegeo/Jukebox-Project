@@ -72,7 +72,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const uid = userInfo?.preferred_username;
 
   useEffect(() => {
-    const newSocket = io(import.meta.env.VITE_BACKEND_URL);
+    const newSocket = io();
     setSocket(newSocket);
     newSocket.on('connect', () => setIsConnected(true));
     newSocket.on('disconnect', () => setIsConnected(false));

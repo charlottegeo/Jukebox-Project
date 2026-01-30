@@ -2,13 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { UserinfoResponse } from 'openid-client';
 import { Song } from './interfaces';
 
-
-export const getSnarkyComment = (lengthInSeconds: number): string => {
-  return lengthInSeconds > 3600
-    ? '<br/>Also, over an hour long??? Greedy ahhh mf...'
-    : '';
-};
-
 export const getSongLengthInSeconds = (song: Song): number => {
   const lengthParts = song.track_length?.split(':') || ['0', '0'];
   let lengthInSeconds = 0;

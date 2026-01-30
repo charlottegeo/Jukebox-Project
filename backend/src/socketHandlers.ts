@@ -7,7 +7,7 @@ import {
   handleSpotifyLink,
   handleYouTubeLink,
 } from './trackService.js';
-import { getSnarkyComment, getSongLengthInSeconds } from './utils.js';
+import { getSongLengthInSeconds } from './utils.js';
 import { Song } from './interfaces';
 
 const getUserIdFromSocket = (socket: any): string | null => {
@@ -45,9 +45,7 @@ export function registerSocketHandlers(io: Server) {
       if (lengthInSeconds > songLengthLimit * 60) {
         socket.emit('message_box', {
           type: 'error',
-          message: `Song exceeds the maximum length limit of ${songLengthLimit} minutes${getSnarkyComment(
-            lengthInSeconds
-          )}`,
+          message: `Song exceeds the maximum length limit of ${songLengthLimit} minutes`,
         });
         return;
       }
@@ -170,9 +168,7 @@ export function registerSocketHandlers(io: Server) {
           if (lengthInSeconds > songLengthLimit * 60) {
             invalidSongs[song.track_name] = `"${
               song.track_name
-            }" exceeds the maximum length limit of ${songLengthLimit} minutes${getSnarkyComment(
-              lengthInSeconds
-            )}`;
+            }" exceeds the maximum length limit of ${songLengthLimit} minutes`;
             failureCount++;
           } else {
             validSongs.push(song);

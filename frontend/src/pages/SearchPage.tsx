@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Song } from '../types';
 import { useOidcAccessToken } from '@axa-fr/react-oidc';
 import UserInfo from '../UserInfo';
@@ -32,9 +33,10 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
 
   const [songs, setSongs] = useState<Song[]>([]);
 
+  const { user } = useAuth();
   const { accessTokenPayload } = useOidcAccessToken();
   const userInfo = accessTokenPayload as UserInfo;
-  const uid = userInfo?.preferred_username;
+  const uid = userInfo?.preferred_username || user?.username;
   
   useEffect(() => {
     if (!socket || !isConnected) return;
@@ -78,6 +80,10 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
 
   const handleAddToQueue = (song: Song) => {
     if (socket && isConnected) {
+      if (!uid) {
+        console.log('User ID not found, cannot add song to queue');
+        return;
+      }
       socket.emit('addSongToQueue', { song, uid: uid });
     }
   };
