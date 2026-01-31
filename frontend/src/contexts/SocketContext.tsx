@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Song, ActiveUser } from '../types';
+import { Song, ActiveUser, SkipVoteStatus } from '../types';
 import { useAuth } from './AuthContext';
 import { useMessage } from './MessageContext';
 import { useOidcAccessToken } from '@axa-fr/react-oidc';
@@ -25,6 +25,7 @@ interface SocketContextType {
   activeUserCount: number;
   songLengthLimit: number;
   playbackStartTime: number | null;
+  skipVoteStatus: SkipVoteStatus | null;
 
   setMyColor: (color: string) => void;
   setVolume: (volume: number) => void;
@@ -62,6 +63,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [songLengthLimit, setSongLengthLimit] = useState<number>(10);
   const [volume, setVolume] = useState<number>(50);
   const [playbackStartTime, setPlaybackStartTime] = useState<number | null>(null);
+  const [skipVoteStatus, setSkipVoteStatus] = useState<SkipVoteStatus | null>(null);
 
   const { user } = useAuth();
   const { showMessage } = useMessage();
@@ -92,6 +94,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket.emit('getActiveUsers');
     socket.emit('get_current_song');
     socket.emit('getSongLengthLimit');
+    if (currentSong) {
+      socket.emit('get_skip_vote_status');
+    }
 
     const handleServerStartup = () => {
       sessionStorage.removeItem('userColor');
@@ -109,6 +114,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const handleUpdateCurrentSong = (data: { currentSong: Song | null; isLoading?: boolean; playbackStartTime?: number | null }) => {
+      const wasSongChange = currentSong?.id !== data.currentSong?.id && currentSong?.track_id !== data.currentSong?.track_id;
       setCurrentSong(data.currentSong);
       if (data.isLoading !== undefined) setIsLoading(data.isLoading);
       if (data.playbackStartTime !== undefined) setPlaybackStartTime(data.playbackStartTime);
@@ -116,6 +122,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setCurrentCatColor('White');
         setPlaybackStartTime(null);
         setIsPaused(false);
+        setSkipVoteStatus(null);
+      } else if (wasSongChange && socket) {
+        socket.emit('get_skip_vote_status');
       }
     };
 
@@ -134,6 +143,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handleVolumeChange = (data: { volume: number }) => setVolume(data.volume);
     const handleSongDownloaded = () => setIsLoading(false);
     const handleRefresh = () => window.location.reload();
+    
+    const handleUpdateSkipVotes = (data: { currentVotes: number; requiredVotes: number; activeUserCount: number; hasVoted?: boolean }) => {
+      setSkipVoteStatus({
+        currentVotes: data.currentVotes,
+        requiredVotes: data.requiredVotes,
+        hasVoted: data.hasVoted ?? false,
+        activeUserCount: data.activeUserCount,
+      });
+    };
 
     const handleUpdateUserColor = (data: { uid: string | null; color: string }) => {
       if (data.uid === null) {
@@ -169,6 +187,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket.on('addSongToQueue', handleAddSong);
     socket.on('addPlaylistToQueue', handleAddPlaylist);
     socket.on('addAlbumToQueue', handleAddAlbum);
+    socket.on('updateSkipVotes', handleUpdateSkipVotes);
 
     return () => {
       socket.off('server_startup');
@@ -187,6 +206,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       socket.off('addSongToQueue');
       socket.off('addPlaylistToQueue');
       socket.off('addAlbumToQueue');
+      socket.off('updateSkipVotes');
     };
   }, [socket, isConnected, uid, userInfo, showMessage]);
 
@@ -227,6 +247,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     activeUserCount,
     songLengthLimit,
     playbackStartTime,
+    skipVoteStatus,
     setMyColor: handleSetMyColor,
     setVolume: handleSetVolume,
     isAdminPanelOpen,

@@ -34,3 +34,10 @@ export interface SongLengthLimits {
     maxLength: number;
     minLength: number;
 }
+
+export interface SkipVoteStatus {
+    currentVotes: number;
+    requiredVotes: number;
+    hasVoted: boolean;
+    activeUserCount: number;
+}

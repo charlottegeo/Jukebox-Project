@@ -29,6 +29,7 @@ let songLengthLimits: SongLengthLimits = {
 };
 let songLengthLimit = 10;
 let displaySocketId: string | null = null;
+let skipVotes: Set<string> = new Set();
 
 export const initIo = (serverIo: Server) => {
   io = serverIo;
@@ -59,6 +60,11 @@ export const setCurrentSong = (song: Song | null, uid?: string) => {
   const isNewSong = !previousSong || !song || 
     (previousSong.id !== song.id && previousSong.track_id !== song.track_id);
   
+  if (isNewSong) {
+    skipVotes.clear();
+    broadcastSkipVoteStatus();
+  }
+  
   currentPlayingSong = song;
   if (song && uid) {
     currentCatColor = userStates[uid]?.color || 'White';
@@ -66,7 +72,9 @@ export const setCurrentSong = (song: Song | null, uid?: string) => {
   } else if (!song) {
     currentCatColor = 'White';
     playbackStartTime = null;
+    skipVotes.clear();
     io.emit('updateUserCatColor', { uid: null, color: 'White' });
+    broadcastSkipVoteStatus();
   }
   const isLoading = song ? !song.audioPath : false;
   io.emit('updateCurrentSong', { currentSong: song, isLoading, playbackStartTime });
@@ -293,6 +301,74 @@ export const updateActiveUsers = () => {
 
   console.log('Active users from queues:', activeUsers);
   io.emit('updateActiveUsers', activeUsers);
+  
+  broadcastSkipVoteStatus();
+};
+
+export const addSkipVote = (uid: string) => {
+  skipVotes.add(uid);
+  broadcastSkipVoteStatus();
+};
+
+export const removeSkipVote = (uid: string) => {
+  skipVotes.delete(uid);
+  broadcastSkipVoteStatus();
+};
+
+export const getSkipVoteStatus = (uid?: string) => {
+  const activeUserCount = Object.keys(userQueues).filter(
+    (uid) => userQueues[uid] && userQueues[uid].length > 0
+  ).length;
+  
+  const requiredVotes = activeUserCount === 1 
+    ? 1 
+    : Math.floor(activeUserCount / 2) + 1;
+  
+  const currentVotes = skipVotes.size;
+  const hasVoted = uid ? skipVotes.has(uid) : false;
+  
+  return {
+    currentVotes,
+    requiredVotes,
+    hasVoted,
+    activeUserCount,
+  };
+};
+
+export const shouldTriggerSkip = (): boolean => {
+  if (!currentPlayingSong) return false;
+  const status = getSkipVoteStatus();
+  return status.currentVotes >= status.requiredVotes;
+};
+
+const broadcastSkipVoteStatus = () => {
+  const activeUserCount = Object.keys(userQueues).filter(
+    (uid) => userQueues[uid] && userQueues[uid].length > 0
+  ).length;
+  
+  const requiredVotes = activeUserCount === 1 
+    ? 1 
+    : Math.floor(activeUserCount / 2) + 1;
+  
+  const currentVotes = skipVotes.size;
+  
+  const allUsers = Object.keys(userStates);
+  allUsers.forEach((uid) => {
+    const hasVoted = skipVotes.has(uid);
+    io.to(uid).emit('updateSkipVotes', {
+      currentVotes,
+      requiredVotes,
+      activeUserCount,
+      hasVoted,
+    });
+  });
+  
+  io.emit('updateSkipVotes', {
+    currentVotes,
+    requiredVotes,
+    activeUserCount,
+    hasVoted: false,
+  });
 };
 
 export const resetServerState = () => {

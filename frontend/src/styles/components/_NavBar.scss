@@ -6,27 +6,17 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 
   .navbar-brand {
-    color: var(--text-color) !important;
     font-weight: 600;
     font-size: 1.5em;
     text-decoration: none;
     transition: var(--transition-normal);
-
-    &:hover {
-      color: var(--text-color-lightened) !important;
-    }
   }
 
   .navbar-toggler {
     border: none;
     padding: var(--spacing-sm);
-    color: var(--text-color);
     font-size: 1.5em;
     transition: var(--transition-normal);
-
-    &:hover {
-      color: var(--text-color-lightened);
-    }
 
     &:focus {
       outline: none;
@@ -45,18 +35,15 @@
 
       .nav-item {
         .nav-link {
-          color: var(--text-color);
           padding: var(--spacing-sm) var(--spacing-md);
           border-radius: var(--border-radius-sm);
           transition: var(--transition-normal);
 
           &:hover {
-            color: var(--text-color-lightened);
             background: rgba(255, 255, 255, 0.1);
           }
 
           &.active {
-            color: var(--text-color);
             background: rgba(255, 255, 255, 0.2);
           }
         }

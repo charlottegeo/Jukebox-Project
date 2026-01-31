@@ -28,15 +28,16 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
     setMyColor,
     setVolume,
     playbackStartTime,
+    skipVoteStatus,
   } = useSocket();
 
   const [isTunedIn, setIsTunedIn] = useState(false);
   const [radioVolume, setRadioVolume] = useState(50);
   const radioAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastSongIdRef = useRef<string | null>(null);
-  const loadedRadioTrackIdRef = useRef<string | null>(null);
-
+  
   const [songs, setSongs] = useState<Song[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const { user } = useAuth();
   const { accessTokenPayload } = useOidcAccessToken();
@@ -45,23 +46,14 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
   
   useEffect(() => {
     if (!socket || !isConnected) return;
-    
     const handleSearchResults = (data: { results: Song[] }) => setSongs(data.results);
     socket.on('searchResults', handleSearchResults);
-
-    return () => {
-      socket.off('searchResults', handleSearchResults);
-    };
+    return () => { socket.off('searchResults', handleSearchResults); };
   }, [socket, isConnected]);
 
   const handleSearch = (input: string, source: string) => {
-    if (!socket || !isConnected) {
-      console.log('Socket not connected, cannot search');
-      return;
-    }
-
+    if (!socket || !isConnected) return;
     const event = source.endsWith('Link') ? 'addLinkToQueue' : 'searchTracks';
-    
     if (event === 'addLinkToQueue') {
       socket.emit(event, { link: input, uid });
     } else {
@@ -69,29 +61,10 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
     }
   };
 
-  const handleColorSelect = (color: string) => {
-    setMyColor(color);
-  };
-
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-  };
-
-  const handleVoteSkip = () => {
-    if (socket && isConnected) {
-      socket.emit('force_skip');
-    }
-  };
-
-  const handleAddToQueue = (song: Song) => {
-    if (socket && isConnected) {
-      if (!uid) {
-        console.log('User ID not found, cannot add song to queue');
-        return;
-      }
-      socket.emit('addSongToQueue', { song, uid: uid });
-    }
-  };
+  const handleColorSelect = (color: string) => setMyColor(color);
+  const handleVolumeChange = (newVolume: number) => setVolume(newVolume);
+  const handleVoteSkip = () => { if (socket && isConnected) socket.emit('force_skip'); };
+  const handleAddToQueue = (song: Song) => { if (socket && isConnected && uid) socket.emit('addSongToQueue', { song, uid }); };
 
   const calculateSeekTime = (): number => {
     if (!playbackStartTime) return 0;
@@ -99,140 +72,72 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
   };
 
   useEffect(() => {
-    if (!isTunedIn || !currentSong?.audioPath) {
-      if (radioAudioRef.current) {
-        radioAudioRef.current.pause();
-        radioAudioRef.current.src = '';
-      }
-      lastSongIdRef.current = null;
-      loadedRadioTrackIdRef.current = null;
+    const audio = radioAudioRef.current;
+    
+    if (!isTunedIn || !currentSong?.audioPath || !audio) {
+      if (audio) audio.pause();
       return;
     }
 
-    const audio = radioAudioRef.current;
-    if (!audio) return;
+    audio.volume = radioVolume / 100;
 
     const trackId = currentSong.track_id || currentSong.id;
-    const hasSongChanged = lastSongIdRef.current !== trackId;
-    const hasLoadedTrackChanged = loadedRadioTrackIdRef.current !== trackId;
+    const isNewSong = lastSongIdRef.current !== trackId;
 
-    if (hasSongChanged && hasLoadedTrackChanged) {
+    if (isNewSong) {
       lastSongIdRef.current = trackId;
-      loadedRadioTrackIdRef.current = trackId;
       audio.src = currentSong.audioPath;
-      audio.volume = radioVolume / 100;
-      
-      const handleCanPlay = () => {
-        if (playbackStartTime && !isPaused && audio.readyState >= 2) {
-          const seekTo = calculateSeekTime();
-          if (audio.duration) {
-            audio.currentTime = Math.min(seekTo, audio.duration);
-          }
-        }
-        if (!isPaused) {
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(e => {
-              if (e.name === 'AbortError') {
-                return;
-              }
-              if (e.name === 'NotAllowedError') {
-                console.warn('Radio playback blocked by browser. User interaction required.');
-              } else {
-                console.error('Error playing radio audio:', e);
-              }
-            });
-          }
-        }
-      };
-      
-      audio.addEventListener('canplay', handleCanPlay, { once: true });
       audio.load();
-    } else if (!hasSongChanged) {
-      if (audio.src !== currentSong.audioPath) {
-        const wasPlaying = !audio.paused;
-        const currentTime = audio.currentTime;
-        
-        audio.src = currentSong.audioPath;
-        audio.load();
-        
-        if (wasPlaying) {
-          audio.addEventListener('loadedmetadata', () => {
-            if (audio.readyState >= 2 && audio.duration) {
-              audio.currentTime = currentTime;
-              const playPromise = audio.play();
-              if (playPromise !== undefined) {
-                playPromise.catch(e => {
-                  if (e.name !== 'AbortError') {
-                    console.error('Error resuming playback after token refresh:', e);
-                  }
-                });
-              }
-            }
-          }, { once: true });
-        }
-      }
-      
-      if (playbackStartTime && !isPaused && audio.readyState >= 2) {
-        const seekTo = calculateSeekTime();
-        if (audio.duration) {
-          const currentPos = audio.currentTime;
-          const expectedPos = Math.min(seekTo, audio.duration);
-          if (Math.abs(currentPos - expectedPos) > 0.5) {
-            audio.currentTime = expectedPos;
-          }
-        }
-      }
     }
 
     if (isPaused) {
       audio.pause();
-    } else if (audio.readyState >= 2) {
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(e => {
-          if (e.name === 'AbortError') {
-            return;
-          }
-          if (e.name === 'NotAllowedError') {
-            console.warn('Radio playback blocked by browser. User interaction required.');
-          } else {
-            console.error('Error playing radio audio:', e);
-          }
-        });
-      }
+    } else {
+       const playAudio = async () => {
+         try {
+           if (audio.paused) {
+             await audio.play();
+           }
+         } catch (e) {
+           console.warn('Playback failed (autoplay blocked?):', e);
+         }
+       };
+       playAudio();
     }
-  }, [isTunedIn, currentSong?.track_id, currentSong?.id, currentSong?.audioPath, isPaused, playbackStartTime, radioVolume]);
+  }, [isTunedIn, currentSong?.audioPath, currentSong?.id, isPaused, radioVolume]);
 
   useEffect(() => {
-    if (!isTunedIn || !radioAudioRef.current || !playbackStartTime || isPaused || !currentSong?.audioPath) {
-      return;
-    }
+    const audio = radioAudioRef.current;
+    if (!isTunedIn || !audio || isPaused || !playbackStartTime) return;
 
-    const syncInterval = setInterval(() => {
-      const audio = radioAudioRef.current;
-      if (audio && playbackStartTime && !isPaused && audio.readyState >= 2) {
-        const seekTo = calculateSeekTime();
-        if (audio.duration) {
-          const currentPos = audio.currentTime;
-          const expectedPos = Math.min(seekTo, audio.duration);
-          if (Math.abs(currentPos - expectedPos) > 2.0) {
-            audio.currentTime = expectedPos;
-          }
+    const checkSync = () => {
+      if (audio.paused || audio.readyState < 1) return;
+      
+      const expectedTime = calculateSeekTime();
+      const currentTime = audio.currentTime;
+      const diff = Math.abs(currentTime - expectedTime);
+
+      if (diff > 0.5) {
+        if (audio.duration && expectedTime < audio.duration) {
+           if (expectedTime > 0.1) {
+             audio.currentTime = expectedTime;
+           }
         }
       }
-    }, 2000);
-
-    return () => {
-      clearInterval(syncInterval);
     };
-  }, [isTunedIn, playbackStartTime, isPaused, currentSong?.audioPath]);
+
+    const interval = setInterval(checkSync, 1000);
+    return () => clearInterval(interval);
+  }, [isTunedIn, isPaused, playbackStartTime]);
   
-  useEffect(() => {
-    if (radioAudioRef.current) {
-      radioAudioRef.current.volume = radioVolume / 100;
+  const handleLoadedMetadata = () => {
+    if (radioAudioRef.current && playbackStartTime && isTunedIn) {
+       const expectedTime = calculateSeekTime();
+       if (expectedTime > 0 && Number.isFinite(expectedTime)) {
+          radioAudioRef.current.currentTime = expectedTime;
+       }
     }
-  }, [radioVolume]);
+  };
 
   return (
     <div className="search-page">
@@ -245,44 +150,21 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
             onVoteSkip={handleVoteSkip}
             songLengthLimit={songLengthLimit}
             isLoading={isLoading}
+            skipVoteStatus={skipVoteStatus}
+            socket={socket}
+            isTunedIn={isTunedIn}
+            onTuneInToggle={() => setIsTunedIn(!isTunedIn)}
+            radioVolume={radioVolume}
+            onRadioVolumeChange={setRadioVolume}
+            isAdmin={isAdmin}
+            onAdminClick={() => setAdminPanelOpen(true)}
           />
-          <div className="radio-controls" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: '#f0f0f0', borderRadius: '4px', marginTop: '10px' }}>
-            <button
-              onClick={() => setIsTunedIn(!isTunedIn)}
-              style={{
-                padding: '8px 16px',
-                background: isTunedIn ? '#4CAF50' : '#2196F3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              {isTunedIn ? '🔊 Tuned In' : '📻 Tune In'}
-            </button>
-            {isTunedIn && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '14px' }}>Volume:</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={radioVolume}
-                  onChange={(e) => setRadioVolume(Number(e.target.value))}
-                  style={{ width: '100px' }}
-                />
-                <span style={{ fontSize: '14px', minWidth: '35px' }}>{radioVolume}%</span>
-              </div>
-            )}
-          </div>
-          {isTunedIn && (
-            <audio
-              ref={radioAudioRef}
-              crossOrigin="anonymous"
-              style={{ display: 'none' }}
-            />
-          )}
+          <audio
+            ref={radioAudioRef}
+            onLoadedMetadata={handleLoadedMetadata}
+            crossOrigin="anonymous"
+            style={{ display: 'none' }}
+          />
         </div>
         <div className="queue">
           <UserQueue
@@ -293,10 +175,11 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
           />
         </div>
         <div className="search">
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar onSearch={handleSearch} onSearchStateChange={setHasSearched} />
           <SongList
             songs={songs}
             onSelect={handleAddToQueue}
+            hasSearched={hasSearched}
           />
         </div>
       </div>

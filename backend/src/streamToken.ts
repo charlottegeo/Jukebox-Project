@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 const tokenStore = new Map<string, number>();
-const TOKEN_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const TOKEN_EXPIRY_MS = 5 * 60 * 1000;
 
 export const generateShortLivedToken = (): string => {
   const token = crypto.randomBytes(32).toString('hex');

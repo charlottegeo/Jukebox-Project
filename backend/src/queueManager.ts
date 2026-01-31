@@ -62,7 +62,7 @@ export const preloadNextSong = async () => {
     return;
   }
 
-  if (nextSong.audioPath && nextSong.bpm !== undefined) {
+  if (nextSong.audioPath && nextSong.bpm !== undefined && nextSong.bpm !== null) {
     return;
   }
 
@@ -86,7 +86,7 @@ export const preloadNextSong = async () => {
       }
     }
 
-    if (nextSong.bpm === undefined) {
+    if ((nextSong.bpm === undefined || nextSong.bpm === null) && fs.existsSync(localPath)) {
       console.log(`Analyzing BPM for ${nextSong.track_name} (source: ${nextSong.source})...`);
       const { bpm, tempoMap } = await analyzeBPM(localPath);
       nextSong.bpm = bpm;
@@ -163,7 +163,7 @@ export const playNextSong = async () => {
     stateManager.startPlaybackTimer();
     stateManager.setSongDownloaded();
 
-    if (nextSong.bpm === undefined) {
+    if ((nextSong.bpm === undefined || nextSong.bpm === null) && fs.existsSync(localPath)) {
       console.log(`Analyzing BPM for ${nextSong.track_name} (source: ${nextSong.source})...`);
       analyzeBPM(localPath).then(({ bpm, tempoMap }) => {
         nextSong.bpm = bpm;

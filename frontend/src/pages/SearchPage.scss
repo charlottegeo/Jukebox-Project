@@ -12,8 +12,6 @@
   --text-color-lightened: #B8B8D1;
   --accent-color: #E11C52;
   --accent-color-darkened: #C41948;
-  --highlight-color: #E11C52;
-  --highlight-color-darkened: #B0197E;
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -236,7 +234,6 @@ body[data-theme="light"] {
   }
 }
 
-/* Button Styles */
 button {
   padding: 6px 12px;
   background-color: var(--primary-color);
@@ -279,7 +276,6 @@ select {
 
 input[type="text"] {
   padding: 6px;
-  border-radius: 6px;
   border: 1px solid var(--secondary-color);
   background: var(--tertiary-color);
   color: var(--text-color);
@@ -306,7 +302,6 @@ select,
   letter-spacing: inherit;
 }
 
-/* Loading States */
 .loading {
   @extend .d-flex, .align-center, .justify-center;
   min-height: 200px;

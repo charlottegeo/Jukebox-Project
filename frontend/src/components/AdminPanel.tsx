@@ -109,17 +109,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
   return (
     <div className="admin-panel-overlay">
       <div className="admin-panel">
-        <button onClick={onClose} className="close-button">
+        <button onClick={onClose} className="btn btn-link float-right p-0" style={{ fontSize: '1.5rem' }}>
           <FontAwesomeIcon icon={faTimes} />
         </button>
-        <h2>Admin Controls</h2>
+        <h2 className="h4 mb-3">Admin Controls</h2>
         
         <div className="admin-controls-group">
-          <div className="playback-controls">
-            <button onClick={handlePausePlay} className="control-button">
+          <div className="playback-controls mb-3">
+            <button onClick={handlePausePlay} className="btn btn-primary mr-2">
               <FontAwesomeIcon icon={!isPlaying ? faPause : faPlay} />
             </button>
-            <button onClick={handleForceSkip} className="control-button">
+            <button onClick={handleForceSkip} className="btn btn-outline-danger">
               <FontAwesomeIcon icon={faForward} />
             </button>
           </div>
@@ -155,8 +155,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
             <span className="volume-value">{formatTime(songLengthLimit)}</span>
           </div>
 
-          <button onClick={handleRefreshDisplay} className="refresh-button">
-            <FontAwesomeIcon icon={faSync} /> Refresh Display
+          <button onClick={handleRefreshDisplay} className="btn btn-outline-secondary btn-block">
+            <FontAwesomeIcon icon={faSync} className="mr-2" /> Refresh Display
           </button>
         </div>
 

@@ -6,7 +6,6 @@ import {
   Navbar,
   NavbarToggler,
   NavItem,
-  Button,
 } from 'reactstrap';
 import { NavLink } from 'react-router-dom';
 import Profile from './Profile';
@@ -33,15 +32,6 @@ const NavBar: React.FC<NavBarProps> = ({ setAdminPanelOpen }) => {
           </NavLink>
           <NavbarToggler onClick={toggle} />
           <Collapse isOpen={isOpen} navbar>
-            <Nav navbar>
-              {isAdmin && (
-                <NavItem>
-                  <Button color='secondary' onClick={() => setAdminPanelOpen(true)}>
-                    Admin Panel
-                  </Button>
-                </NavItem>
-              )}
-            </Nav>
             <Nav navbar className='ml-auto'>
               <Profile />
             </Nav>

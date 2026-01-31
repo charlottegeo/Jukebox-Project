@@ -13,10 +13,6 @@ const clientId = process.env.SPOTIFY_CLIENT_ID as string;
 const clientSecret = process.env.SPOTIFY_CLIENT_SECRET as string;
 const spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret);
 
-/**
- * Finds the YouTube URL for a Spotify track without downloading
- * Returns the YouTube URL if found, null otherwise
- */
 export const findYouTubeUriForSpotifyTrack = async (
   track_id: string,
 ): Promise<string | null> => {
@@ -154,9 +150,6 @@ export const downloadSpotifyAudio = async (
   }
 };
 
-/**
- * Extract video ID from various YouTube URL formats
- */
 const extractYouTubeVideoId = (url: string): string | null => {
   if (url.includes("watch?v=")) {
     return url.split("watch?v=")[1].split("&")[0].split("#")[0];
@@ -168,33 +161,25 @@ const extractYouTubeVideoId = (url: string): string | null => {
   return null;
 };
 
-/**
- * Shared function to download audio from YouTube using yt-dlp
- * @param videoId - YouTube video ID
- * @param outputFilename - Filename (without extension) for the output file
- * @returns Promise resolving to the local file path (e.g., "/downloads/filename.mp3")
- */
+
 const downloadYouTubeVideoAudio = async (
   videoId: string,
   outputFilename: string,
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const finalOutputPath = `/app/downloads/${outputFilename}.mp3`;
-    const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 --no-playlist --no-cache-dir --no-part --force-overwrites --downloader aria2c --downloader-args "aria2c:-x 4 -s 4 -k 1M" -o "${finalOutputPath.replace(".mp3", ".%(ext)s")}" "${url}"`;
+    const finalOutputPath = `/app/downloads/${outputFilename}.m4a`;
+    
+    const command = `yt-dlp -f "bestaudio[ext=m4a]/bestaudio" --no-playlist --no-cache-dir --no-part --force-overwrites --downloader aria2c --downloader-args "aria2c:-x 4 -s 4 -k 1M" -o "${finalOutputPath.replace(".m4a", ".%(ext)s")}" "${url}"`;
 
     console.log(`[DOWNLOAD] Executing yt-dlp command for video ${videoId}`);
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`[DOWNLOAD] Error downloading YouTube audio (${videoId}): ${stderr}`);
-        console.error(`[DOWNLOAD] Command was: ${command}`);
         return reject(new Error(stderr));
       }
       console.log(`[DOWNLOAD] Successfully downloaded ${videoId} to ${finalOutputPath}`);
-      if (stdout) {
-        console.log(`[DOWNLOAD] yt-dlp output: ${stdout.substring(0, 200)}`);
-      }
-      resolve(`/downloads/${outputFilename}.mp3`);
+      resolve(finalOutputPath);
     });
   });
 };
@@ -210,9 +195,7 @@ export const downloadYouTubeAudio = async (youtubeUrl: string): Promise<string> 
   }
   
   console.log(`[DOWNLOAD] Extracted video ID: ${videoId}, starting download...`);
-  const result = await downloadYouTubeVideoAudio(videoId, videoId);
-  console.log(`[DOWNLOAD] YouTube download complete: ${result}`);
-  return result;
+  return await downloadYouTubeVideoAudio(videoId, videoId);
 };
 
 export const searchYouTube = async (
@@ -235,7 +218,7 @@ export const searchYouTube = async (
       uri: `https://www.youtube.com/watch?v=${item.id}`,
       source: "youtube" as const,
       id: uuidv4(),
-      bpm: null,
+      bpm: undefined,
       submittedBy: "Unknown",
     }));
 
@@ -252,7 +235,6 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
 
     if (videoId) {
       const videoDetails = await youtubeSearchApi.GetVideoDetails(videoId);
-      console.log("Video details:", videoDetails);
       const videoInfo = await ytdl.getInfo(videoId);
       const duration = videoInfo.videoDetails.lengthSeconds;
       const formattedDuration = formatYouTubeDuration(duration);
@@ -269,7 +251,7 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
           track_id: videoDetails.id,
           uri: `https://www.youtube.com/watch?v=${videoDetails.id}`,
           source: "youtube",
-          bpm: null,
+          bpm: undefined,
           submittedBy: "Unknown",
         },
       ];
@@ -295,7 +277,7 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
             track_id: item.id,
             uri: `https://www.youtube.com/watch?v=${item.id}`,
             source: "youtube",
-            bpm: null,
+            bpm: undefined,
             submittedBy: "Unknown",
           };
         }),
@@ -351,13 +333,8 @@ export const handleSpotifyLink = async (
     const pathParts = url.pathname.split("/");
     const linkType = pathParts[1];
     const itemId = pathParts[2];
-    console.log("Handling Spotify link:", link);
-    console.log("Link type:", linkType);
-    console.log("Item ID:", itemId);
-
-    if (!itemId) {
-      throw new Error("No ID found in the provided Spotify link");
-    }
+    
+    if (!itemId) throw new Error("No ID found in the provided Spotify link");
 
     if (linkType === "track") {
       const track = await spotifyApi.tracks.get(itemId);
@@ -379,7 +356,7 @@ export const handleSpotifyLink = async (
       const tracks = album.tracks.items;
       const albumCoverUrl = album.images[0]?.url || "";
 
-      const songs: Song[] = tracks.map((track) => {
+      return tracks.map((track) => {
         return {
           id: uuidv4(),
           track_name: track.name,
@@ -392,11 +369,9 @@ export const handleSpotifyLink = async (
           submittedBy,
         };
       });
-      return songs;
     } else if (linkType === "playlist") {
       const playlist = await spotifyApi.playlists.getPlaylist(itemId);
-      const tracks = playlist.tracks.items;
-      const songs: Song[] = tracks.map((item) => {
+      return playlist.tracks.items.map((item) => {
         const track = item.track;
         return {
           id: uuidv4(),
@@ -410,7 +385,6 @@ export const handleSpotifyLink = async (
           submittedBy,
         };
       });
-      return songs;
     } else {
       throw new Error("Invalid Spotify link type");
     }

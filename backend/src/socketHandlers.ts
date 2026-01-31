@@ -24,6 +24,16 @@ export function registerSocketHandlers(io: Server) {
 
     socket.on('getActiveUsers', () => {
       stateManager.updateActiveUsers();
+      if (stateManager.shouldTriggerSkip()) {
+        const currentSong = stateManager.getCurrentSong();
+        if (currentSong?.audioPath) {
+          queueManager.deleteAudioFile(currentSong.audioPath);
+        }
+        if (stateManager.getIsPlaying()) {
+          stateManager.setPlaying(false);
+        }
+        queueManager.playNextSong();
+      }
     });
 
     socket.on('user_info', (data) => {
@@ -260,6 +270,47 @@ export function registerSocketHandlers(io: Server) {
         stateManager.setPlaying(false);
       }
       queueManager.playNextSong();
+    });
+
+    socket.on('vote_skip', () => {
+      const uid = getUserIdFromSocket(socket);
+      if (!uid || !stateManager.getCurrentSong()) return;
+      
+      stateManager.addSkipVote(uid);
+      const status = stateManager.getSkipVoteStatus(uid);
+      
+      if (status.currentVotes >= status.requiredVotes) {
+        console.log(`Skip threshold met (${status.currentVotes}/${status.requiredVotes}), skipping song`);
+        const currentSong = stateManager.getCurrentSong();
+        if (currentSong?.audioPath) {
+          queueManager.deleteAudioFile(currentSong.audioPath);
+        }
+        
+        if (stateManager.getIsPlaying()) {
+          stateManager.setPlaying(false);
+        }
+        queueManager.playNextSong();
+      }
+    });
+
+    socket.on('unvote_skip', () => {
+      const uid = getUserIdFromSocket(socket);
+      if (!uid) return;
+      
+      stateManager.removeSkipVote(uid);
+    });
+
+    socket.on('get_skip_vote_status', () => {
+      const uid = getUserIdFromSocket(socket);
+      if (!uid) return;
+      
+      const status = stateManager.getSkipVoteStatus(uid);
+      socket.emit('updateSkipVotes', {
+        currentVotes: status.currentVotes,
+        requiredVotes: status.requiredVotes,
+        activeUserCount: status.activeUserCount,
+        hasVoted: status.hasVoted,
+      });
     });
 
     socket.on('pause_play', (data?: { isPaused?: boolean }) => {

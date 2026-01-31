@@ -116,7 +116,9 @@ apiRouter.get('/stream/:filename', (req: Request, res: Response): void => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Range');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
-  res.setHeader('Content-Type', 'audio/mpeg');
+  
+  const contentType = filename.endsWith('.m4a') ? 'audio/mp4' : 'audio/mpeg';
+  res.setHeader('Content-Type', contentType);
 
   const stat = fs.statSync(filePath);
   const fileSize = stat.size;
@@ -132,14 +134,14 @@ apiRouter.get('/stream/:filename', (req: Request, res: Response): void => {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
-      'Content-Type': 'audio/mpeg',
+      'Content-Type': contentType,
     };
     res.writeHead(206, head);
     file.pipe(res);
   } else {
     const head = {
       'Content-Length': fileSize,
-      'Content-Type': 'audio/mpeg',
+      'Content-Type': contentType,
     };
     res.writeHead(200, head);
     fs.createReadStream(filePath).pipe(res);

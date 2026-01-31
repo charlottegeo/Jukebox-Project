@@ -13,8 +13,6 @@
   --text-color-lightened: #{$text-color-lightened};
   --accent-color: #{$accent-color};
   --accent-color-darkened: #{$accent-color-darkened};
-  --highlight-color: #{$highlight-color};
-  --highlight-color-darkened: #{$highlight-color-darkened};
 
   --spacing-xs: #{$spacing-xs};
   --spacing-sm: #{$spacing-sm};
@@ -57,26 +55,46 @@ body {
     "queue search";
   grid-template-columns: 300px 1fr;
   grid-template-rows: auto 1fr;
-  min-height: 100vh;
+  min-height: calc(100vh - 76px);
   gap: var(--spacing-md);
   padding: var(--spacing-md);
+  padding-top: 0;
 
   .banner {
     grid-area: banner;
+    margin-top: 76px;
   }
 
   .queue {
     grid-area: queue;
-    height: calc(100vh - 200px);
+    min-height: 0;
     overflow-y: auto;
     @include mixins.custom-scrollbar;
   }
 
   .search {
     grid-area: search;
-    height: calc(100vh - 200px);
-    overflow-y: auto;
-    @include mixins.custom-scrollbar;
+    min-height: 0;
+    overflow-y: visible;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-areas:
+      "banner"
+      "queue"
+      "search";
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+    padding-top: 0;
+    min-height: calc(100vh - 76px);
+
+    .banner {
+      margin-top: 76px;
+    }
+
+    .queue {
+      max-height: 300px;
+    }
   }
 }
 
@@ -103,26 +121,39 @@ body {
 .p-3 { padding: var(--spacing-lg); }
 .p-4 { padding: var(--spacing-xl); }
 
-.button {
-  border-radius: var(--border-radius-md);
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: var(--tertiary-color);
-  color: var(--text-color);
-  cursor: pointer;
-  transition: var(--transition-normal);
-
-  &:hover {
-    background-color: var(--tertiary-color-darkened);
-    border-color: var(--accent-color);
+[data-theme="dark"] {
+  .card {
+    background-color: var(--secondary-color);
+    border-color: var(--tertiary-color);
   }
 
-  &:focus,
-  &:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
+  .card-header {
+    background-color: var(--tertiary-color);
+    border-color: var(--tertiary-color);
+  }
+
+  .list-group-item {
+    background-color: var(--secondary-color);
+    border-color: var(--tertiary-color);
+
+    &:hover {
+      background-color: var(--tertiary-color);
+    }
+  }
+
+  .form-control {
+    background-color: var(--tertiary-color);
+    border: none;
+
+    &::placeholder {
+      color: var(--text-color-lightened);
+    }
+
+    &:focus {
+      border: none;
+      box-shadow: none;
+      outline: none;
+    }
   }
 }
 

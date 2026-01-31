@@ -1,8 +1,9 @@
 import React from 'react';
 import { ReactSortable } from 'react-sortablejs';
+import { Card, CardHeader, CardBody, ListGroup, ListGroupItem, Button } from 'reactstrap';
 import { Song } from '../types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faTrashCan, faMusic } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faTrashCan, faMusic, faGripVertical } from '@fortawesome/free-solid-svg-icons';
 
 interface UserQueueProps {
     queue: Song[];
@@ -27,71 +28,84 @@ const UserQueue: React.FC<UserQueueProps> = ({
     }));
 
     return (
-        <div className="user-queue-container">
-            <div className="queue-header">
-                <h2 className="user-queue-title">Your Queue</h2>
+        <Card className="h-100">
+            <CardHeader className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">Your Queue</h5>
                 {queue.length > 0 && (
-                    <button 
+                    <Button 
+                        color="link" 
+                        size="sm"
                         onClick={onClearQueue} 
-                        className="clear-queue-button" 
                         title="Clear queue"
+                        className="p-0"
                     >
                         <FontAwesomeIcon icon={faTrashCan} />
-                    </button>
+                    </Button>
                 )}
-            </div>
+            </CardHeader>
+            <CardBody className="p-0">
+                {queue.length === 0 ? (
+                    <div className="text-center text-muted p-5 d-flex flex-column align-items-center">
+                        <FontAwesomeIcon icon={faMusic} size="3x" className="mb-3" />
+                        <p className="mb-1">Your Queue is Empty</p>
+                        <p className="small mb-0">Search for songs above to add them to your queue</p>
+                    </div>
+                ) : (
+                    <ReactSortable<Song>
+                        list={reorderableQueue}
+                        setList={handleReorder}
+                        animation={200}
+                        handle=".drag-handle"
+                        disabled={queue.length <= 1}
+                    >
+                        <ListGroup flush>
+                            {queue.map((song, index) => (
+                                <ListGroupItem
+                                    key={`${song.id}-${index}`}
+                                    className={`d-flex align-items-center ${song.source === 'spotify' ? 'border-left border-success' : 'border-left border-danger'}`}
+                                    style={{ borderLeftWidth: '4px' }}
+                                >
+                                    <span className="text-muted small mr-2" style={{ minWidth: '24px' }}>
+                                        {index + 1}
+                                    </span>
 
-            {queue.length === 0 ? (
-                <div className="empty-queue">
-                    <FontAwesomeIcon icon={faMusic} className="music-icon" />
-                    <p>Your Queue is Empty</p>
-                    <p className="empty-queue-subtitle">Search for songs above to add them to your queue</p>
-                </div>
-            ) : (
-                <ReactSortable<Song>
-                    list={reorderableQueue}
-                    setList={handleReorder}
-                    animation={200}
-                    handle=".drag-handle"
-                    className="sortable-list"
-                    disabled={queue.length <= 1}
-                >
-                    {queue.map((song, index) => (
-                        <div
-                            key={`${song.id}-${index}`}
-                            className={`queue-item ${song.source}`}
-                        >
-                            <div className="order-number">{index + 1}</div>
+                                    <div
+                                        className="drag-handle mr-2"
+                                        title="Drag to reorder"
+                                        style={{ cursor: queue.length > 1 ? 'grab' : 'default' }}
+                                    >
+                                        <FontAwesomeIcon icon={faGripVertical} className="text-muted" />
+                                    </div>
 
-                            <div
-                                className="drag-handle"
-                                title="Drag to reorder"
-                            >
-                                <div className="dot"></div>
-                                <div className="dot"></div>
-                                <div className="dot"></div>
-                            </div>
+                                    <img 
+                                        src={song.cover_url} 
+                                        alt={song.track_name}
+                                        className="mr-3 rounded"
+                                        style={{ width: '48px', height: '48px', objectFit: 'cover', flexShrink: 0 }}
+                                    />
 
-                            <img src={song.cover_url} alt={song.track_name} />
+                                    <div className="flex-grow-1" style={{ minWidth: 0, overflow: 'hidden' }}>
+                                        <div className="font-weight-bold text-truncate">{song.track_name}</div>
+                                        <div className="text-muted small text-truncate">{song.artist_name}</div>
+                                        <div className="text-muted small">{song.track_length}</div>
+                                    </div>
 
-                            <div className="song-info">
-                                <div className="track-name">{song.track_name}</div>
-                                <div className="artist-name">{song.artist_name}</div>
-                                <div className="duration">{song.track_length}</div>
-                            </div>
-
-                            <button
-                                onClick={() => onRemoveSong(index)}
-                                className="remove-song-button"
-                                title="Remove song"
-                            >
-                                <FontAwesomeIcon icon={faTrash} />
-                            </button>
-                        </div>
-                    ))}
-                </ReactSortable>
-            )}
-        </div>
+                                    <Button
+                                        color="link"
+                                        size="sm"
+                                        onClick={() => onRemoveSong(index)}
+                                        title="Remove song"
+                                        className="text-danger p-0 ml-2"
+                                    >
+                                        <FontAwesomeIcon icon={faTrash} />
+                                    </Button>
+                                </ListGroupItem>
+                            ))}
+                        </ListGroup>
+                    </ReactSortable>
+                )}
+            </CardBody>
+        </Card>
     );
 };
 

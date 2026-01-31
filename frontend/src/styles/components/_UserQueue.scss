@@ -1,180 +1,19 @@
 @use '../_mixins.scss' as *;
 
 .user-queue-container {
-  @include flex-column;
-  gap: var(--spacing-md);
-  height: 100%;
+  .list-group-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 
-  .queue-header {
-    @include flex-center;
-    justify-content: space-between;
-    padding: var(--spacing-md);
-    background: var(--secondary-color);
-    border-radius: var(--border-radius-md);
-
-    .user-queue-title {
-      color: var(--text-color);
-      font-size: 1.5em;
-      margin: 0;
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
-    .clear-queue-button {
-      @include control-button;
-      color: var(--accent-color);
-      font-size: 1.2em;
+    .drag-handle {
+      cursor: grab;
 
-      &:hover {
-        color: var(--accent-color-darkened);
-      }
-    }
-  }
-
-  .empty-queue {
-    @include flex-column;
-    @include flex-center;
-    gap: var(--spacing-md);
-    padding: var(--spacing-xl);
-    text-align: center;
-    color: var(--text-color-lightened);
-    background: var(--secondary-color);
-    border-radius: var(--border-radius-md);
-    height: 100%;
-
-    .music-icon {
-      font-size: 3em;
-      color: var(--tertiary-color);
-    }
-
-    .empty-queue-subtitle {
-      font-size: 0.9em;
-      color: var(--text-color-lightened);
-    }
-  }
-
-  .sortable-list {
-    @include flex-column;
-    gap: var(--spacing-sm);
-    height: 100%;
-    overflow-y: auto;
-    @include custom-scrollbar;
-
-    .queue-item {
-      @include flex-center;
-      background: var(--secondary-color);
-      border-radius: var(--border-radius-md);
-      padding: var(--spacing-md);
-      gap: var(--spacing-md);
-      transition: var(--transition-normal);
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      }
-
-      &.locked {
-        opacity: 0.8;
-        pointer-events: none;
-        border: 2px solid var(--accent-color);
-        background-color: var(--secondary-color-darkened);
-        
-        .lock-icon {
-          color: var(--accent-color);
-          font-size: 1.1em;
-        }
-        
-        .lock-status {
-          color: var(--accent-color);
-          font-size: 0.8em;
-          font-style: italic;
-          margin-top: var(--spacing-xs);
-        }
-      }
-
-      .order-number {
-        color: var(--text-color-lightened);
-        font-size: 0.9em;
-        min-width: 24px;
-        text-align: center;
-      }
-
-      .drag-handle {
-        @include flex-center;
-        gap: var(--spacing-xs);
-        cursor: grab;
-        padding: var(--spacing-xs);
-
-        .dot {
-          width: 4px;
-          height: 4px;
-          background: var(--text-color-lightened);
-          border-radius: 50%;
-        }
-      }
-
-      img {
-        width: 48px;
-        height: 48px;
-        border-radius: var(--border-radius-sm);
-        object-fit: cover;
-      }
-
-      .song-info {
-        @include flex-column;
-        flex: 1;
-        min-width: 0;
-        gap: var(--spacing-xs);
-
-        .track-name {
-          color: var(--text-color);
-          font-weight: 600;
-          @include text-truncate;
-        }
-
-        .artist-name {
-          color: var(--text-color-lightened);
-          font-size: 0.9em;
-          @include text-truncate;
-        }
-
-        .duration {
-          color: var(--text-color-lightened);
-          font-size: 0.8em;
-        }
-      }
-
-      .remove-song-button {
-        @include control-button;
-        color: var(--accent-color);
-
-        &:hover {
-          color: var(--accent-color-darkened);
-        }
-      }
-
-      &.spotify {
-        border-left: 4px solid #1DB954;
-      }
-
-      &.youtube {
-        border-left: 4px solid #FF0000;
-      }
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .user-queue-container {
-    .queue-item {
-      padding: var(--spacing-sm);
-      gap: var(--spacing-sm);
-
-      img {
-        width: 40px;
-        height: 40px;
-      }
-
-      .drag-handle {
-        display: none;
+      &:active {
+        cursor: grabbing;
       }
     }
   }

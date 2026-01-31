@@ -5,9 +5,10 @@ import { faSpotify, faYoutube } from '@fortawesome/free-brands-svg-icons';
 
 interface SearchBarProps {
     onSearch: (input: string, source: string) => void;
+    onSearchStateChange?: (hasSearched: boolean) => void;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onSearchStateChange }) => {
     const [searchSource, setSearchSource] = useState('spotify');
     const [searchInput, setSearchInput] = useState('');
 
@@ -39,34 +40,40 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         }
     
         setSearchInput('');
+        if (onSearchStateChange) {
+            onSearchStateChange(true);
+        }
     };
     
     return (
         <div className="search-container">
-            <div className="source-switcher">
+            <div className="btn-group mb-2" role="group">
                 <button
-                    className={`source-button ${searchSource === 'spotify' ? 'active' : ''}`}
+                    type="button"
+                    className={`btn ${searchSource === 'spotify' ? 'btn-success' : 'btn-outline-secondary'}`}
                     onClick={() => setSearchSource('spotify')}
                     title="Search on Spotify"
                 >
                     <FontAwesomeIcon icon={faSpotify} />
                 </button>
                 <button
-                    className={`source-button ${searchSource === 'youtube' ? 'active' : ''}`}
+                    type="button"
+                    className={`btn ${searchSource === 'youtube' ? 'btn-danger' : 'btn-outline-secondary'}`}
                     onClick={() => setSearchSource('youtube')}
                     title="Search on YouTube"
                 >
                     <FontAwesomeIcon icon={faYoutube} />
                 </button>
             </div>
-            <form onSubmit={handleSearch} className="search-form">
+            <form onSubmit={handleSearch} className="d-flex">
                 <input
                     type="text"
+                    className="form-control mr-2"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     placeholder={`Search for a song or enter a ${searchSource} link...`}
                 />
-                <button type="submit" className="search-button">
+                <button type="submit" className="btn btn-primary">
                     <FontAwesomeIcon icon={faSearch} />
                 </button>
             </form>

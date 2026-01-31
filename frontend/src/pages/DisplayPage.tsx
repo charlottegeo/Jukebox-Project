@@ -17,17 +17,20 @@ const DisplayPage: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
   const animationIntervalRef = useRef<NodeJS.Timer | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const catImageRef = useRef<HTMLImageElement | null>(null);
   const lastLoggedBpmRef = useRef<number | null>(null);
   const currentTrackIdRef = useRef<string | null>(null);
   const loadedTrackIdRef = useRef<string | null>(null);
   const currentlyPlayingSrcRef = useRef<string | null>(null);
+  const animationTrackIdRef = useRef<string | null>(null);
+  const animationColorRef = useRef<string>(currentCatColor);
 
   const getBpmForTime = (time: number): number => {
     if (!currentSong) return 120;
     
     if (!currentSong.tempoMap || currentSong.tempoMap.length === 0) {
       return currentSong.bpm || 120;
-    }
+      }
 
     let bpm = currentSong.bpm || 120;
     
@@ -41,14 +44,18 @@ const DisplayPage: React.FC = () => {
     
     return bpm;
   };
-  
+
   const animateFrames = (bpm: number, colorOverride?: string) => {
+    if (!catImageRef.current) {
+      console.warn('[Animation] catImageRef.current is null, cannot start animation');
+      return;
+    }
+
     let currentFrameIndex = 0;
     let currentIncrement = true;
     const currentColor = colorOverride ?? currentCatColor;
-    const imgElement = document.getElementById('pusay') as HTMLImageElement;
-    if (imgElement) {
-      const currentSrc = imgElement.src;
+    
+    const currentSrc = catImageRef.current.src;
       const currentFrame = currentSrc.split('/').pop()?.replace('.png', '');
 
       if (currentFrame === 'PusayLeft') {
@@ -61,7 +68,6 @@ const DisplayPage: React.FC = () => {
       } else if (currentFrame === 'PusayRight') {
         currentFrameIndex = 2;
         currentIncrement = false;
-      }
     }
 
     if (animationIntervalRef.current) {
@@ -75,8 +81,7 @@ const DisplayPage: React.FC = () => {
     let beatPhase = 0.0;
 
     const updateFrame = () => {
-      const imgElement = document.getElementById('pusay') as HTMLImageElement;
-      if (!imgElement || !audioRef.current) {
+      if (!catImageRef.current || !audioRef.current) {
         if (animationIntervalRef.current) {
           clearInterval(animationIntervalRef.current as unknown as number);
           animationIntervalRef.current = null;
@@ -109,24 +114,31 @@ const DisplayPage: React.FC = () => {
       while (beatPhase >= 1.0) {
         beatPhase -= 1.0;
 
-        const currentImgElement = document.getElementById('pusay') as HTMLImageElement;
-        if (currentImgElement) {
-          const frame = frames[frameIndex];
-          const imgSrc = `/images/cats/${currentColor}/${frame}.png`;
-          currentImgElement.src = imgSrc;
-        }
-
-        if (increment) {
-          frameIndex++;
+        if (catImageRef.current) {
+        const frame = frames[frameIndex];
+        const imgSrc = `/images/cats/${currentColor}/${frame}.png`;
+          if (catImageRef.current.src !== imgSrc) {
+            catImageRef.current.src = imgSrc;
+          }
         } else {
-          frameIndex--;
-        }
-        if (frameIndex === frames.length - 1) {
-          increment = false;
-        }
-        if (frameIndex === 0) {
-          increment = true;
-        }
+          if (animationIntervalRef.current) {
+            clearInterval(animationIntervalRef.current as unknown as number);
+            animationIntervalRef.current = null;
+          }
+          return;
+      }
+
+      if (increment) {
+        frameIndex++;
+      } else {
+        frameIndex--;
+      }
+      if (frameIndex === frames.length - 1) {
+        increment = false;
+      }
+      if (frameIndex === 0) {
+        increment = true;
+      }
       }
     };
 
@@ -134,11 +146,10 @@ const DisplayPage: React.FC = () => {
   };
 
   const setCatImage = (frame: string, colorOverride?: string) => {
-    const imgElement = document.getElementById('pusay') as HTMLImageElement;
-    if (imgElement) {
+    if (catImageRef.current) {
       const color = colorOverride ?? currentCatColor;
       const imgSrc = `/images/cats/${color}/${frame}.png`;
-      imgElement.src = imgSrc;
+      catImageRef.current.src = imgSrc;
     }
   };  
 
@@ -150,7 +161,6 @@ const DisplayPage: React.FC = () => {
     setCatImage('PusayCenter');
   };
 
-
   const calculateSeekTime = (): number => {
     if (!playbackStartTime) return 0;
     return Math.max(0, (Date.now() - playbackStartTime) / 1000);
@@ -158,7 +168,6 @@ const DisplayPage: React.FC = () => {
 
   useEffect(() => {
     if (!audioRef.current) return;
-
     audioRef.current.volume = volume / 100;
 
     if (isPaused) {
@@ -212,8 +221,8 @@ const DisplayPage: React.FC = () => {
           }
         } else {
           audioRef.current.currentTime = 0;
-        }
-        
+      }
+
         if (!isPaused) {
           audioRef.current.play().catch(e => {
             if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
@@ -241,67 +250,78 @@ const DisplayPage: React.FC = () => {
   }, [currentSong?.track_id, currentSong?.id, currentSong?.audioPath, playbackStartTime, isPaused]);
 
   useEffect(() => {
-    if (!isPaused && currentSong?.bpm && currentSong.audioPath) {
-      const initialBpm = currentSong.bpm;
-      animateFrames(initialBpm, currentCatColor);
-    } else {
-      resetCatAnimation();
-    }
+    const trackId = currentSong?.track_id || currentSong?.id;
+    const shouldAnimate = !isPaused && currentSong?.bpm && currentSong?.audioPath;
+    const trackChanged = animationTrackIdRef.current !== trackId;
+    const colorChanged = animationColorRef.current !== currentCatColor;
+    const animationRunning = animationIntervalRef.current !== null;
 
-    return () => {
+    if (shouldAnimate && (trackChanged || !animationRunning || colorChanged)) {
+      animationTrackIdRef.current = trackId || null;
+      animationColorRef.current = currentCatColor;
+      
       if (animationIntervalRef.current) {
         clearInterval(animationIntervalRef.current as unknown as number);
         animationIntervalRef.current = null;
       }
+      
+      const initialBpm = currentSong.bpm!;
+      console.log('[Animation] Starting animation for track:', trackId, 'BPM:', initialBpm, 'Color:', currentCatColor);
+      
+      setTimeout(() => {
+        if (catImageRef.current) {
+          animateFrames(initialBpm, currentCatColor);
+        } else {
+          console.warn('[Animation] catImageRef not set, retrying...');
+          setTimeout(() => {
+            if (catImageRef.current && animationTrackIdRef.current === trackId) {
+              animateFrames(initialBpm, currentCatColor);
+            }
+          }, 100);
+        }
+      }, 0);
+    } else if (!shouldAnimate) {
+      if (animationIntervalRef.current) {
+        clearInterval(animationIntervalRef.current as unknown as number);
+        animationIntervalRef.current = null;
+      }
+      animationTrackIdRef.current = null;
+      if (!currentSong?.audioPath) {
+        resetCatAnimation();
+      }
+    }
+
+    return () => {
     };
-  }, [isPaused, currentSong?.bpm, currentSong?.audioPath, currentCatColor]);
+  }, [isPaused, currentSong?.track_id, currentSong?.id, currentSong?.bpm, currentSong?.audioPath, currentCatColor]);
 
   useEffect(() => {
     if (!animationIntervalRef.current) {
       setCatImage('PusayCenter', currentCatColor);
-    }
+          }
   }, [currentCatColor]);
   
   useEffect(() => {
     if (!socket) return;
-    
     socket.emit('register_display');
-    
-    const handleRedirect = () => {
-      console.log('Another display is already open, redirecting to home...');
-      window.location.href = '/';
-    };
-    
+    const handleRedirect = () => window.location.href = '/';
     socket.on('redirect_to_home', handleRedirect);
-    
-    return () => {
-      socket.off('redirect_to_home', handleRedirect);
-    };
+    return () => { socket.off('redirect_to_home', handleRedirect); };
   }, [socket]);
 
   useEffect(() => {
     if (!socket || !currentSong?.audioPath) return;
-    
-    const refreshToken = () => {
-      socket.emit('refresh_stream_token');
-    };
-    
+    const refreshToken = () => socket.emit('refresh_stream_token');
     const tokenRefreshInterval = setInterval(refreshToken, 4 * 60 * 1000);
-    
     refreshToken();
-    
-    return () => {
-      clearInterval(tokenRefreshInterval);
-    };
+    return () => clearInterval(tokenRefreshInterval);
   }, [socket, currentSong?.audioPath]);
 
   const handleAudioEnded = () => {
-    console.log('Audio finished playing');
     setProgress(0);
     resetCatAnimation();
     socket?.emit('song_finished');
   };
-
 
   const renderPlayer = () => {
     const isSongLoading = currentSong && (isLoading || !currentSong.audioPath);
@@ -317,7 +337,12 @@ const DisplayPage: React.FC = () => {
             </div>
           </div>
           <div className={styles.catContainer}>
-            <img id="pusay" src={`/images/cats/${currentCatColor}/PusayCenter.png`} alt="Pusay" />
+            <img 
+              id="pusay" 
+              ref={catImageRef} 
+              src={`/images/cats/${currentCatColor}/PusayCenter.png`} 
+              alt="Pusay" 
+            />
           </div>
         </div>
       );
@@ -341,8 +366,10 @@ const DisplayPage: React.FC = () => {
             crossOrigin="anonymous"
             style={{ display: 'none' }}
           >
-            <source src={currentSong.audioPath} type="audio/mpeg" />
-            Your browser does not support the audio element.
+            <source 
+              src={currentSong.audioPath} 
+              type={currentSong.audioPath.endsWith('.m4a') ? "audio/mp4" : "audio/mpeg"} 
+            />
           </audio>
         )}
         <div className={styles.songInfoContainer}>
@@ -363,21 +390,26 @@ const DisplayPage: React.FC = () => {
               <div className={styles.trackName}>Loading song...</div>
             ) : (
               <>
-                <div className={styles.trackName}>{currentSong.track_name}</div>
-                <div className={styles.artistName}>{currentSong.artist_name}</div>
-                <div className={styles.submittedBy}>Added by {currentSong.submittedBy}</div>
-                <div className={styles.progressContainer}>
-                  <progress 
+            <div className={styles.trackName}>{currentSong.track_name}</div>
+            <div className={styles.artistName}>{currentSong.artist_name}</div>
+            <div className={styles.submittedBy}>Added by {currentSong.submittedBy}</div>
+            <div className={styles.progressContainer}>
+              <progress 
                     className={styles.progressBar}
-                    value={progress} 
-                    max="100"
-                  />
-                </div>
+                value={progress} 
+                max="100"
+              />
+            </div>
               </>
             )}
           </div>
           <div className={styles.catContainer}>
-            <img id="pusay" src={`/images/cats/${currentCatColor}/PusayCenter.png`} alt="Dancing Cat" />
+            <img 
+              id="pusay" 
+              ref={catImageRef}
+              src={`/images/cats/${currentCatColor}/PusayCenter.png`}
+              alt="Dancing Cat" 
+            />
           </div>
         </div>
       </>

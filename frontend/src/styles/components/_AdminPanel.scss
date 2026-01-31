@@ -85,24 +85,6 @@
         @include flex-center;
         gap: var(--spacing-sm);
         flex-wrap: wrap;
-
-        .control-button {
-          @extend .button;
-          background: var(--tertiary-color);
-          color: var(--text-color);
-
-          &:hover {
-            background: var(--tertiary-color-darkened);
-          }
-
-          &.danger {
-            background: var(--accent-color);
-
-            &:hover {
-              background: var(--accent-color-darkened);
-            }
-          }
-        }
       }
     }
 
