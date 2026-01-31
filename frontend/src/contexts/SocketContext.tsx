@@ -13,8 +13,6 @@ interface SocketContextType {
   myQueue: Song[];
   myColor: string | null;
   isAdmin: boolean;
-  isQueueLocked: boolean;
-  lockedSongId: string | null;
 
   allQueues: Song[];
   userColors: { [key: string]: string };
@@ -26,6 +24,7 @@ interface SocketContextType {
   isPaused: boolean;
   activeUserCount: number;
   songLengthLimit: number;
+  playbackStartTime: number | null;
 
   setMyColor: (color: string) => void;
   setVolume: (volume: number) => void;
@@ -51,8 +50,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [myQueue, setMyQueue] = useState<Song[]>([]);
   const [myColor, setMyColor] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isQueueLocked, setIsQueueLocked] = useState(false);
-  const [lockedSongId, setLockedSongId] = useState<string | null>(null);
   
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [allQueues, setAllQueues] = useState<Song[]>([]);
@@ -64,6 +61,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activeUserCount, setActiveUserCount] = useState(0);
   const [songLengthLimit, setSongLengthLimit] = useState<number>(10);
   const [volume, setVolume] = useState<number>(50);
+  const [playbackStartTime, setPlaybackStartTime] = useState<number | null>(null);
 
   const { user } = useAuth();
   const { showMessage } = useMessage();
@@ -107,18 +105,18 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setAllQueues(data.queue);
       } else if (data.uid === uid) {
         setMyQueue(data.queue);
-        if (data.queue.length === 0 || !data.queue.some(song => song.id === lockedSongId)) {
-          setIsQueueLocked(false);
-          setLockedSongId(null);
-        }
       }
     };
 
-    const handleUpdateCurrentSong = (data: { currentSong: Song | null; isLoading?: boolean }) => {
+    const handleUpdateCurrentSong = (data: { currentSong: Song | null; isLoading?: boolean; playbackStartTime?: number | null }) => {
       setCurrentSong(data.currentSong);
-      setIsPaused(false);
       if (data.isLoading !== undefined) setIsLoading(data.isLoading);
-      if (!data.currentSong) setCurrentCatColor('White');
+      if (data.playbackStartTime !== undefined) setPlaybackStartTime(data.playbackStartTime);
+      if (!data.currentSong) {
+        setCurrentCatColor('White');
+        setPlaybackStartTime(null);
+        setIsPaused(false);
+      }
     };
 
     const handleQueueEmpty = () => {
@@ -126,6 +124,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsPaused(false);
       setIsLoading(false);
       setCurrentCatColor('White');
+      setPlaybackStartTime(null);
     };
 
     const handlePausePlay = (data: { isPaused: boolean }) => setIsPaused(data.isPaused);
@@ -149,14 +148,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    const handlePreloadedNextSong = (data: { song: Song }) => {
-      if (data.song.submittedBy === uid) {
-        setIsQueueLocked(true);
-        setLockedSongId(data.song.id);
-        showMessage('Your next song is preloaded and ready to play', 'info');
-      }
-    };
-
     const handleMessageBox = (data: { type: 'success' | 'error' | 'warning'; message: string }) => showMessage(data.message, data.type);
     const handleAddSong = (data: { song: Song, uid: string }) => { if (data.uid === uid) showMessage(`Added "${data.song.track_name}"`, 'success'); };
     const handleAddPlaylist = (data: { uid: string; successCount: number; failureCount: number }) => { if (data.uid === uid) showMessage(`Added ${data.successCount} songs from playlist`, 'success'); };
@@ -170,7 +161,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket.on('updateActiveUsers', handleActiveUsers);
     socket.on('updateUserCatColor', handleUpdateUserColor);
     socket.on('updateAdminStatus', handleUpdateAdminStatus);
-    socket.on('preloaded_next_song', handlePreloadedNextSong);
     socket.on('updateSongLengthLimit', handleSongLengthLimit);
     socket.on('volume_change', handleVolumeChange);
     socket.on('song_download_complete', handleSongDownloaded);
@@ -189,7 +179,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       socket.off('updateActiveUsers');
       socket.off('updateUserCatColor');
       socket.off('updateAdminStatus');
-      socket.off('preloaded_next_song');
       socket.off('updateSongLengthLimit');
       socket.off('volume_change');
       socket.off('song_download_complete');
@@ -199,7 +188,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       socket.off('addPlaylistToQueue');
       socket.off('addAlbumToQueue');
     };
-  }, [socket, isConnected, uid, userInfo, showMessage, lockedSongId]);
+  }, [socket, isConnected, uid, userInfo, showMessage]);
 
   useEffect(() => {
     if (currentSong && userColors[currentSong.submittedBy]) {
@@ -228,8 +217,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     myQueue,
     myColor,
     isAdmin,
-    isQueueLocked,
-    lockedSongId,
     allQueues,
     userColors,
     currentCatColor,
@@ -239,6 +226,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isPaused,
     activeUserCount,
     songLengthLimit,
+    playbackStartTime,
     setMyColor: handleSetMyColor,
     setVolume: handleSetVolume,
     isAdminPanelOpen,

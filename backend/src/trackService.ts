@@ -13,9 +13,13 @@ const clientId = process.env.SPOTIFY_CLIENT_ID as string;
 const clientSecret = process.env.SPOTIFY_CLIENT_SECRET as string;
 const spotifyApi = SpotifyApi.withClientCredentials(clientId, clientSecret);
 
-export const downloadSpotifyAudio = async (
+/**
+ * Finds the YouTube URL for a Spotify track without downloading
+ * Returns the YouTube URL if found, null otherwise
+ */
+export const findYouTubeUriForSpotifyTrack = async (
   track_id: string,
-): Promise<string> => {
+): Promise<string | null> => {
   try {
     const track = await spotifyApi.tracks.get(track_id);
     const isrc = track.external_ids?.isrc;
@@ -23,7 +27,6 @@ export const downloadSpotifyAudio = async (
     const artistName = track.artists[0]?.name || "";
     const expectedDurationSec = Math.floor(track.duration_ms / 1000);
 
-    const finalOutputPath = `/app/downloads/${track_id}.mp3`;
     const clean = (q: string) => q.replace(/'/g, "");
 
     const searchQueries = [
@@ -34,7 +37,7 @@ export const downloadSpotifyAudio = async (
     let targetVideoId: string | null = null;
 
     for (const query of searchQueries) {
-      console.log(`[SEARCH] Query: ${query}`);
+      console.log(`[PRE-FETCH SEARCH] Query: ${query}`);
       const searchResult = await youtubeSearchApi.GetListByKeyword(
         query!,
         false,
@@ -50,9 +53,6 @@ export const downloadSpotifyAudio = async (
         const title = video.title.toLowerCase();
         const artistMatch = title.includes(artistName.toLowerCase());
 
-        console.log(
-          `[CHECK] "${video.title}" | Dur: ${videoDurationSec}s | Diff: ${diff}s | Artist Match: ${artistMatch}`,
-        );
         if (
           videoDurationSec > 0 &&
           (diff <= 20 || (diff <= 50 && artistMatch))
@@ -65,57 +65,154 @@ export const downloadSpotifyAudio = async (
     }
 
     if (!targetVideoId) {
-      throw new Error(
-        `No accurate YouTube match found for: ${trackName} (${artistName})`,
+      console.log(
+        `[PRE-FETCH] No YouTube match found for: ${trackName} (${artistName})`,
       );
+      return null;
     }
 
-    console.log(
-      `[MATCH FOUND] Choosing: ${targetVideoId}. Starting download...`,
-    );
+    const youtubeUrl = `https://www.youtube.com/watch?v=${targetVideoId}`;
+    console.log(`[PRE-FETCH] Found YouTube URL for ${trackName}: ${youtubeUrl}`);
+    return youtubeUrl;
+  } catch (error) {
+    console.error("Error finding YouTube URI for Spotify track:", error);
+    return null;
+  }
+};
 
-    await new Promise<void>((resolve, reject) => {
-      const url = `https://www.youtube.com/watch?v=${targetVideoId}`;
-      const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 --no-playlist --no-cache-dir --no-part --force-overwrites -o "${finalOutputPath.replace(".mp3", ".%(ext)s")}" "${url}"`;
+export const downloadSpotifyAudio = async (
+  track_id: string,
+  youtubeUri?: string,
+): Promise<string> => {
+  try {
+    let targetVideoId: string | null = null;
 
-      exec(command, (error, stdout, stderr) => {
-        if (error) return reject(new Error(stderr));
-        resolve();
-      });
-    });
+    if (youtubeUri) {
+      targetVideoId = extractYouTubeVideoId(youtubeUri);
+      if (targetVideoId) {
+        console.log(`[DOWNLOAD] Using pre-fetched YouTube URL: ${youtubeUri}`);
+      }
+    }
 
-    return `/downloads/${track_id}.mp3`;
+    if (!targetVideoId) {
+      const track = await spotifyApi.tracks.get(track_id);
+      const isrc = track.external_ids?.isrc;
+      const trackName = track.name;
+      const artistName = track.artists[0]?.name || "";
+      const expectedDurationSec = Math.floor(track.duration_ms / 1000);
+
+      const clean = (q: string) => q.replace(/'/g, "");
+
+      const searchQueries = [
+        isrc ? `${isrc}` : null,
+        `"${clean(artistName)}" "${clean(trackName)}" official audio`,
+      ].filter(Boolean) as string[];
+
+      for (const query of searchQueries) {
+        console.log(`[SEARCH] Query: ${query}`);
+        const searchResult = await youtubeSearchApi.GetListByKeyword(
+          query!,
+          false,
+          5,
+          [{ type: "video" }],
+        );
+
+        for (const video of searchResult.items) {
+          const videoDurationSec = parseYouTubeDurationToSeconds(
+            video.length?.simpleText || "0:00",
+          );
+          const diff = Math.abs(videoDurationSec - expectedDurationSec);
+          const title = video.title.toLowerCase();
+          const artistMatch = title.includes(artistName.toLowerCase());
+
+          console.log(
+            `[CHECK] "${video.title}" | Dur: ${videoDurationSec}s | Diff: ${diff}s | Artist Match: ${artistMatch}`,
+          );
+          if (
+            videoDurationSec > 0 &&
+            (diff <= 20 || (diff <= 50 && artistMatch))
+          ) {
+            targetVideoId = video.id;
+            break;
+          }
+        }
+        if (targetVideoId) break;
+      }
+
+      if (!targetVideoId) {
+        throw new Error(
+          `No accurate YouTube match found for: ${trackName} (${artistName})`,
+        );
+      }
+    }
+
+    console.log(`[MATCH FOUND] Choosing: ${targetVideoId}. Starting download...`);
+    return await downloadYouTubeVideoAudio(targetVideoId, track_id);
   } catch (error) {
     console.error("Spotify download failed:", error);
     throw error;
   }
 };
 
-const runDownload = (videoId: string, outputPath: string) => {
-  return new Promise<void>((resolve, reject) => {
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 --no-playlist --no-cache-dir --no-part --force-overwrites -o "${outputPath.replace(".mp3", ".%(ext)s")}" "${url}"`;
+/**
+ * Extract video ID from various YouTube URL formats
+ */
+const extractYouTubeVideoId = (url: string): string | null => {
+  if (url.includes("watch?v=")) {
+    return url.split("watch?v=")[1].split("&")[0].split("#")[0];
+  } else if (url.includes("youtu.be/")) {
+    return url.split("youtu.be/")[1].split("?")[0].split("&")[0].split("#")[0];
+  } else if (url.includes("/v/")) {
+    return url.split("/v/")[1].split("?")[0].split("&")[0].split("#")[0];
+  }
+  return null;
+};
 
+/**
+ * Shared function to download audio from YouTube using yt-dlp
+ * @param videoId - YouTube video ID
+ * @param outputFilename - Filename (without extension) for the output file
+ * @returns Promise resolving to the local file path (e.g., "/downloads/filename.mp3")
+ */
+const downloadYouTubeVideoAudio = async (
+  videoId: string,
+  outputFilename: string,
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    const finalOutputPath = `/app/downloads/${outputFilename}.mp3`;
+    const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 --no-playlist --no-cache-dir --no-part --force-overwrites --downloader aria2c --downloader-args "aria2c:-x 4 -s 4 -k 1M" -o "${finalOutputPath.replace(".mp3", ".%(ext)s")}" "${url}"`;
+
+    console.log(`[DOWNLOAD] Executing yt-dlp command for video ${videoId}`);
     exec(command, (error, stdout, stderr) => {
-      if (error) return reject(new Error(stderr));
-      resolve();
+      if (error) {
+        console.error(`[DOWNLOAD] Error downloading YouTube audio (${videoId}): ${stderr}`);
+        console.error(`[DOWNLOAD] Command was: ${command}`);
+        return reject(new Error(stderr));
+      }
+      console.log(`[DOWNLOAD] Successfully downloaded ${videoId} to ${finalOutputPath}`);
+      if (stdout) {
+        console.log(`[DOWNLOAD] yt-dlp output: ${stdout.substring(0, 200)}`);
+      }
+      resolve(`/downloads/${outputFilename}.mp3`);
     });
   });
 };
 
-export const downloadYouTubeAudio = (youtubeUrl: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const command = `yt-dlp --extract-audio --audio-format mp3 -o "/app/downloads/%(id)s.%(ext)s" ${youtubeUrl}`;
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error downloading YouTube audio: ${stderr}`);
-        return reject(error);
-      }
-      const youtubeId = youtubeUrl.split("v=")[1];
-      const audioPath = `/downloads/${youtubeId}.mp3`;
-      resolve(audioPath);
-    });
-  });
+export const downloadYouTubeAudio = async (youtubeUrl: string): Promise<string> => {
+  console.log(`[DOWNLOAD] Starting YouTube download for: ${youtubeUrl}`);
+  
+  const videoId = extractYouTubeVideoId(youtubeUrl);
+  
+  if (!videoId) {
+    console.error(`[DOWNLOAD] Failed to extract video ID from URL: ${youtubeUrl}`);
+    throw new Error(`Could not extract video ID from URL: ${youtubeUrl}`);
+  }
+  
+  console.log(`[DOWNLOAD] Extracted video ID: ${videoId}, starting download...`);
+  const result = await downloadYouTubeVideoAudio(videoId, videoId);
+  console.log(`[DOWNLOAD] YouTube download complete: ${result}`);
+  return result;
 };
 
 export const searchYouTube = async (
@@ -151,13 +248,7 @@ export const searchYouTube = async (
 
 export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
   try {
-    let videoId: string | null = null;
-
-    if (link.includes("watch?v=")) {
-      videoId = link.split("watch?v=")[1].split("&")[0];
-    } else if (link.includes("youtu.be/")) {
-      videoId = link.split("youtu.be/")[1].split("?")[0];
-    }
+    const videoId = extractYouTubeVideoId(link);
 
     if (videoId) {
       const videoDetails = await youtubeSearchApi.GetVideoDetails(videoId);

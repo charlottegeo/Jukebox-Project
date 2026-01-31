@@ -12,13 +12,20 @@ interface AdminPanelProps {
   volume: number;
   onVolumeChange: (volume: number) => void;
   currentUser?: string;
+  isPaused?: boolean;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolumeChange, currentUser }) => {
-  const [isPlaying, setIsPlaying] = useState(true);
+const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolumeChange, currentUser, isPaused: serverIsPaused }) => {
+  const [isPlaying, setIsPlaying] = useState(!(serverIsPaused ?? false));
   const [previousVolume, setPreviousVolume] = useState<number>(volume);
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
   const [songLengthLimit, setSongLengthLimit] = useState<number>(10);
+
+  useEffect(() => {
+    if (serverIsPaused !== undefined) {
+      setIsPlaying(!serverIsPaused);
+    }
+  }, [serverIsPaused]);
 
   useEffect(() => {
     if (!socket) return;
@@ -33,8 +40,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
       setSongLengthLimit(data.limit);
     };
 
+    const handlePausePlay = (data: { isPaused: boolean }) => {
+      setIsPlaying(!data.isPaused);
+    };
+
     socket.on('updateActiveUsers', handleActiveUsers);
     socket.on('updateSongLengthLimit', handleSongLengthLimit);
+    socket.on('toggle_pause_play', handlePausePlay);
 
     socket.emit('getActiveUsers');
     socket.emit('getSongLengthLimit');
@@ -42,6 +54,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
     return () => {
       socket.off('updateActiveUsers', handleActiveUsers);
       socket.off('updateSongLengthLimit', handleSongLengthLimit);
+      socket.off('toggle_pause_play', handlePausePlay);
     };
   }, [socket]);
 
@@ -50,8 +63,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
   };
 
   const handlePausePlay = () => {
-    setIsPlaying(!isPlaying);
-    socket?.emit('pause_play', { isPaused: isPlaying });
+    const newState = !isPlaying;
+    setIsPlaying(newState);
+    socket?.emit('pause_play', { isPaused: newState });
   };
 
   const handleRefreshDisplay = () => {

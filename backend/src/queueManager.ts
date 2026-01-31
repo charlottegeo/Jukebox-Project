@@ -5,7 +5,18 @@ import {
   downloadSpotifyAudio,
   downloadYouTubeAudio,
 } from './trackService.js';
+import { analyzeBPM } from './bpmAnalyzer.js';
 import { Song } from './interfaces';
+import { generateShortLivedToken } from './streamToken.js';
+
+const getBackendUrl = () => process.env.BACKEND_URL || 'http://localhost:3001';
+
+const buildAudioPath = (localPath: string): string => {
+  const backendUrl = getBackendUrl();
+  const filename = path.basename(localPath);
+  const streamToken = generateShortLivedToken();
+  return `${backendUrl}/api/stream/${filename}?streamToken=${streamToken}`;
+};
 
 export const deleteAudioFile = (audioPath: string) => {
   if (!audioPath) return;
@@ -21,49 +32,70 @@ export const deleteAudioFile = (audioPath: string) => {
 };
 
 export const preloadNextSong = async () => {
-  if (stateManager.isDownloadInProgress() || !stateManager.hasAnyQueueLeft()) {
+  if (!stateManager.hasAnyQueueLeft()) {
     return;
   }
 
-  const nextUser = stateManager.getNextUser();
-  if (!nextUser) {
+  const userOrder = stateManager.getUserOrder();
+  if (userOrder.length === 0) {
     return;
   }
 
-  const userQueue = stateManager.getUserQueue(nextUser);
-  if (!userQueue || userQueue.length === 0) {
+  let nextUser: string | null = null;
+  let nextSong: Song | null = null;
+
+  for (const uid of userOrder) {
+    const userQueue = stateManager.getUserQueue(uid);
+    if (userQueue && userQueue.length > 0) {
+      nextUser = uid;
+      nextSong = userQueue[0];
+      break;
+    }
+  }
+
+  if (!nextUser || !nextSong) {
     return;
   }
 
-  const nextSong = userQueue[0];
   const currentSong = stateManager.getCurrentSong();
-
   if (currentSong && (currentSong.id === nextSong.id || currentSong.track_id === nextSong.track_id)) {
     return;
   }
 
-  stateManager.setLockedState(nextUser, nextSong);
+  if (nextSong.audioPath && nextSong.bpm !== undefined) {
+    return;
+  }
 
   try {
-    let audioPath = nextSong.audioPath;
-    if (!audioPath) {
-      audioPath = await (nextSong.source === 'spotify'
-        ? downloadSpotifyAudio(nextSong.track_id)
+    let localPath: string;
+    
+    if (!nextSong.audioPath) {
+      localPath = await (nextSong.source === 'spotify'
+        ? downloadSpotifyAudio(nextSong.track_id, nextSong.youtubeUri)
         : downloadYouTubeAudio(nextSong.uri));
+      nextSong.audioPath = buildAudioPath(localPath);
+      stateManager.updateSongInQueue(nextUser, 0, nextSong);
+    } else {
+      const urlMatch = nextSong.audioPath.match(/\/stream\/([^?]+)/);
+      if (urlMatch) {
+        localPath = `/app/downloads/${urlMatch[1]}`;
+      } else {
+        const pathWithoutQuery = nextSong.audioPath.split('?')[0];
+        const filename = path.basename(pathWithoutQuery);
+        localPath = `/app/downloads/${filename}`;
+      }
     }
 
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-    nextSong.audioPath = `${backendUrl}/downloads/${path.basename(audioPath)}`;
-    console.log('Updating song with audioPath:', nextSong);
-    stateManager.updateSongInQueue(nextUser, 0, nextSong);
-    
-    stateManager.setLockedState(nextUser, nextSong); 
-    stateManager.setDownloadInProgress(false);
-    
-    console.log('Updated song with audioPath:', nextSong);
+    if (nextSong.bpm === undefined) {
+      console.log(`Analyzing BPM for ${nextSong.track_name} (source: ${nextSong.source})...`);
+      const { bpm, tempoMap } = await analyzeBPM(localPath);
+      nextSong.bpm = bpm;
+      nextSong.tempoMap = tempoMap;
+      stateManager.updateSongInQueue(nextUser, 0, nextSong);
+      console.log(`BPM analysis complete: ${bpm} BPM for ${nextSong.track_name} (${nextSong.source})`);
+    }
   } catch (err) {
     console.error('Error preloading next song:', err);
-    stateManager.clearLockedState();
   }
 };
 
@@ -82,7 +114,7 @@ export const playNextSong = async () => {
     return;
   }
 
-  const nextUser = stateManager.getLockedUser() ?? stateManager.getNextUser();
+  const nextUser = stateManager.getNextUser();
   if (!nextUser) {
     stateManager.emitQueueEmpty();
     stateManager.setPlaying(false);
@@ -90,78 +122,68 @@ export const playNextSong = async () => {
   }
 
   const userQueue = stateManager.getUserQueue(nextUser);
-  const nextSong = userQueue?.[0];
-
-  if (!nextSong) {
-    stateManager.clearLockedState();
+  if (!userQueue || userQueue.length === 0) {
     playNextSong();
     return;
   }
-  const socket = null; 
-  stateManager.removeSongFromQueue(nextUser, 0, socket); 
+
+  const nextSong = userQueue[0];
+  if (!nextSong) {
+    playNextSong();
+    return;
+  }
+
+  stateManager.removeSongFromQueue(nextUser, 0, null); 
 
   stateManager.setCurrentSong(nextSong, nextUser);
   stateManager.setPlaying(true);
-  stateManager.clearLockedState();
 
   preloadNextSong();
 
   try {
-    let audioPath = nextSong.audioPath;
-    if (!audioPath) {
-      audioPath = await (nextSong.source === 'spotify'
-        ? downloadSpotifyAudio(nextSong.track_id)
+    let localPath: string;
+    
+    if (!nextSong.audioPath) {
+      localPath = await (nextSong.source === 'spotify'
+        ? downloadSpotifyAudio(nextSong.track_id, nextSong.youtubeUri)
         : downloadYouTubeAudio(nextSong.uri));
-      
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-      nextSong.audioPath = `${backendUrl}/downloads/${path.basename(audioPath)}`;
+      nextSong.audioPath = buildAudioPath(localPath);
+      stateManager.updateSongInQueue(nextUser, 0, nextSong);
+    } else {
+      const urlMatch = nextSong.audioPath.match(/\/stream\/([^?]+)/);
+      if (urlMatch) {
+        localPath = `/app/downloads/${urlMatch[1]}`;
+      } else {
+        const pathWithoutQuery = nextSong.audioPath.split('?')[0];
+        const filename = path.basename(pathWithoutQuery);
+        localPath = `/app/downloads/${filename}`;
+      }
     }
 
+    stateManager.startPlaybackTimer();
     stateManager.setSongDownloaded();
+
+    if (nextSong.bpm === undefined) {
+      console.log(`Analyzing BPM for ${nextSong.track_name} (source: ${nextSong.source})...`);
+      analyzeBPM(localPath).then(({ bpm, tempoMap }) => {
+        nextSong.bpm = bpm;
+        nextSong.tempoMap = tempoMap;
+        stateManager.updateSongInQueue(nextUser, 0, nextSong);
+        
+        const currentSong = stateManager.getCurrentSong();
+        if (currentSong && (currentSong.id === nextSong.id || currentSong.track_id === nextSong.track_id)) {
+          stateManager.setCurrentSong(nextSong, nextUser);
+          console.log(`BPM analysis complete: ${bpm} BPM for ${nextSong.track_name}`);
+        }
+      }).catch(err => {
+        console.error(`BPM analysis failed for ${nextSong.track_name}:`, err);
+      });
+    }
 
   } catch (error) {
     console.error(`Error downloading ${nextSong.source} audio:`, error);
     stateManager.setCurrentSong(null);
     stateManager.setPlaying(false);
     playNextSong();
-  }
-};
-
-export const handlePreloadFailure = async (data: { songId: string, errorType: string, path?: string }) => {
-  console.log('Preload failed:', data);
-  const lockedSong = stateManager.getLockedSong();
-  const lockedUser = stateManager.getLockedUser();
-
-  if (data.errorType === 'file_not_found' && lockedSong) {
-    console.log('Attempting to re-download file for song:', lockedSong.track_name);
-    
-    try {
-      stateManager.setDownloadInProgress(true);
-      
-      if (lockedSong && (lockedSong.track_id === data.songId || lockedSong.id === data.songId)) {
-        let audioPath;
-        if (lockedSong.source === 'spotify') {
-          audioPath = await downloadSpotifyAudio(lockedSong.track_id);
-        } else {
-          audioPath = await downloadYouTubeAudio(lockedSong.uri);
-        }
-        
-        const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-        lockedSong.audioPath = `${backendUrl}/downloads/${path.basename(audioPath)}`;
-        
-        console.log('Successfully re-downloaded file:', lockedSong.audioPath);
-        
-        stateManager.setLockedState(lockedUser, lockedSong);
-        stateManager.setDownloadInProgress(false);
-      }
-    } catch (err) {
-      console.error('Error re-downloading file:', err);
-      const socket = null;
-      if (lockedUser && stateManager.getUserQueue(lockedUser)?.length > 0) {
-        stateManager.removeSongFromQueue(lockedUser, 0, socket);
-      }
-      stateManager.clearLockedState();
-      preloadNextSong();
-    }
   }
 };

@@ -18,18 +18,17 @@ const userQueues: { [key: string]: Song[] } = {};
 const userStates: { [key: string]: UserState } = {};
 const disconnectTimers: { [key: string]: NodeJS.Timeout } = {};
 let userOrder: string[] = [];
-let lockedNextSong: Song | null = null;
-let lockedNextUser: string | null = null;
-let lockedDownloadInProgress: boolean = false;
 let isPlaying = false;
 let isPaused = false;
 let currentPlayingSong: Song | null = null;
 let currentCatColor = 'White';
+let playbackStartTime: number | null = null;
 let songLengthLimits: SongLengthLimits = {
   maxLength: 600,
   minLength: 0,
 };
 let songLengthLimit = 10;
+let displaySocketId: string | null = null;
 
 export const initIo = (serverIo: Server) => {
   io = serverIo;
@@ -39,9 +38,6 @@ export const getUserQueue = (uid: string) => userQueues[uid];
 export const getUserState = (uid: string) => userStates[uid];
 export const hasUser = (uid: string) => !!userStates[uid];
 export const getUserOrder = () => userOrder;
-export const getLockedSong = () => lockedNextSong;
-export const getLockedUser = () => lockedNextUser;
-export const isDownloadInProgress = () => lockedDownloadInProgress;
 export const getIsPlaying = () => isPlaying;
 export const getIsPaused = () => isPaused;
 export const getCurrentSong = () => currentPlayingSong;
@@ -49,45 +45,45 @@ export const getCurrentCatColor = () => currentCatColor;
 export const getSongLengthLimits = () => songLengthLimits;
 export const getSongLengthLimit = () => songLengthLimit;
 export const getDisconnectTimer = (uid: string) => disconnectTimers[uid];
+export const getDisplaySocketId = () => displaySocketId;
+export const setDisplaySocketId = (socketId: string | null) => {
+  displaySocketId = socketId;
+};
+export const getPlaybackStartTime = () => playbackStartTime;
 export const hasAnyQueueLeft = (): boolean => {
   return Object.values(userQueues).some((queue) => queue.length > 0);
 };
 
-export const setLockedState = (user: string | null, song: Song | null) => {
-  lockedNextUser = user;
-  lockedNextSong = song;
-  lockedDownloadInProgress = user !== null;
-  if (user && userQueues[user]) {
-    io.emit('preloaded_next_song', { song: lockedNextSong });
-    io.emit('updateUserQueue', { queue: userQueues[user], uid: user });
-  }
-};
-
-export const clearLockedState = () => {
-  lockedNextUser = null;
-  lockedNextSong = null;
-  lockedDownloadInProgress = false;
-};
-
-export const setDownloadInProgress = (status: boolean) => {
-  lockedDownloadInProgress = status;
-};
-
 export const setCurrentSong = (song: Song | null, uid?: string) => {
+  const previousSong = currentPlayingSong;
+  const isNewSong = !previousSong || !song || 
+    (previousSong.id !== song.id && previousSong.track_id !== song.track_id);
+  
   currentPlayingSong = song;
   if (song && uid) {
     currentCatColor = userStates[uid]?.color || 'White';
     io.emit('updateUserCatColor', { uid, color: currentCatColor });
   } else if (!song) {
     currentCatColor = 'White';
+    playbackStartTime = null;
     io.emit('updateUserCatColor', { uid: null, color: 'White' });
   }
-  io.emit('updateCurrentSong', { currentSong: song, isLoading: song ? true : false });
+  const isLoading = song ? !song.audioPath : false;
+  io.emit('updateCurrentSong', { currentSong: song, isLoading, playbackStartTime });
+};
+
+export const startPlaybackTimer = () => {
+  playbackStartTime = Date.now();
+  if (currentPlayingSong) {
+    io.emit('updateCurrentSong', { currentSong: currentPlayingSong, isLoading: false, playbackStartTime });
+  }
 };
 
 export const setSongDownloaded = () => {
-  io.emit('updateCurrentSong', { currentSong: currentPlayingSong, isLoading: false });
-  io.emit('song_download_complete');
+  if (currentPlayingSong) {
+    io.emit('updateCurrentSong', { currentSong: currentPlayingSong, isLoading: false, playbackStartTime });
+    io.emit('song_download_complete');
+  }
 };
 
 export const setPlaying = (status: boolean) => {
@@ -198,12 +194,13 @@ export const addSongToQueue = (uid: string, song: Song) => {
   }
   song.submittedBy = uid;
   userQueues[uid].push(song);
+  
+  if (!userOrder.includes(uid)) {
+    userOrder.push(uid);
+  }
+  
   updateActiveUsers();
   io.emit('updateUserQueue', { queue: userQueues[uid], uid });
-
-  if (lockedNextUser === uid && lockedNextSong?.id === song.id) {
-    io.emit('preloaded_next_song', { song: lockedNextSong });
-  }
 };
 
 export const addSongsToQueue = (uid: string, songs: Song[]) => {
@@ -211,22 +208,17 @@ export const addSongsToQueue = (uid: string, songs: Song[]) => {
     userQueues[uid] = [];
   }
   userQueues[uid].push(...songs);
+  
+  if (!userOrder.includes(uid)) {
+    userOrder.push(uid);
+  }
+  
   updateActiveUsers();
   io.emit('updateUserQueue', { queue: userQueues[uid], uid });
 };
 
 export const removeSongFromQueue = (uid: string, index: number, socket: Socket | null) => {
   if (!userQueues[uid]) return;
-
-  if (uid === lockedNextUser && index === 0) {
-    if (socket) {
-      socket.emit('message_box', {
-        type: 'error',
-        message: "You can't remove the next song — it's locked for playback.",
-      });
-    }
-    return;
-  }
 
   userQueues[uid].splice(index, 1);
   if (userQueues[uid].length === 0) {
@@ -239,14 +231,6 @@ export const removeSongFromQueue = (uid: string, index: number, socket: Socket |
 
 export const reorderQueue = (uid: string, queue: Song[], socket: Socket) => {
   if (!userQueues[uid]) return;
-
-  if (uid === lockedNextUser && queue.length > 0 && queue[0].id !== lockedNextSong?.id) {
-    socket.emit('message_box', {
-      type: 'error',
-      message: 'The first song in your queue is locked and cannot be moved.',
-    });
-    return;
-  }
 
   userQueues[uid] = queue;
   io.emit('updateUserQueue', { queue, uid });
@@ -261,17 +245,6 @@ export const updateSongInQueue = (uid: string, index: number, song: Song) => {
 
 export const clearUserQueue = (uid: string, socket: Socket | null) => {
   if (!userQueues[uid]) return;
-
-  if (uid === lockedNextUser) {
-    if (socket){
-        socket.emit('message_box', {
-        type: 'error',
-        message: "You can't clear your queue while your next song is locked for playback.",
-        });
-        return;
-    }
-    
-  }
 
   delete userQueues[uid];
   userOrder = userOrder.filter((user) => user !== uid);
@@ -330,11 +303,12 @@ export const resetServerState = () => {
   });
   currentCatColor = 'White';
   currentPlayingSong = null;
+  playbackStartTime = null;
   
   if (io) {
     io.emit('server_startup', { timestamp: Date.now() });
     io.emit('updateUserCatColor', { uid: null, color: 'White' });
-    io.emit('updateCurrentSong', { currentSong: null });
+    io.emit('updateCurrentSong', { currentSong: null, playbackStartTime: null });
   }
 };
 

@@ -8,8 +8,10 @@ export interface Song {
   uri: string;
   source: "spotify" | "youtube";
   bpm?: number | null;
+  tempoMap?: { time: number; bpm: number }[];
   submittedBy: string;
   audioPath?: string;
+  youtubeUri?: string;
 }
 export interface UserQueue {
   uid: string;

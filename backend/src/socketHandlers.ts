@@ -6,9 +6,12 @@ import {
   searchYouTube,
   handleSpotifyLink,
   handleYouTubeLink,
+  findYouTubeUriForSpotifyTrack,
 } from './trackService.js';
 import { getSongLengthInSeconds } from './utils.js';
 import { Song } from './interfaces';
+import { generateShortLivedToken } from './streamToken.js';
+import path from 'path';
 
 const getUserIdFromSocket = (socket: any): string | null => {
   return socket.data?.uid || null;
@@ -35,6 +38,18 @@ export function registerSocketHandlers(io: Server) {
       }
     });
 
+    socket.on('register_display', () => {
+      const currentDisplaySocketId = stateManager.getDisplaySocketId();
+      
+      if (!currentDisplaySocketId) {
+        console.log(`Registering socket ${socket.id} as display`);
+        stateManager.setDisplaySocketId(socket.id);
+      } else {
+        console.log(`Display already registered (${currentDisplaySocketId}), redirecting socket ${socket.id} to home`);
+        socket.emit('redirect_to_home');
+      }
+    });
+
     socket.on('addSongToQueue', async (data) => {
       const { song, uid } = data;
       if (!uid) return;
@@ -48,6 +63,18 @@ export function registerSocketHandlers(io: Server) {
           message: `Song exceeds the maximum length limit of ${songLengthLimit} minutes`,
         });
         return;
+      }
+
+      if (song.source === 'spotify' && !song.youtubeUri) {
+        try {
+          const youtubeUri = await findYouTubeUriForSpotifyTrack(song.track_id);
+          if (youtubeUri) {
+            song.youtubeUri = youtubeUri;
+            console.log(`Pre-fetched YouTube URI for ${song.track_name}: ${youtubeUri}`);
+          }
+        } catch (error) {
+          console.error('Error pre-fetching YouTube URI:', error);
+        }
       }
 
       const wasQueueEmpty = !stateManager.hasAnyQueueLeft();
@@ -151,6 +178,21 @@ export function registerSocketHandlers(io: Server) {
         let songs: Song[] = [];
         if (link.includes('spotify')) {
           songs = await handleSpotifyLink(link, uid);
+          await Promise.all(
+            songs.map(async (song) => {
+              if (song.source === 'spotify' && !song.youtubeUri) {
+                try {
+                  const youtubeUri = await findYouTubeUriForSpotifyTrack(song.track_id);
+                  if (youtubeUri) {
+                    song.youtubeUri = youtubeUri;
+                    console.log(`Pre-fetched YouTube URI for ${song.track_name}: ${youtubeUri}`);
+                  }
+                } catch (error) {
+                  console.error(`Error pre-fetching YouTube URI for ${song.track_name}:`, error);
+                }
+              }
+            })
+          );
         } else if (link.includes('youtube')) {
           songs = await handleYouTubeLink(link);
         } else {
@@ -209,13 +251,18 @@ export function registerSocketHandlers(io: Server) {
     });
 
     socket.on('force_skip', () => {
+      const currentSong = stateManager.getCurrentSong();
+      if (currentSong?.audioPath) {
+        queueManager.deleteAudioFile(currentSong.audioPath);
+      }
+      
       if (stateManager.getIsPlaying()) {
         stateManager.setPlaying(false);
       }
       queueManager.playNextSong();
     });
 
-    socket.on('pause_play', () => {
+    socket.on('pause_play', (data?: { isPaused?: boolean }) => {
       stateManager.togglePause();
     });
 
@@ -249,14 +296,42 @@ export function registerSocketHandlers(io: Server) {
       stateManager.setSongLengthLimit(data.limit, uid);
     });
 
-    socket.on('disconnect', () => {
-      const uid = getUserIdFromSocket(socket);
-      if (!uid) return;
-      stateManager.scheduleUserRemoval(uid);
+    socket.on('refresh_stream_token', () => {
+      const displaySocketId = stateManager.getDisplaySocketId();
+      if (displaySocketId !== socket.id) {
+        return;
+      }
+      
+      const currentSong = stateManager.getCurrentSong();
+      if (currentSong?.audioPath) {
+        try {
+          const url = new URL(currentSong.audioPath);
+          const filename = path.basename(url.pathname);
+          const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+          const newToken = generateShortLivedToken();
+          const newAudioPath = `${backendUrl}/api/stream/${filename}?streamToken=${newToken}`;
+          
+          const uid = currentSong.submittedBy;
+          currentSong.audioPath = newAudioPath;
+          stateManager.setCurrentSong(currentSong, uid);
+        } catch (error) {
+          console.error('Error refreshing stream token:', error);
+        }
+      }
     });
 
-    socket.on('preload_failed', async (data: { songId: string, errorType: string, path?: string }) => {
-      queueManager.handlePreloadFailure(data);
+    socket.on('disconnect', () => {
+      const displaySocketId = stateManager.getDisplaySocketId();
+      if (displaySocketId === socket.id) {
+        console.log(`Display socket ${socket.id} disconnected, clearing display registration`);
+        stateManager.setDisplaySocketId(null);
+      }
+      
+      const uid = getUserIdFromSocket(socket);
+      if (uid) {
+        stateManager.scheduleUserRemoval(uid);
+      }
     });
+
   });
 }

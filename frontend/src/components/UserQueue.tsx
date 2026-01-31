@@ -2,15 +2,13 @@ import React from 'react';
 import { ReactSortable } from 'react-sortablejs';
 import { Song } from '../types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faTrashCan, faMusic, faLock } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faTrashCan, faMusic } from '@fortawesome/free-solid-svg-icons';
 
 interface UserQueueProps {
     queue: Song[];
     onClearQueue: () => void;
     onRemoveSong: (index: number) => void;
     onReorderQueue: (newQueue: Song[]) => void;
-    isLocked?: boolean;
-    lockedSongId?: string | null;
 }
 
 const UserQueue: React.FC<UserQueueProps> = ({
@@ -18,18 +16,9 @@ const UserQueue: React.FC<UserQueueProps> = ({
     onClearQueue,
     onRemoveSong,
     onReorderQueue,
-    isLocked = false,
-    lockedSongId = null
 }) => {
     const handleReorder = (newQueue: Song[]) => {
         onReorderQueue(newQueue);
-    };
-
-    const isSongLocked = (index: number, song: Song): boolean => {
-        if (isLocked && index === 0 && lockedSongId && song.id === lockedSongId) {
-            return true;
-        }
-        return false;
     };
 
     const reorderableQueue = queue.map((song, index) => ({
@@ -46,7 +35,6 @@ const UserQueue: React.FC<UserQueueProps> = ({
                         onClick={onClearQueue} 
                         className="clear-queue-button" 
                         title="Clear queue"
-                        disabled={isLocked}
                     >
                         <FontAwesomeIcon icon={faTrashCan} />
                     </button>
@@ -66,56 +54,41 @@ const UserQueue: React.FC<UserQueueProps> = ({
                     animation={200}
                     handle=".drag-handle"
                     className="sortable-list"
-                    disabled={queue.length <= 1 || isLocked}
+                    disabled={queue.length <= 1}
                 >
-                    {queue.map((song, index) => {
-                        const locked = isSongLocked(index, song);
-                        return (
+                    {queue.map((song, index) => (
+                        <div
+                            key={`${song.id}-${index}`}
+                            className={`queue-item ${song.source}`}
+                        >
+                            <div className="order-number">{index + 1}</div>
+
                             <div
-                                key={`${song.id}-${index}`}
-                                className={`queue-item ${song.source} ${locked ? 'locked' : ''}`}
+                                className="drag-handle"
+                                title="Drag to reorder"
                             >
-                                <div className="order-number">{index + 1}</div>
-
-                                <div
-                                    className="drag-handle"
-                                    title={locked ? "Locked - this song is next in the rotation" : "Drag to reorder"}
-                                    style={{ pointerEvents: locked ? 'none' : undefined }}
-                                >
-                                    {locked ? (
-                                        <FontAwesomeIcon icon={faLock} className="lock-icon" />
-                                    ) : (
-                                        <>
-                                            <div className="dot"></div>
-                                            <div className="dot"></div>
-                                            <div className="dot"></div>
-                                        </>
-                                    )}
-                                </div>
-
-                                <img src={song.cover_url} alt={song.track_name} />
-
-                                <div className="song-info">
-                                    <div className="track-name">{song.track_name}</div>
-                                    <div className="artist-name">{song.artist_name}</div>
-                                    <div className="duration">{song.track_length}</div>
-                                    {locked && (
-                                        <div className="lock-status">Next in rotation - preloaded</div>
-                                    )}
-                                </div>
-
-                                {!locked && (
-                                    <button
-                                        onClick={() => onRemoveSong(index)}
-                                        className="remove-song-button"
-                                        title="Remove song"
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} />
-                                    </button>
-                                )}
+                                <div className="dot"></div>
+                                <div className="dot"></div>
+                                <div className="dot"></div>
                             </div>
-                        );
-                    })}
+
+                            <img src={song.cover_url} alt={song.track_name} />
+
+                            <div className="song-info">
+                                <div className="track-name">{song.track_name}</div>
+                                <div className="artist-name">{song.artist_name}</div>
+                                <div className="duration">{song.track_length}</div>
+                            </div>
+
+                            <button
+                                onClick={() => onRemoveSong(index)}
+                                className="remove-song-button"
+                                title="Remove song"
+                            >
+                                <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                        </div>
+                    ))}
                 </ReactSortable>
             )}
         </div>

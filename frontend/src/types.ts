@@ -9,10 +9,12 @@ export interface Song {
     track_id: string;
     uri: string;
     source: 'spotify' | 'youtube';
-    bpm?: number;
+    bpm?: number | null;
+    tempoMap?: { time: number; bpm: number }[];
     audioPath?: string;
     submittedBy: string;
     duration?: number;
+    youtubeUri?: string;
 }
 
 export interface UserQueue {
