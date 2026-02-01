@@ -29,12 +29,6 @@
   --transition-slow: #{$transition-slow};
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 body {
   margin: 0;
   padding: 0;
@@ -157,7 +151,6 @@ body {
   }
 }
 
-@import './components/NavBar';
 @import './components/Profile';
 @import './components/SearchBar';
 @import './components/UserQueue';

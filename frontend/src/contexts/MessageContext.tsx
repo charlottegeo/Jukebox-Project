@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import MessagePopup, { MessageType } from '../components/MessagePopup';
-import styles from '../styles/components/_MessagePopup.module.scss';
 
 interface Message {
   id: string;
@@ -38,7 +37,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   return (
     <MessageContext.Provider value={{ showMessage }}>
       {children}
-      <div className={styles.messageContainer}>
+      <div className="message-container">
         {messages.map((message, index) => (
           <MessagePopup
             key={message.id}

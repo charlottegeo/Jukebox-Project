@@ -86,7 +86,6 @@ body[data-theme="light"] {
         border-radius: 8px;
 
         .source-button {
-          @extend .button;
           padding: 8px 12px;
           font-size: 1.2em;
           background: none;
@@ -151,7 +150,6 @@ body[data-theme="light"] {
       border-radius: 8px;
 
       .view-button {
-        @extend .button;
         padding: 8px 12px;
         font-size: 1.2em;
         background: none;
@@ -232,74 +230,6 @@ body[data-theme="light"] {
       }
     }
   }
-}
-
-button {
-  padding: 6px 12px;
-  background-color: var(--primary-color);
-  color: var(--text-color);
-  border: none;
-  cursor: pointer;
-  border-radius: 6px;
-  font-weight: bold;
-  font-size: 0.8em;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-
-  &:hover {
-    background-color: var(--primary-color-darkened);
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-}
-
-select {
-  margin-left: 8px;
-  padding: 4px;
-  border-radius: 5px;
-  border: 1px solid var(--secondary-color);
-  background: var(--tertiary-color);
-  color: var(--text-color);
-  transition: background-color 0.3s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  }
-
-  option {
-    background: var(--background-color);
-    color: var(--text-color);
-  }
-}
-
-input[type="text"] {
-  padding: 6px;
-  border: 1px solid var(--secondary-color);
-  background: var(--tertiary-color);
-  color: var(--text-color);
-  width: 55%;
-  margin-right: 10px;
-  font-size: 0.9em;
-  transition: background-color 0.3s ease, box-shadow 0.2s ease;
-
-  &:focus {
-    box-shadow: 0 0 5px 0 var(--primary-color-darkened);
-  }
-}
-
-button,
-input,
-select,
-.song-info,
-.user-queue-title,
-.empty-queue,
-.track-name,
-.artist-name,
-.duration {
-  font-family: inherit;
-  letter-spacing: inherit;
 }
 
 .loading {
