@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faForward, faClock, faUndo, faRadio, faCog } from '@fortawesome/free-solid-svg-icons';
 import { Song, SkipVoteStatus } from '../types';
@@ -20,6 +20,7 @@ interface PlaybackBannerProps {
   onRadioVolumeChange?: (volume: number) => void;
   isAdmin?: boolean;
   onAdminClick?: () => void;
+  playbackStartTime?: number | null;
 }
 
 const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
@@ -36,9 +37,62 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
   radioVolume = 50,
   onRadioVolumeChange,
   isAdmin = false,
-  onAdminClick
+  onAdminClick,
+  playbackStartTime
 }) => {
   const { darkMode } = useTheme();
+  const [elapsed, setElapsed] = useState(0);
+  const titleContainerRef = useRef<HTMLDivElement>(null);
+  const titleMeasureRef = useRef<HTMLSpanElement>(null);
+  const artistMeasureRef = useRef<HTMLSpanElement>(null);
+  const [isTitleLong, setIsTitleLong] = useState(false);
+  const [isArtistLong, setIsArtistLong] = useState(false);
+
+  useEffect(() => {
+    if (!currentSong) {
+      setIsTitleLong(false);
+      setIsArtistLong(false);
+      return;
+    }
+    const checkOverflow = () => {
+      if (titleContainerRef.current && titleMeasureRef.current) {
+        const containerWidth = titleContainerRef.current.clientWidth;
+        const textWidth = titleMeasureRef.current.scrollWidth;
+        setIsTitleLong(textWidth > containerWidth);
+      }
+      if (titleContainerRef.current && artistMeasureRef.current) {
+        const containerWidth = titleContainerRef.current.clientWidth;
+        const textWidth = artistMeasureRef.current.scrollWidth;
+        setIsArtistLong(textWidth > containerWidth);
+      }
+    };
+    const t = window.setTimeout(checkOverflow, 0);
+    return () => window.clearTimeout(t);
+  }, [currentSong?.track_name, currentSong?.artist_name]);
+
+  useEffect(() => {
+    let interval: number | undefined;
+    if (currentSong && !isPaused && playbackStartTime) {
+      const update = () => {
+        const now = Date.now();
+        const diff = Math.max(0, (now - playbackStartTime) / 1000);
+        setElapsed(diff);
+      };
+      update();
+      interval = window.setInterval(update, 1000);
+    } else if (isPaused && playbackStartTime) {
+       const now = Date.now();
+       const diff = Math.max(0, (now - playbackStartTime) / 1000);
+       setElapsed(diff);
+    } else {
+        setElapsed(0);
+    }
+    return () => {
+      if (interval !== undefined) window.clearInterval(interval);
+    };
+  }, [currentSong, isPaused, playbackStartTime]);
+
+
   const handleVoteSkip = () => {
     if (!socket || !currentSong) return;
     
@@ -60,7 +114,9 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
     
     return `Vote to Skip (${skipVoteStatus.currentVotes}/${skipVoteStatus.requiredVotes})`;
   };
+  
   const formatTime = (seconds: number): string => {
+    if (!Number.isFinite(seconds)) return "0:00";
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -75,8 +131,8 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
 
   return (
     <Card className={`mb-0 rounded-0 border-0 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
-      <CardBody className="d-flex flex-wrap align-items-center justify-content-between py-3 px-4 playback-banner-body">
-        <div className="d-flex align-items-center gap-3 flex-grow-1 min-width-0 playback-banner-song">
+      <CardBody className="d-flex flex-wrap align-items-center justify-content-between py-2 px-3 playback-banner-body">
+        <div className="d-flex align-items-center flex-grow-1 min-width-0 playback-banner-song" style={{ gap: '1rem' }}>
           {currentSong ? (
             <>
               <img
@@ -86,16 +142,47 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
                 style={{ width: '56px', height: '56px', objectFit: 'cover' }}
               />
               <div className="min-width-0 d-flex flex-wrap align-items-center gap-4">
-                <div>
+                <div ref={titleContainerRef} style={{ maxWidth: '300px', overflow: 'hidden', position: 'relative', paddingRight: '1rem' }}>
+                  <span
+                    ref={titleMeasureRef}
+                    className="playback-banner-title"
+                    aria-hidden
+                    style={{ position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', pointerEvents: 'none' }}
+                  >
+                    {currentSong.track_name}
+                  </span>
+                  <span
+                    ref={artistMeasureRef}
+                    className="playback-banner-artist"
+                    aria-hidden
+                    style={{ position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', pointerEvents: 'none' }}
+                  >
+                    {currentSong.artist_name}
+                  </span>
                   <div className="playback-banner-label">
                     {isLoading ? 'Loading...' : `Now Playing ${isPaused ? '(Paused)' : ''}`}
                   </div>
-                  <div className="playback-banner-title text-truncate" style={{ maxWidth: '280px' }}>{currentSong.track_name}</div>
-                  <div className="playback-banner-artist text-truncate" style={{ maxWidth: '280px' }}>{currentSong.artist_name}</div>
+                  <div className={`playback-banner-title ${isTitleLong ? 'marquee-container' : 'text-truncate'}`}>
+                    <span className={isTitleLong ? 'marquee-content animate-marquee' : ''}>
+                         {currentSong.track_name}
+                         {isTitleLong && <span style={{display: 'inline-block', width: '2rem'}}></span>}
+                         {isTitleLong && currentSong.track_name}
+                    </span>
+                  </div>
+                  <div className={`playback-banner-artist ${isArtistLong ? 'marquee-container' : 'text-truncate'}`}>
+                      <span className={isArtistLong ? 'marquee-content animate-marquee' : ''}>
+                         {currentSong.artist_name}
+                         {isArtistLong && <span style={{display: 'inline-block', width: '2rem'}}></span>}
+                         {isArtistLong && currentSong.artist_name}
+                    </span>
+                  </div>
                 </div>
-                <div className="playback-banner-meta">
-                  <div>Added by {currentSong.submittedBy}</div>
-                  <div>{currentSong.duration ? formatTime(currentSong.duration) : currentSong.track_length}</div>
+                
+                <div className="playback-banner-meta d-flex flex-column border-left pl-3" style={{ borderLeftColor: 'rgba(255,255,255,0.2)' }}>
+                  <div className="small text-muted mb-1">Added by {currentSong.submittedBy}</div>
+                  <div className="font-weight-bold">
+                    {formatTime(elapsed)} / {currentSong.duration ? formatTime(currentSong.duration) : currentSong.track_length}
+                  </div>
                 </div>
               </div>
             </>
@@ -105,7 +192,7 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
         </div>
 
         <div className="d-flex flex-wrap align-items-center playback-banner-controls">
-          <span className="playback-banner-meta playback-banner-max">
+          <span className="playback-banner-meta playback-banner-max mr-3">
             <FontAwesomeIcon icon={faClock} className="mr-1" /> Max: {formatLengthLimit(songLengthLimit)}
           </span>
           {onTuneInToggle && (
@@ -120,18 +207,15 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
                 {isTunedIn ? 'Tuned In' : 'Tune In'}
               </Button>
               {isTunedIn && onRadioVolumeChange && (
-                <div className="d-flex align-items-center playback-banner-volume">
-                  <label className="playback-banner-meta mr-2 mb-0">Volume:</label>
+                <div className="d-flex align-items-center playback-banner-volume mx-2">
                   <Input
                     type="range"
                     min="0"
                     max="100"
                     value={radioVolume}
                     onChange={(e) => onRadioVolumeChange(Number(e.target.value))}
-                    className="mr-2"
-                    style={{ width: '100px' }}
+                    style={{ width: '80px', height: '4px' }}
                   />
-                  <span className="playback-banner-meta">{radioVolume}%</span>
                 </div>
               )}
             </>
@@ -143,25 +227,25 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
             onClick={handleVoteSkip}
             disabled={!currentSong}
             title={activeUserCount > 1 ? (skipVoteStatus?.hasVoted ? 'Click to unvote' : 'Vote to skip (requires majority)') : 'Skip'}
-            className="playback-banner-btn playback-banner-skip"
+            className="playback-banner-btn playback-banner-skip ml-2"
           >
             <FontAwesomeIcon icon={skipVoteStatus?.hasVoted ? faUndo : faForward} className="mr-1" />
             {getSkipButtonText()}
           </Button>
-          <span className="playback-banner-active d-flex align-items-center">
+          <span className="playback-banner-active d-flex align-items-center ml-3">
             <span
               className="mr-1 rounded-circle d-inline-block flex-shrink-0"
               style={{
-                width: '10px',
-                height: '10px',
+                width: '8px',
+                height: '8px',
                 backgroundColor: activeUserCount > 0 ? '#28a745' : '#6c757d',
               }}
             />
-            {activeUserCount} active
+            {activeUserCount}
           </span>
           {isAdmin && onAdminClick && (
-            <Button color="link" size="md" onClick={onAdminClick} className="playback-banner-admin-btn text-muted px-2" title="Admin Panel">
-              <FontAwesomeIcon icon={faCog} style={{ fontSize: '1.35rem' }} />
+            <Button color="link" size="md" onClick={onAdminClick} className="playback-banner-admin-btn text-muted px-2 ml-1" title="Admin Panel">
+              <FontAwesomeIcon icon={faCog} style={{ fontSize: '1.2rem' }} />
             </Button>
           )}
         </div>
@@ -170,4 +254,4 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
   );
 };
 
-export default PlaybackBanner; 
+export default PlaybackBanner;

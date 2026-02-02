@@ -2,7 +2,7 @@
 @import './variables';
 
 :root {
-    --primary-color: #B0197E;
+  --primary-color: #B0197E;
   --background-color: #f8f9fa;
   --surface-color: #ffffff;
   --text-color: #212529;
@@ -10,6 +10,7 @@
   --border-color: #dee2e6;
   --input-bg: #ffffff;
   --highlight-bg: rgba(176, 25, 126, 0.1);
+  --queue-card-bg: #ffffff;
 
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -29,6 +30,7 @@ body.dark-theme {
   --jukebox-bg: #13131F;
   --jukebox-surface: #1E1E2F;
   --jukebox-text: #ffffff;
+  --queue-card-bg: #252535;
 }
 
 body {
@@ -69,6 +71,11 @@ html, .page-and-navbar {
   color: var(--text-color);
   border: 1px solid var(--border-color);
   transition: background-color 0.3s ease;
+}
+
+.card-queue {
+  background-color: var(--queue-card-bg) !important;
+  border: 1px solid var(--border-color);
 }
 
 .list-group-item {
@@ -155,26 +162,52 @@ html, .page-and-navbar {
 }
 
 .user-queue-item {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .user-queue-item-animate {
-  animation: user-queue-reorder 0.32s ease;
+  animation: user-queue-reorder 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes user-queue-reorder {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 transparent;
-  }
-  50% {
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 transparent;
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+  100% { transform: scale(1); }
+}
+
+.song-list-cards {
+  gap: 1rem 0;
+}
+
+.song-card-selected {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(176, 25, 126, 0.2);
+}
+
+.marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+}
+
+.marquee-content {
+  display: inline-block;
+  padding-left: 0;
+  animation: marquee 28s ease-in-out infinite;
+}
+
+.animate-marquee .marquee-content {
+  padding-left: 100%;
+}
+
+@keyframes marquee {
+  0% { transform: translate(0, 0); }
+  12% { transform: translate(0, 0); }
+  62% { transform: translate(-100%, 0); }
+  88% { transform: translate(-100%, 0); }
+  100% { transform: translate(0, 0); }
 }
 
 .flex-center {
@@ -220,6 +253,10 @@ body.dark-theme {
 
   .text-muted {
     color: var(--text-muted) !important;
+  }
+
+  .form-control {
+    color: var(--text-color) !important;
   }
 
   .form-control::placeholder {

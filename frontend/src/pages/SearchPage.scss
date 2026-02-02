@@ -1,7 +1,7 @@
 @use '../styles/mixins';
 @import '../styles/variables';
 
-$search-page-max-width: 1600px;
+$search-page-max-width: 100%;
 $search-page-padding: var(--spacing-md, #{$spacing-md});
 
 .search-page {
@@ -15,39 +15,40 @@ $search-page-padding: var(--spacing-md, #{$spacing-md});
 .app-container {
   display: grid;
   grid-template-areas: "queue search";
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 350px 1fr;
   grid-template-rows: 1fr;
   min-height: 0;
   flex: 1;
-  gap: $search-page-padding;
-  padding: $search-page-padding;
-  padding-bottom: 0;
-  width: 100%;
-  max-width: $search-page-max-width;
+  gap: var(--spacing-md);
+  padding: 0 var(--spacing-md) var(--spacing-md) var(--spacing-md);
+  width: 98%;
+  max-width: 2400px;
   margin: 0 auto;
   box-sizing: border-box;
 
-  .queue {
+  queue {
     grid-area: queue;
     min-height: 0;
-    overflow-y: auto;
-    border-radius: $border-radius-md;
-    @include mixins.custom-scrollbar;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
 
-    .card {
+    > .card {
+      height: 100%;
+      overflow-y: auto;
       box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075), 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+      @include mixins.custom-scrollbar;
     }
   }
 
-  .search {
+  search {
     grid-area: search;
     min-height: 0;
     overflow-y: visible;
     display: flex;
     flex-direction: column;
     max-width: 100%;
-    padding-right: $search-page-padding;
-
+    
     .card {
       box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075), 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
     }
@@ -61,7 +62,7 @@ $search-page-padding: var(--spacing-md, #{$spacing-md});
   flex-direction: column;
   padding: $search-page-padding;
   padding-top: 0;
-  max-width: $search-page-max-width;
+  max-width: 100%;
   margin: 0 auto;
   width: 100%;
 }
@@ -123,4 +124,5 @@ body:not(.dark-theme) .search-page-tabs .nav-link {
   .search {
     min-height: 200px;
   }
+
 }

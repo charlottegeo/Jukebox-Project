@@ -12,9 +12,13 @@ export default function PageContainer({ children }: Props) {
 
   return (
     <div className="page-and-navbar">
-      {!isDisplayPage && <NavBar />}
+      {!isDisplayPage && (
+          <div style={{ width: '100%' }}>
+            <NavBar />
+          </div>
+      )}
       <Container className="main" fluid>
-        <Container className="main-child">{children}</Container>
+        <Container className="main-child" fluid>{children}</Container>
       </Container>
     </div>
   );

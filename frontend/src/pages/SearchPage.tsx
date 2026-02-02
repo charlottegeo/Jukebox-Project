@@ -170,6 +170,7 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
             onRadioVolumeChange={setRadioVolume}
             isAdmin={isAdmin}
             onAdminClick={() => setAdminPanelOpen(true)}
+            playbackStartTime={playbackStartTime}
           />
           <audio
             ref={radioAudioRef}
@@ -230,17 +231,13 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
       ) : (
         <div className="app-container">
           <div className="queue">
-            <Card className={`h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
-              <CardBody>
                 <UserQueue
                   queue={myQueue}
                   onClearQueue={() => socket?.emit('clearUserQueue', uid)}
                   onRemoveSong={(index) => socket?.emit('removeSongFromQueue', { uid, index })}
                   onReorderQueue={(newQueue) => socket?.emit('reorderQueue', { queue: newQueue, uid })}
-                  wrapInCard={false}
+                  wrapInCard={true}
                 />
-              </CardBody>
-            </Card>
           </div>
           <div className="search">
             <Card className={`h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>

@@ -6,7 +6,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faTrashCan, faMusic, faGripVertical, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { useTheme } from '../contexts/ThemeContext';
 
-/** Item shape for react-sortablejs: unique id + original song id for restoring on reorder */
 type SortableSong = Song & { id: string; _originalId: string };
 
 interface UserQueueProps {
@@ -14,7 +13,6 @@ interface UserQueueProps {
     onClearQueue: () => void;
     onRemoveSong: (index: number) => void;
     onReorderQueue: (newQueue: Song[]) => void;
-    /** When false, render only header + list (parent wraps in Card for same shading as search) */
     wrapInCard?: boolean;
 }
 
@@ -26,9 +24,8 @@ const UserQueue: React.FC<UserQueueProps> = ({
     wrapInCard = true,
 }) => {
     const { darkMode } = useTheme();
-    const cardClass = darkMode ? 'bg-dark text-white' : 'bg-light border-light';
     const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set());
-    const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const animTimeoutRef = useRef<number | null>(null);
 
     const reorderableQueue: SortableSong[] = queue.map((song, index) => ({
         ...song,
@@ -48,9 +45,9 @@ const UserQueue: React.FC<UserQueueProps> = ({
         const next = [...queue];
         [next[fromIndex], next[toIndex]] = [next[toIndex], next[fromIndex]];
         onReorderQueue(next);
-        if (animTimeoutRef.current) clearTimeout(animTimeoutRef.current);
+        if (animTimeoutRef.current !== null) window.clearTimeout(animTimeoutRef.current);
         setAnimatingIds(new Set([idA, idB]));
-        animTimeoutRef.current = setTimeout(() => {
+        animTimeoutRef.current = window.setTimeout(() => {
             setAnimatingIds(new Set());
             animTimeoutRef.current = null;
         }, 320);
@@ -79,7 +76,7 @@ const UserQueue: React.FC<UserQueueProps> = ({
                 <div className="text-center text-muted p-5 d-flex flex-column align-items-center">
                     <FontAwesomeIcon icon={faMusic} size="3x" className="mb-3" />
                     <p className="mb-1">Your Queue is Empty</p>
-                    <p className="small mb-0">Search for songs above to add them to your queue</p>
+                    <p className="small mb-0">Search for songs to add them to your queue</p>
                 </div>
             ) : (
                 <ReactSortable<SortableSong>
@@ -95,7 +92,7 @@ const UserQueue: React.FC<UserQueueProps> = ({
                 return (
                     <Card
                         key={song.id}
-                        className={`mb-2 user-queue-item ${isAnimating ? 'user-queue-item-animate' : ''} ${cardClass} ${song.source === 'spotify' ? 'border-left border-success' : 'border-left border-danger'}`}
+                        className={`mb-2 user-queue-item ${isAnimating ? 'user-queue-item-animate' : ''} ${darkMode ? 'bg-dark text-white' : 'bg-white'} ${song.source === 'spotify' ? 'border-left border-success' : 'border-left border-danger'}`}
                         style={{ borderLeftWidth: '4px', borderTop: 'none', borderRight: 'none', borderBottom: 'none' }}
                     >
                                 <CardBody className="d-flex align-items-center py-2 px-3">
@@ -164,32 +161,10 @@ const UserQueue: React.FC<UserQueueProps> = ({
         </>
     );
 
-    if (!wrapInCard) {
-        return (
-            <>
-                {header}
-                {listContent}
-            </>
-        );
-    }
-
     return (
-        <Card className={`h-100 ${cardClass}`}>
-            <CardHeader className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">Your Queue</h5>
-                {queue.length > 0 && (
-                    <Button
-                        color="link"
-                        size="lg"
-                        onClick={onClearQueue}
-                        title="Clear queue"
-                        className="p-0 text-primary"
-                    >
-                        <FontAwesomeIcon icon={faTrashCan} />
-                    </Button>
-                )}
-            </CardHeader>
-            <CardBody className="p-0">
+        <Card className={`h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
+            <CardBody className="p-3">
+                 {header}
                 {listContent}
             </CardBody>
         </Card>

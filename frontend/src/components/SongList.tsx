@@ -49,11 +49,11 @@ const SongList: React.FC<SongListProps> = ({ songs, onSelect, hasSearched = fals
     }
 
     return (
-        <div className="song-list row row-cols-1 g-2">
+        <div className="song-list row row-cols-1 g-3 song-list-cards">
             {songs.map((song, index) => (
-                <div key={song.track_id ?? song.id ?? index} className="col">
+                <div key={song.track_id ?? song.id ?? index} className="col song-list-col">
                     <Card 
-                        className={`song-card h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'} ${song.source === 'spotify' ? 'border-left border-success' : 'border-left border-danger'}`}
+                        className={`song-card h-100 ${selectedSong?.track_id === song.track_id ? 'song-card-selected' : ''} ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'} ${song.source === 'spotify' ? 'border-left border-success' : 'border-left border-danger'}`}
                         style={{ 
                             borderLeftWidth: '4px', 
                             cursor: 'pointer',
