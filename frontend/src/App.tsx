@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import DisplayPage from './pages/DisplayPage';
 import SearchPage from './pages/SearchPage';
@@ -23,16 +23,12 @@ type Props = {
 const App: React.FC<Props> = ({ rerouteHomeOn404 = null }) => {
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
 
-  useEffect(() => {
-    document.body.setAttribute('data-theme', 'dark');
-  }, []);
-
   return (
     <Router>
       <AuthProvider>
         <MessageProvider>
           <SocketProvider>
-            <PageContainer adminPanelOpen={adminPanelOpen} setAdminPanelOpen={setAdminPanelOpen}>
+            <PageContainer>
               <Routes>
                 <Route path="/" element={
                   SSOEnabled ? (

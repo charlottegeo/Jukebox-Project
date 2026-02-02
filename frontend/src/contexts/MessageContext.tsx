@@ -37,14 +37,13 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   return (
     <MessageContext.Provider value={{ showMessage }}>
       {children}
-      <div className="message-container">
-        {messages.map((message, index) => (
+      <div className="position-fixed top-0 end-0 m-3 d-flex flex-column gap-2" style={{ zIndex: 1100 }}>
+        {messages.map((message) => (
           <MessagePopup
             key={message.id}
             message={message.text}
             type={message.type}
             onClose={() => handleClose(message.id)}
-            style={{ top: `${92 + (index * 70)}px` }}
           />
         ))}
       </div>

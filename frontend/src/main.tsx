@@ -8,20 +8,27 @@ import Authenticating from './callbacks/Authenticating'
 import AuthenticationError from './callbacks/AuthenticationError'
 import Loading from './callbacks/Loading'
 import SessionLost from './callbacks/SessionLost'
+import { HelmetProvider } from 'react-helmet-async'
+
+
+import "material-icons/iconfont/filled.css";
+import "material-icons/iconfont/outlined.css";
 
 const rootElement = document.getElementById('root')!;
 const root = ReactDOM.createRoot(rootElement);
 
 root.render(
   <React.StrictMode>
-    <OidcProvider
-      configuration={configuration}
-      authenticatingComponent={Authenticating}
-      authenticatingErrorComponent={AuthenticationError}
-      loadingComponent={Loading}
-      sessionLostComponent={SessionLost}
-    >
-      <App />
-    </OidcProvider>
+    <HelmetProvider>
+      <OidcProvider
+        configuration={configuration}
+        authenticatingComponent={Authenticating}
+        authenticatingErrorComponent={AuthenticationError}
+        loadingComponent={Loading}
+        sessionLostComponent={SessionLost}
+      >
+        <App />
+      </OidcProvider>
+    </HelmetProvider>
   </React.StrictMode>
 );

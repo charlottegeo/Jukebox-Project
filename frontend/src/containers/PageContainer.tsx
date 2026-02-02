@@ -1,27 +1,21 @@
-import React from "react";
-import { Container } from "reactstrap";
 import { useLocation } from "react-router-dom";
+import { Container } from "reactstrap";
 import NavBar from "../components/NavBar";
-import './PageContainer.tsx.scss';
-import { AdminPanelProps } from "../App";
 
 type Props = {
   children: React.ReactNode;
-} & AdminPanelProps;
+};
 
-export const PageContainer: React.FC<Props> = ({ children, adminPanelOpen, setAdminPanelOpen }) => {
+export default function PageContainer({ children }: Props) {
   const location = useLocation();
-
   const isDisplayPage = location.pathname === "/display";
 
   return (
-    <div className={isDisplayPage ? 'full-screen' : 'page'}>
-      {!isDisplayPage && <NavBar setAdminPanelOpen={setAdminPanelOpen} />}
-      <Container fluid className={isDisplayPage ? 'full-container' : ''}>
-        {children}
+    <div className="page-and-navbar">
+      {!isDisplayPage && <NavBar />}
+      <Container className="main" fluid>
+        <Container className="main-child">{children}</Container>
       </Container>
     </div>
   );
-};
-
-export default PageContainer;
+}

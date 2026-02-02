@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faForward, faPlay, faPause, faSync, faTimes, 
-  faVolumeUp, faVolumeDown, faVolumeMute, faClock 
+import {
+  faForward, faPlay, faPause, faSync,
+  faVolumeUp, faVolumeDown, faVolumeMute, faClock
 } from '@fortawesome/free-solid-svg-icons';
+import {
+  Modal, ModalHeader, ModalBody,
+  Button, Input, FormGroup, Label, Card, CardBody, ListGroup, ListGroupItem
+} from 'reactstrap';
 import { ActiveUser } from '../types';
 
 interface AdminPanelProps {
@@ -73,8 +77,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseInt(e.target.value);
-    onVolumeChange(newVolume);
+    onVolumeChange(parseInt(e.target.value, 10));
   };
 
   const handleVolumeIconClick = () => {
@@ -107,78 +110,73 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
   };
 
   return (
-    <div className="admin-panel-overlay">
-      <div className="admin-panel">
-        <button onClick={onClose} className="btn btn-link float-right p-0" style={{ fontSize: '1.5rem' }}>
-          <FontAwesomeIcon icon={faTimes} />
-        </button>
-        <h2 className="h4 mb-3">Admin Controls</h2>
-        
-        <div className="admin-controls-group">
-          <div className="playback-controls mb-3">
-            <button onClick={handlePausePlay} className="btn btn-primary mr-2">
-              <FontAwesomeIcon icon={!isPlaying ? faPause : faPlay} />
-            </button>
-            <button onClick={handleForceSkip} className="btn btn-outline-danger">
-              <FontAwesomeIcon icon={faForward} />
-            </button>
-          </div>
-
-          <div className="volume-control">
-            <div className="volume-icon" onClick={handleVolumeIconClick}>
-              <FontAwesomeIcon icon={getVolumeIcon()} />
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={volume}
-              onChange={handleVolumeChange}
-              className="volume-slider"
-            />
-            <span className="volume-value">{volume}%</span>
-          </div>
-
-          <div className="volume-control">
-            <div className="volume-icon">
-              <FontAwesomeIcon icon={faClock} />
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              step="0.5"
-              value={songLengthLimit}
-              onChange={handleMaxLengthChange}
-              className="volume-slider"
-            />
-            <span className="volume-value">{formatTime(songLengthLimit)}</span>
-          </div>
-
-          <button onClick={handleRefreshDisplay} className="btn btn-outline-secondary btn-block">
-            <FontAwesomeIcon icon={faSync} className="mr-2" /> Refresh Display
-          </button>
+    <Modal isOpen toggle={onClose} size="lg">
+      <ModalHeader toggle={onClose}>Admin Controls</ModalHeader>
+      <ModalBody>
+        <div className="mb-3 d-flex gap-2">
+          <Button color="primary" onClick={handlePausePlay}>
+            <FontAwesomeIcon icon={!isPlaying ? faPause : faPlay} />
+          </Button>
+          <Button color="danger" outline onClick={handleForceSkip}>
+            <FontAwesomeIcon icon={faForward} />
+          </Button>
         </div>
 
-        <div className="active-users-section">
-          <h3>Active Users</h3>
-          <div className="active-users-list">
-            {activeUsers.map((user) => (
-              <div key={user.username} className="active-user">
-                <img 
-                  src={user.profilePicture} 
-                  alt={user.username} 
-                  className="user-avatar"
-                />
-                <div className="user-info">
-                  {user.username} | {user.queueCount} {user.queueCount === 1 ? 'song' : 'songs'}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+        <FormGroup>
+          <Label className="d-flex align-items-center">
+            <FontAwesomeIcon icon={getVolumeIcon()} className="mr-2" onClick={handleVolumeIconClick} style={{ cursor: 'pointer' }} />
+            Volume: {volume}%
+          </Label>
+          <Input
+            type="range"
+            min="0"
+            max="100"
+            value={volume}
+            onChange={handleVolumeChange}
+            className="form-control-range"
+          />
+        </FormGroup>
+
+        <FormGroup>
+          <Label>
+            <FontAwesomeIcon icon={faClock} className="mr-2" />
+            Max song length: {formatTime(songLengthLimit)}
+          </Label>
+          <Input
+            type="range"
+            min="1"
+            max="10"
+            step="0.5"
+            value={songLengthLimit}
+            onChange={handleMaxLengthChange}
+            className="form-control-range"
+          />
+        </FormGroup>
+
+        <Button color="secondary" outline block onClick={handleRefreshDisplay} className="mb-3">
+          <FontAwesomeIcon icon={faSync} className="mr-2" /> Refresh Display
+        </Button>
+
+        <Card>
+          <CardBody>
+            <h5 className="card-title">Active Users</h5>
+            <ListGroup flush>
+              {activeUsers.map((user) => (
+                <ListGroupItem key={user.username} className="d-flex align-items-center">
+                  <img
+                    src={user.profilePicture}
+                    alt={user.username}
+                    className="rounded mr-2"
+                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                  />
+                  <span>{user.username} · {user.queueCount} {user.queueCount === 1 ? 'song' : 'songs'}</span>
+                </ListGroupItem>
+              ))}
+            </ListGroup>
+          </CardBody>
+        </Card>
+      </ModalBody>
+    </Modal>
   );
 };
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Collapse,
   Container,
@@ -6,18 +6,14 @@ import {
   Navbar,
   NavbarToggler,
   NavItem,
-} from 'reactstrap';
-import { NavLink } from 'react-router-dom';
-import Profile from './Profile';
-import { useSocket } from '../contexts/SocketContext';
+} from "reactstrap";
+import {NavLink} from "react-router-dom";
+import Profile from "./Profile";
+import ThemeToggle from "./ThemeToggle";
+import { useSocket } from "../contexts/SocketContext";
 
-interface NavBarProps {
-  setAdminPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-const NavBar: React.FC<NavBarProps> = ({ setAdminPanelOpen }) => {
+const NavBar: React.FunctionComponent = () => {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
-  const { isAdmin } = useSocket();
 
   const toggle = () => {
     setIsOpen(!isOpen);
@@ -25,15 +21,23 @@ const NavBar: React.FC<NavBarProps> = ({ setAdminPanelOpen }) => {
 
   return (
     <div>
-      <Navbar color='primary' dark expand='lg' fixed='top'>
+      <Navbar color="primary" dark expand="lg">
         <Container>
-          <NavLink to='/' className={'navbar-brand'}>
+          <NavLink to="/" className={"navbar-brand"}>
             CatJam
           </NavLink>
           <NavbarToggler onClick={toggle} />
           <Collapse isOpen={isOpen} navbar>
-            <Nav navbar className='ml-auto'>
+            <Nav navbar>
+              {
+                // to add stuff to the navbar, add a NavItem tag with a NavLink to the route
+              }
+            </Nav>
+            <Nav navbar className="ml-auto">
               <Profile />
+              <NavItem className="nav-link">
+                <ThemeToggle />
+              </NavItem>
             </Nav>
           </Collapse>
         </Container>
@@ -42,4 +46,4 @@ const NavBar: React.FC<NavBarProps> = ({ setAdminPanelOpen }) => {
   );
 };
 
-export default NavBar
+export default NavBar;

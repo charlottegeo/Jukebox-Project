@@ -60,6 +60,11 @@ export function registerSocketHandlers(io: Server) {
       }
     });
 
+    socket.on('playback_started', () => {
+      if (stateManager.getDisplaySocketId() !== socket.id) return;
+      stateManager.startPlaybackTimer();
+    });
+
     socket.on('addSongToQueue', async (data) => {
       const { song, uid } = data;
       if (!uid) return;

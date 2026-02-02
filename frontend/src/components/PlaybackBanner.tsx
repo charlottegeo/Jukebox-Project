@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay, faPause, faForward, faUsers, faClock, faUndo, faRadio, faCog } from '@fortawesome/free-solid-svg-icons';
+import { faForward, faClock, faUndo, faRadio, faCog } from '@fortawesome/free-solid-svg-icons';
 import { Song, SkipVoteStatus } from '../types';
-import { Button, Input } from 'reactstrap';
+import { Button, Card, CardBody, Input } from 'reactstrap';
 
 interface PlaybackBannerProps {
   currentSong: Song | null;
@@ -72,52 +72,45 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
   };
 
   return (
-    <div className="playback-banner">
-      <div className="banner-content">
-        <div className="song-info">
+    <Card className="mb-0 rounded-0 border-0">
+      <CardBody className="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+        <div className="d-flex align-items-center flex-wrap gap-2 flex-grow-1 min-width-0">
           {currentSong ? (
             <>
-              <div className="current-song">
-                <img 
-                  src={currentSong.cover_url} 
-                  alt={currentSong.track_name}
-                  className={`cover-art ${isLoading ? 'loading' : ''}`}
-                />
-                <div className="song-details">
-                  <span className="now-playing">
-                    {isLoading ? "Loading..." : `Now Playing ${isPaused ? "(Paused)" : ""}`}
-                  </span>
-                  <span className="track-name">{currentSong.track_name}</span>
-                  <span className="artist-name">{currentSong.artist_name}</span>
-                  <span className="submitted-by">Added by {currentSong.submittedBy}</span>
-                  <div className="metadata">
-                    <span>
-                      <FontAwesomeIcon icon={faClock} /> {currentSong.duration ? formatTime(currentSong.duration) : currentSong.track_length}
-                    </span>
-                  </div>
+              <img
+                src={currentSong.cover_url}
+                alt={currentSong.track_name}
+                className="rounded"
+                style={{ width: '48px', height: '48px', objectFit: 'cover', flexShrink: 0 }}
+              />
+              <div className="min-width-0">
+                <div className="small text-muted">
+                  {isLoading ? 'Loading...' : `Now Playing ${isPaused ? '(Paused)' : ''}`}
+                </div>
+                <div className="font-weight-bold text-truncate">{currentSong.track_name}</div>
+                <div className="small text-muted text-truncate">{currentSong.artist_name}</div>
+                <div className="small text-muted">
+                  Added by {currentSong.submittedBy} · {currentSong.duration ? formatTime(currentSong.duration) : currentSong.track_length}
                 </div>
               </div>
             </>
           ) : (
-            <div className="no-song">
-              <span>No song playing</span>
-            </div>
+            <span className="text-muted">No song playing</span>
           )}
         </div>
 
-        <div className="controls d-flex flex-wrap align-items-center gap-2">
-          <div className="length-limit text-muted small">
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <span className="text-muted small">
             <FontAwesomeIcon icon={faClock} className="mr-1" /> Max: {formatLengthLimit(songLengthLimit)}
-          </div>
+          </span>
           {onTuneInToggle && (
             <>
-              <Button 
+              <Button
                 color={isTunedIn ? 'success' : 'primary'}
                 size="sm"
                 onClick={onTuneInToggle}
-                className="d-flex align-items-center"
               >
-                <FontAwesomeIcon icon={faRadio} className="mr-2" />
+                <FontAwesomeIcon icon={faRadio} className="mr-1" />
                 {isTunedIn ? 'Tuned In' : 'Tune In'}
               </Button>
               {isTunedIn && onRadioVolumeChange && (
@@ -129,44 +122,37 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
                     max="100"
                     value={radioVolume}
                     onChange={(e) => onRadioVolumeChange(Number(e.target.value))}
-                    style={{ width: '100px' }}
                     className="mr-2"
+                    style={{ width: '100px' }}
                   />
-                  <span className="small text-muted" style={{ minWidth: '35px' }}>{radioVolume}%</span>
+                  <span className="small text-muted">{radioVolume}%</span>
                 </div>
               )}
             </>
           )}
-          <Button 
-            className={`${skipVoteStatus?.hasVoted ? 'btn-outline-secondary' : 'btn-primary'}`}
+          <Button
+            color={skipVoteStatus?.hasVoted ? 'secondary' : 'primary'}
+            outline={!!skipVoteStatus?.hasVoted}
             size="sm"
             onClick={handleVoteSkip}
             disabled={!currentSong}
             title={skipVoteStatus?.hasVoted ? 'Click to unvote' : 'Click to vote to skip'}
           >
-            <FontAwesomeIcon icon={skipVoteStatus?.hasVoted ? faUndo : faForward} className="mr-2" />
+            <FontAwesomeIcon icon={skipVoteStatus?.hasVoted ? faUndo : faForward} className="mr-1" />
             {getSkipButtonText()}
           </Button>
-          <div className="user-count d-flex align-items-center text-muted small">
-            <div className="active-indicator mr-2">
-              <div className={`dot ${activeUserCount > 0 ? 'active' : 'inactive'}`}></div>
-            </div>
-            <span>{activeUserCount} active</span>
-          </div>
+          <span className="text-muted small">
+            <span className={`mr-1 rounded-circle d-inline-block ${activeUserCount > 0 ? 'bg-success' : 'bg-secondary'}`} style={{ width: '8px', height: '8px' }} />
+            {activeUserCount} active
+          </span>
           {isAdmin && onAdminClick && (
-            <Button
-              color="link"
-              size="sm"
-              onClick={onAdminClick}
-              className="text-muted"
-              title="Admin Panel"
-            >
+            <Button color="link" size="sm" onClick={onAdminClick} className="text-muted" title="Admin Panel">
               <FontAwesomeIcon icon={faCog} />
             </Button>
           )}
         </div>
-      </div>
-    </div>
+      </CardBody>
+    </Card>
   );
 };
 

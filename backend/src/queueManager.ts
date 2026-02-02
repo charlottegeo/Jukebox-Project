@@ -160,7 +160,6 @@ export const playNextSong = async () => {
       }
     }
 
-    stateManager.startPlaybackTimer();
     stateManager.setSongDownloaded();
 
     if ((nextSong.bpm === undefined || nextSong.bpm === null) && fs.existsSync(localPath)) {

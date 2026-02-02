@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardBody } from 'reactstrap';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Song } from '../types';
@@ -141,31 +142,31 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
 
   return (
     <div className="search-page">
-      <div className="app-container">
-        <div className="banner">
-          <PlaybackBanner
-            currentSong={currentSong}
-            isPaused={isPaused}
-            activeUserCount={activeUserCount}
-            onVoteSkip={handleVoteSkip}
-            songLengthLimit={songLengthLimit}
-            isLoading={isLoading}
-            skipVoteStatus={skipVoteStatus}
-            socket={socket}
-            isTunedIn={isTunedIn}
+      <div className="banner-full-width">
+        <PlaybackBanner
+          currentSong={currentSong}
+          isPaused={isPaused}
+          activeUserCount={activeUserCount}
+          onVoteSkip={handleVoteSkip}
+          songLengthLimit={songLengthLimit}
+          isLoading={isLoading}
+          skipVoteStatus={skipVoteStatus}
+          socket={socket}
+          isTunedIn={isTunedIn}
             onTuneInToggle={() => setIsTunedIn(!isTunedIn)}
             radioVolume={radioVolume}
             onRadioVolumeChange={setRadioVolume}
             isAdmin={isAdmin}
             onAdminClick={() => setAdminPanelOpen(true)}
           />
-          <audio
-            ref={radioAudioRef}
-            onLoadedMetadata={handleLoadedMetadata}
-            crossOrigin="anonymous"
-            style={{ display: 'none' }}
-          />
-        </div>
+        <audio
+          ref={radioAudioRef}
+          onLoadedMetadata={handleLoadedMetadata}
+          crossOrigin="anonymous"
+          style={{ display: 'none' }}
+        />
+      </div>
+      <div className="app-container">
         <div className="queue">
           <UserQueue
             queue={myQueue}
@@ -175,12 +176,16 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
           />
         </div>
         <div className="search">
-          <SearchBar onSearch={handleSearch} onSearchStateChange={setHasSearched} />
-          <SongList
-            songs={songs}
-            onSelect={handleAddToQueue}
-            hasSearched={hasSearched}
-          />
+          <Card className="h-100">
+            <CardBody>
+              <SearchBar onSearch={handleSearch} onSearchStateChange={setHasSearched} />
+              <SongList
+                songs={songs}
+                onSelect={handleAddToQueue}
+                hasSearched={hasSearched}
+              />
+            </CardBody>
+          </Card>
         </div>
       </div>
       {isAdmin && adminPanelOpen && (

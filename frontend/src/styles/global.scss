@@ -37,27 +37,95 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  transition: var(--transition-normal);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+#root {
+  margin: 0 auto;
+  text-align: center;
+}
+
+html,
+body,
+#root,
+.page-and-navbar {
+  height: 100%;
+}
+
+.page-and-navbar {
+  display: flex;
+  flex-flow: column;
+}
+
+.main {
+  height: 100%;
+  flex: 1 1 auto;
+}
+
+.main-child {
+  height: 100%;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.banner-full-width {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  margin-bottom: var(--spacing-md);
 }
 
 .app-container {
   display: grid;
-  grid-template-areas:
-    "banner banner"
-    "queue search";
+  grid-template-areas: "queue search";
   grid-template-columns: 300px 1fr;
-  grid-template-rows: auto 1fr;
-  min-height: calc(100vh - 76px);
+  grid-template-rows: 1fr;
+  min-height: 0;
+  flex: 1;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
-  padding-top: 0;
-
-  .banner {
-    grid-area: banner;
-    margin-top: 76px;
-  }
 
   .queue {
     grid-area: queue;
@@ -73,18 +141,9 @@ body {
   }
 
   @media (max-width: 768px) {
-    grid-template-areas:
-      "banner"
-      "queue"
-      "search";
+    grid-template-areas: "queue" "search";
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto 1fr;
-    padding-top: 0;
-    min-height: calc(100vh - 76px);
-
-    .banner {
-      margin-top: 76px;
-    }
+    grid-template-rows: auto 1fr;
 
     .queue {
       max-height: 300px;
@@ -115,42 +174,13 @@ body {
 .p-3 { padding: var(--spacing-lg); }
 .p-4 { padding: var(--spacing-xl); }
 
-[data-theme="dark"] {
-  .card {
-    background-color: var(--secondary-color);
-    border-color: var(--tertiary-color);
-  }
-
-  .card-header {
-    background-color: var(--tertiary-color);
-    border-color: var(--tertiary-color);
-  }
-
-  .list-group-item {
-    background-color: var(--secondary-color);
-    border-color: var(--tertiary-color);
-
-    &:hover {
-      background-color: var(--tertiary-color);
-    }
-  }
-
-  .form-control {
-    background-color: var(--tertiary-color);
-    border: none;
-
-    &::placeholder {
-      color: var(--text-color-lightened);
-    }
-
-    &:focus {
-      border: none;
-      box-shadow: none;
-      outline: none;
-    }
-  }
+.icon-button {
+  background: none;
+  cursor: pointer;
+  border: none;
+  color: unset;
+  padding: unset;
 }
-
 @import './components/Profile';
 @import './components/SearchBar';
 @import './components/UserQueue';

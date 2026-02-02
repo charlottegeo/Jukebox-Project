@@ -8,7 +8,6 @@ interface MessagePopupProps {
   type: MessageType;
   onClose: () => void;
   duration?: number;
-  style?: React.CSSProperties;
 }
 
 const MessagePopup: React.FC<MessagePopupProps> = ({
@@ -16,7 +15,6 @@ const MessagePopup: React.FC<MessagePopupProps> = ({
   type,
   onClose,
   duration = 5000,
-  style
 }) => {
   const [isVisible, setIsVisible] = useState(true);
 
@@ -43,20 +41,7 @@ const MessagePopup: React.FC<MessagePopupProps> = ({
   }
 
   return (
-    <Alert
-      color={alertColor}
-      isOpen={isVisible}
-      toggle={handleClose}
-      className="position-fixed"
-      style={{
-        top: '20px',
-        right: '20px',
-        zIndex: 1100,
-        minWidth: '300px',
-        maxWidth: '500px',
-        ...style
-      }}
-    >
+    <Alert color={alertColor} isOpen={isVisible} toggle={handleClose} className="shadow mb-0">
       {message}
     </Alert>
   );

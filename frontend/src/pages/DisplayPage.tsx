@@ -24,6 +24,7 @@ const DisplayPage: React.FC = () => {
   const currentlyPlayingSrcRef = useRef<string | null>(null);
   const animationTrackIdRef = useRef<string | null>(null);
   const animationColorRef = useRef<string>(currentCatColor);
+  const playbackStartedEmittedForTrackRef = useRef<string | null>(null);
 
   const getBpmForTime = (time: number): number => {
     if (!currentSong) return 120;
@@ -193,6 +194,7 @@ const DisplayPage: React.FC = () => {
       currentTrackIdRef.current = null;
       loadedTrackIdRef.current = null;
       currentlyPlayingSrcRef.current = null;
+      playbackStartedEmittedForTrackRef.current = null;
       setProgress(0);
       resetCatAnimation();
       lastLoggedBpmRef.current = null;
@@ -221,7 +223,15 @@ const DisplayPage: React.FC = () => {
           }
         } else {
           audioRef.current.currentTime = 0;
-      }
+        }
+
+        const handlePlaying = () => {
+          if (playbackStartedEmittedForTrackRef.current !== trackId && socket) {
+            playbackStartedEmittedForTrackRef.current = trackId;
+            socket.emit('playback_started');
+          }
+        };
+        audioRef.current.addEventListener('playing', handlePlaying, { once: true });
 
         if (!isPaused) {
           audioRef.current.play().catch(e => {
