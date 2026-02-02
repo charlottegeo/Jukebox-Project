@@ -2,7 +2,11 @@
   "name": "csh-react-boilerplate",
   "version": "1.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "dependencies": {
+    "20": "^3.1.9",
     "@axa-fr/react-oidc": "^7.22.31",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
