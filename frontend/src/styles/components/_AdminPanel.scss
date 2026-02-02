@@ -1,0 +1,21 @@
+.admin-panel-actions {
+  gap: 0.75rem 1rem;
+}
+
+.admin-volume-group {
+  .admin-volume-slider-wrap {
+    display: inline-flex;
+    align-items: center;
+    height: 120px;
+    padding: 0.5rem 0;
+  }
+
+  .admin-volume-slider {
+    width: 120px;
+    height: 6px;
+    margin: 0;
+    transform: rotate(-90deg);
+    transform-origin: center center;
+    cursor: pointer;
+  }
+}

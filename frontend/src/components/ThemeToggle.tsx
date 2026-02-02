@@ -1,24 +1,12 @@
-import {useEffect, useState} from "react";
-import {useConstCallback} from "powerhooks";
-import {Helmet} from "react-helmet-async";
-
-const darkQuery = () => window.matchMedia("(prefers-color-scheme: dark)");
+import { useConstCallback } from "powerhooks";
+import { Helmet } from "react-helmet-async";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function ThemeToggle() {
-  const [darkMode, setDarkMode] = useState(() => darkQuery().matches);
-  useEffect(() => {
-    const query = darkQuery();
-    const onMediaChange = (event: {matches: boolean}) => {
-      setDarkMode(event.matches);
-    };
-    onMediaChange(query);
-    return () => {
-      query.removeEventListener("change", onMediaChange);
-    };
-  }, []);
+  const { darkMode, setDarkMode } = useTheme();
 
   const onThemeToggle = useConstCallback(() => {
-    setDarkMode((darkMode) => !darkMode);
+    setDarkMode((prev) => !prev);
   });
 
   return (
@@ -32,7 +20,7 @@ export default function ThemeToggle() {
         className="icon-button"
         role="toggle"
       >
-        <span className="material-icons-outlined" style={{fontSize: "32px"}}>
+        <span className="material-icons-outlined" style={{ fontSize: "32px" }}>
           {darkMode ? "light_mode" : "dark_mode"}
         </span>
       </button>

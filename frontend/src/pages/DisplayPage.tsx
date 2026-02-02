@@ -328,6 +328,11 @@ const DisplayPage: React.FC = () => {
   }, [socket, currentSong?.audioPath]);
 
   const handleAudioEnded = () => {
+    const trackId = currentSong?.track_id || currentSong?.id;
+    if (!trackId || playbackStartedEmittedForTrackRef.current !== trackId) {
+      return;
+    }
+    playbackStartedEmittedForTrackRef.current = null;
     setProgress(0);
     resetCatAnimation();
     socket?.emit('song_finished');

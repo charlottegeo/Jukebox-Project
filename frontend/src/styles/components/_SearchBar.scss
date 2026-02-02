@@ -1,7 +1,12 @@
 .search-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
   margin-bottom: 1rem;
+
+  .btn-group {
+    margin-right: 0.5rem;
+  }
+
+  form {
+    flex: 1;
+    min-width: 0;
+  }
 }

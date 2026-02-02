@@ -109,6 +109,16 @@ export function registerSocketHandlers(io: Server) {
     });
 
     socket.on('song_finished', () => {
+      const currentSong = stateManager.getCurrentSong();
+      const playbackStartTime = stateManager.getPlaybackStartTime();
+      if (!currentSong?.audioPath) {
+        console.log('Ignoring song_finished: song still loading (no audioPath)');
+        return;
+      }
+      if (playbackStartTime === null) {
+        console.log('Ignoring song_finished: playback never started (no playback_started yet)');
+        return;
+      }
       console.log('Song finished, cleaning up and playing next song');
       stateManager.setPlaying(false);
       queueManager.playNextSong();

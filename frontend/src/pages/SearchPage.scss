@@ -1,6 +1,126 @@
+@use '../styles/mixins';
+@import '../styles/variables';
+
+$search-page-max-width: 1600px;
+$search-page-padding: var(--spacing-md, #{$spacing-md});
+
 .search-page {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  width: 100%;
+}
+
+.app-container {
+  display: grid;
+  grid-template-areas: "queue search";
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: 1fr;
+  min-height: 0;
+  flex: 1;
+  gap: $search-page-padding;
+  padding: $search-page-padding;
+  padding-bottom: 0;
+  width: 100%;
+  max-width: $search-page-max-width;
+  margin: 0 auto;
+  box-sizing: border-box;
+
+  .queue {
+    grid-area: queue;
+    min-height: 0;
+    overflow-y: auto;
+    border-radius: $border-radius-md;
+    @include mixins.custom-scrollbar;
+
+    .card {
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075), 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  .search {
+    grid-area: search;
+    min-height: 0;
+    overflow-y: visible;
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+    padding-right: $search-page-padding;
+
+    .card {
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075), 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+.search-page-mobile {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: $search-page-padding;
+  padding-top: 0;
+  max-width: $search-page-max-width;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.search-page-tabs {
+  margin-bottom: $spacing-md;
+  padding: 0;
+  gap: 0.25rem;
+
+  .nav-link {
+    padding: 0.5rem 1rem;
+    border-radius: $border-radius-md;
+    cursor: pointer;
+  }
+}
+
+body.dark-theme .search-page-tabs .nav-link {
+  color: #ffffff;
+  background-color: #1E1E2F;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:hover {
+    background-color: #2A2A3F;
+    color: #ffffff;
+  }
+
+  &.active {
+    background-color: #13131F;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+body:not(.dark-theme) .search-page-tabs .nav-link {
+  color: #212529;
+  background-color: #e9ecef;
+  border: 1px solid #dee2e6;
+
+  &:hover {
+    background-color: #dee2e6;
+    color: #212529;
+  }
+
+  &.active {
+    background-color: #fff;
+    color: #212529;
+    border-color: #dee2e6;
+    font-weight: 600;
+  }
+}
+
+.search-page-tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  @include mixins.custom-scrollbar;
+
+  .queue,
+  .search {
+    min-height: 200px;
+  }
 }

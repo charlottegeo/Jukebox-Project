@@ -148,7 +148,6 @@ export const playNextSong = async () => {
         ? downloadSpotifyAudio(nextSong.track_id, nextSong.youtubeUri)
         : downloadYouTubeAudio(nextSong.uri));
       nextSong.audioPath = buildAudioPath(localPath);
-      stateManager.updateSongInQueue(nextUser, 0, nextSong);
     } else {
       const urlMatch = nextSong.audioPath.match(/\/stream\/([^?]+)/);
       if (urlMatch) {
@@ -167,8 +166,6 @@ export const playNextSong = async () => {
       analyzeBPM(localPath).then(({ bpm, tempoMap }) => {
         nextSong.bpm = bpm;
         nextSong.tempoMap = tempoMap;
-        stateManager.updateSongInQueue(nextUser, 0, nextSong);
-        
         const currentSong = stateManager.getCurrentSong();
         if (currentSong && (currentSong.id === nextSong.id || currentSong.track_id === nextSong.track_id)) {
           stateManager.setCurrentSong(nextSong, nextUser);

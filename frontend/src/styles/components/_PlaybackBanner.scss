@@ -1,0 +1,56 @@
+.playback-banner-body {
+  gap: 1rem 1.5rem;
+}
+
+.playback-banner-song {
+  margin-right: 1.5rem;
+}
+
+.playback-banner-controls {
+  gap: 0.75rem 1rem;
+  margin-left: 0.5rem;
+}
+
+.playback-banner-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.playback-banner-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.playback-banner-artist {
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
+
+.playback-banner-meta {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.playback-banner-max,
+.playback-banner-volume {
+  white-space: nowrap;
+}
+
+.playback-banner-btn {
+  margin: 0 0.15rem;
+}
+
+.playback-banner-skip {
+  margin-left: 0.25rem;
+}
+
+.playback-banner-active {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+  opacity: 0.95;
+}
+
+.playback-banner-admin-btn {
+  padding: 0.35rem 0.5rem !important;
+}

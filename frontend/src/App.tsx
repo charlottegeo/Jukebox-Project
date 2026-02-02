@@ -10,6 +10,7 @@ import { SSOEnabled } from './configuration';
 import { MessageProvider } from './contexts/MessageContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 export interface AdminPanelProps {
   adminPanelOpen: boolean;
@@ -25,10 +26,11 @@ const App: React.FC<Props> = ({ rerouteHomeOn404 = null }) => {
 
   return (
     <Router>
-      <AuthProvider>
-        <MessageProvider>
-          <SocketProvider>
-            <PageContainer>
+      <ThemeProvider>
+        <AuthProvider>
+          <MessageProvider>
+            <SocketProvider>
+              <PageContainer>
               <Routes>
                 <Route path="/" element={
                   SSOEnabled ? (
@@ -52,10 +54,11 @@ const App: React.FC<Props> = ({ rerouteHomeOn404 = null }) => {
                   <NotFound />
                 )} />
               </Routes>
-            </PageContainer>
-          </SocketProvider>
-        </MessageProvider>
-      </AuthProvider>
+              </PageContainer>
+            </SocketProvider>
+          </MessageProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </Router>
   )
 }

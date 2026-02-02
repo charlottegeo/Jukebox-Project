@@ -6,9 +6,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Modal, ModalHeader, ModalBody,
-  Button, Input, FormGroup, Label, Card, CardBody, ListGroup, ListGroupItem
+  Button, Input, FormGroup, Label, Card, CardBody
 } from 'reactstrap';
 import { ActiveUser } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -20,6 +21,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolumeChange, currentUser, isPaused: serverIsPaused }) => {
+  const { darkMode } = useTheme();
   const [isPlaying, setIsPlaying] = useState(!(serverIsPaused ?? false));
   const [previousVolume, setPreviousVolume] = useState<number>(volume);
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
@@ -113,28 +115,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
     <Modal isOpen toggle={onClose} size="lg">
       <ModalHeader toggle={onClose}>Admin Controls</ModalHeader>
       <ModalBody>
-        <div className="mb-3 d-flex gap-2">
+        <div className="mb-3 d-flex gap-3 flex-wrap admin-panel-actions">
           <Button color="primary" onClick={handlePausePlay}>
-            <FontAwesomeIcon icon={!isPlaying ? faPause : faPlay} />
+            <FontAwesomeIcon icon={!isPlaying ? faPause : faPlay} className="mr-1" />
+            {isPlaying ? 'Pause' : 'Play'}
           </Button>
-          <Button color="danger" outline onClick={handleForceSkip}>
-            <FontAwesomeIcon icon={faForward} />
+          <Button color="danger" onClick={handleForceSkip} className="font-weight-bold">
+            <FontAwesomeIcon icon={faForward} className="mr-1" />
+            Force Skip
           </Button>
         </div>
 
-        <FormGroup>
-          <Label className="d-flex align-items-center">
+        <FormGroup className="admin-volume-group">
+          <Label className="d-flex align-items-center mb-2">
             <FontAwesomeIcon icon={getVolumeIcon()} className="mr-2" onClick={handleVolumeIconClick} style={{ cursor: 'pointer' }} />
             Volume: {volume}%
           </Label>
-          <Input
-            type="range"
-            min="0"
-            max="100"
-            value={volume}
-            onChange={handleVolumeChange}
-            className="form-control-range"
-          />
+          <div className="admin-volume-slider-wrap">
+            <Input
+              type="range"
+              min="0"
+              max="100"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="form-control-range admin-volume-slider"
+            />
+          </div>
         </FormGroup>
 
         <FormGroup>
@@ -157,24 +163,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
           <FontAwesomeIcon icon={faSync} className="mr-2" /> Refresh Display
         </Button>
 
-        <Card>
-          <CardBody>
-            <h5 className="card-title">Active Users</h5>
-            <ListGroup flush>
-              {activeUsers.map((user) => (
-                <ListGroupItem key={user.username} className="d-flex align-items-center">
-                  <img
-                    src={user.profilePicture}
-                    alt={user.username}
-                    className="rounded mr-2"
-                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                  />
-                  <span>{user.username} · {user.queueCount} {user.queueCount === 1 ? 'song' : 'songs'}</span>
-                </ListGroupItem>
-              ))}
-            </ListGroup>
-          </CardBody>
-        </Card>
+        <h5 className="mb-2">Active Users</h5>
+        <div className="d-flex flex-wrap gap-2">
+          {activeUsers.map((user) => (
+            <Card key={user.username} className={`mb-0 ${darkMode ? 'bg-dark text-white border-secondary' : 'bg-light border-light'}`} style={{ minWidth: '200px' }}>
+              <CardBody className="d-flex align-items-center py-2 px-3">
+                <img
+                  src={user.profilePicture}
+                  alt={user.username}
+                  className="rounded mr-2 flex-shrink-0"
+                  style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                />
+                <div className="min-width-0">
+                  <div className="font-weight-bold text-truncate">{user.username}</div>
+                  <div className="small text-muted">{user.queueCount} {user.queueCount === 1 ? 'song' : 'songs'}</div>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </ModalBody>
     </Modal>
   );

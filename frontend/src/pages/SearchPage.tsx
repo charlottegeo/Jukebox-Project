@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardBody } from 'reactstrap';
+import { Card, CardBody, Nav, NavItem, NavLink } from 'reactstrap';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Song } from '../types';
 import { useOidcAccessToken } from '@axa-fr/react-oidc';
 import UserInfo from '../UserInfo';
@@ -39,7 +40,18 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
   
   const [songs, setSongs] = useState<Song[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [activeTab, setActiveTab] = useState<'queue' | 'search'>('queue');
+  const [isMobile, setIsMobile] = useState(false);
 
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    const handler = () => setIsMobile(mql.matches);
+    handler();
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  const { darkMode } = useTheme();
   const { user } = useAuth();
   const { accessTokenPayload } = useOidcAccessToken();
   const userInfo = accessTokenPayload as UserInfo;
@@ -143,51 +155,107 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
   return (
     <div className="search-page">
       <div className="banner-full-width">
-        <PlaybackBanner
-          currentSong={currentSong}
-          isPaused={isPaused}
-          activeUserCount={activeUserCount}
-          onVoteSkip={handleVoteSkip}
-          songLengthLimit={songLengthLimit}
-          isLoading={isLoading}
-          skipVoteStatus={skipVoteStatus}
-          socket={socket}
-          isTunedIn={isTunedIn}
+          <PlaybackBanner
+            currentSong={currentSong}
+            isPaused={isPaused}
+            activeUserCount={activeUserCount}
+            onVoteSkip={handleVoteSkip}
+            songLengthLimit={songLengthLimit}
+            isLoading={isLoading}
+            skipVoteStatus={skipVoteStatus}
+            socket={socket}
+            isTunedIn={isTunedIn}
             onTuneInToggle={() => setIsTunedIn(!isTunedIn)}
             radioVolume={radioVolume}
             onRadioVolumeChange={setRadioVolume}
             isAdmin={isAdmin}
             onAdminClick={() => setAdminPanelOpen(true)}
           />
-        <audio
-          ref={radioAudioRef}
-          onLoadedMetadata={handleLoadedMetadata}
-          crossOrigin="anonymous"
-          style={{ display: 'none' }}
-        />
-      </div>
-      <div className="app-container">
-        <div className="queue">
-          <UserQueue
-            queue={myQueue}
-            onClearQueue={() => socket?.emit('clearUserQueue', uid)}
-            onRemoveSong={(index) => socket?.emit('removeSongFromQueue', { uid, index })}
-            onReorderQueue={(newQueue) => socket?.emit('reorderQueue', { queue: newQueue, uid })}
+          <audio
+            ref={radioAudioRef}
+            onLoadedMetadata={handleLoadedMetadata}
+            crossOrigin="anonymous"
+            style={{ display: 'none' }}
           />
-        </div>
-        <div className="search">
-          <Card className="h-100">
-            <CardBody>
-              <SearchBar onSearch={handleSearch} onSearchStateChange={setHasSearched} />
-              <SongList
-                songs={songs}
-                onSelect={handleAddToQueue}
-                hasSearched={hasSearched}
-              />
-            </CardBody>
-          </Card>
-        </div>
       </div>
+      {isMobile ? (
+        <div className="search-page-mobile">
+          <Nav pills className="search-page-tabs">
+            <NavItem>
+              <NavLink
+                active={activeTab === 'queue'}
+                onClick={() => setActiveTab('queue')}
+                className="search-page-tab"
+              >
+                Queue
+              </NavLink>
+            </NavItem>
+            <NavItem>
+              <NavLink
+                active={activeTab === 'search'}
+                onClick={() => setActiveTab('search')}
+                className="search-page-tab"
+              >
+                Search
+              </NavLink>
+            </NavItem>
+          </Nav>
+          <div className="search-page-tab-content">
+            {activeTab === 'queue' && (
+              <div className="queue">
+                <UserQueue
+                  queue={myQueue}
+                  onClearQueue={() => socket?.emit('clearUserQueue', uid)}
+                  onRemoveSong={(index) => socket?.emit('removeSongFromQueue', { uid, index })}
+                  onReorderQueue={(newQueue) => socket?.emit('reorderQueue', { queue: newQueue, uid })}
+                />
+              </div>
+            )}
+            {activeTab === 'search' && (
+              <div className="search">
+                <Card className={`h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
+                  <CardBody>
+                    <SearchBar onSearch={handleSearch} onSearchStateChange={setHasSearched} />
+                    <SongList
+                      songs={songs}
+                      onSelect={handleAddToQueue}
+                      hasSearched={hasSearched}
+                    />
+                  </CardBody>
+                </Card>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="app-container">
+          <div className="queue">
+            <Card className={`h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
+              <CardBody>
+                <UserQueue
+                  queue={myQueue}
+                  onClearQueue={() => socket?.emit('clearUserQueue', uid)}
+                  onRemoveSong={(index) => socket?.emit('removeSongFromQueue', { uid, index })}
+                  onReorderQueue={(newQueue) => socket?.emit('reorderQueue', { queue: newQueue, uid })}
+                  wrapInCard={false}
+                />
+              </CardBody>
+            </Card>
+          </div>
+          <div className="search">
+            <Card className={`h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
+              <CardBody>
+                <SearchBar onSearch={handleSearch} onSearchStateChange={setHasSearched} />
+                <SongList
+                  songs={songs}
+                  onSelect={handleAddToQueue}
+                  hasSearched={hasSearched}
+                />
+              </CardBody>
+            </Card>
+          </div>
+        </div>
+      )}
       {isAdmin && adminPanelOpen && (
         <AdminPanel
           onClose={() => setAdminPanelOpen(false)}

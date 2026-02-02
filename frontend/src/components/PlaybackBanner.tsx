@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faForward, faClock, faUndo, faRadio, faCog } from '@fortawesome/free-solid-svg-icons';
 import { Song, SkipVoteStatus } from '../types';
 import { Button, Card, CardBody, Input } from 'reactstrap';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface PlaybackBannerProps {
   currentSong: Song | null;
@@ -37,6 +38,7 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
   isAdmin = false,
   onAdminClick
 }) => {
+  const { darkMode } = useTheme();
   const handleVoteSkip = () => {
     if (!socket || !currentSong) return;
     
@@ -72,35 +74,38 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
   };
 
   return (
-    <Card className="mb-0 rounded-0 border-0">
-      <CardBody className="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
-        <div className="d-flex align-items-center flex-wrap gap-2 flex-grow-1 min-width-0">
+    <Card className={`mb-0 rounded-0 border-0 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
+      <CardBody className="d-flex flex-wrap align-items-center justify-content-between py-3 px-4 playback-banner-body">
+        <div className="d-flex align-items-center gap-3 flex-grow-1 min-width-0 playback-banner-song">
           {currentSong ? (
             <>
               <img
                 src={currentSong.cover_url}
                 alt={currentSong.track_name}
-                className="rounded"
-                style={{ width: '48px', height: '48px', objectFit: 'cover', flexShrink: 0 }}
+                className="rounded flex-shrink-0"
+                style={{ width: '56px', height: '56px', objectFit: 'cover' }}
               />
-              <div className="min-width-0">
-                <div className="small text-muted">
-                  {isLoading ? 'Loading...' : `Now Playing ${isPaused ? '(Paused)' : ''}`}
+              <div className="min-width-0 d-flex flex-wrap align-items-center gap-4">
+                <div>
+                  <div className="playback-banner-label">
+                    {isLoading ? 'Loading...' : `Now Playing ${isPaused ? '(Paused)' : ''}`}
+                  </div>
+                  <div className="playback-banner-title text-truncate" style={{ maxWidth: '280px' }}>{currentSong.track_name}</div>
+                  <div className="playback-banner-artist text-truncate" style={{ maxWidth: '280px' }}>{currentSong.artist_name}</div>
                 </div>
-                <div className="font-weight-bold text-truncate">{currentSong.track_name}</div>
-                <div className="small text-muted text-truncate">{currentSong.artist_name}</div>
-                <div className="small text-muted">
-                  Added by {currentSong.submittedBy} · {currentSong.duration ? formatTime(currentSong.duration) : currentSong.track_length}
+                <div className="playback-banner-meta">
+                  <div>Added by {currentSong.submittedBy}</div>
+                  <div>{currentSong.duration ? formatTime(currentSong.duration) : currentSong.track_length}</div>
                 </div>
               </div>
             </>
           ) : (
-            <span className="text-muted">No song playing</span>
+            <span className="playback-banner-meta">No song playing</span>
           )}
         </div>
 
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <span className="text-muted small">
+        <div className="d-flex flex-wrap align-items-center playback-banner-controls">
+          <span className="playback-banner-meta playback-banner-max">
             <FontAwesomeIcon icon={faClock} className="mr-1" /> Max: {formatLengthLimit(songLengthLimit)}
           </span>
           {onTuneInToggle && (
@@ -109,13 +114,14 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
                 color={isTunedIn ? 'success' : 'primary'}
                 size="sm"
                 onClick={onTuneInToggle}
+                className="playback-banner-btn"
               >
                 <FontAwesomeIcon icon={faRadio} className="mr-1" />
                 {isTunedIn ? 'Tuned In' : 'Tune In'}
               </Button>
               {isTunedIn && onRadioVolumeChange && (
-                <div className="d-flex align-items-center">
-                  <label className="small text-muted mr-2 mb-0">Volume:</label>
+                <div className="d-flex align-items-center playback-banner-volume">
+                  <label className="playback-banner-meta mr-2 mb-0">Volume:</label>
                   <Input
                     type="range"
                     min="0"
@@ -125,7 +131,7 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
                     className="mr-2"
                     style={{ width: '100px' }}
                   />
-                  <span className="small text-muted">{radioVolume}%</span>
+                  <span className="playback-banner-meta">{radioVolume}%</span>
                 </div>
               )}
             </>
@@ -136,18 +142,26 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
             size="sm"
             onClick={handleVoteSkip}
             disabled={!currentSong}
-            title={skipVoteStatus?.hasVoted ? 'Click to unvote' : 'Click to vote to skip'}
+            title={activeUserCount > 1 ? (skipVoteStatus?.hasVoted ? 'Click to unvote' : 'Vote to skip (requires majority)') : 'Skip'}
+            className="playback-banner-btn playback-banner-skip"
           >
             <FontAwesomeIcon icon={skipVoteStatus?.hasVoted ? faUndo : faForward} className="mr-1" />
             {getSkipButtonText()}
           </Button>
-          <span className="text-muted small">
-            <span className={`mr-1 rounded-circle d-inline-block ${activeUserCount > 0 ? 'bg-success' : 'bg-secondary'}`} style={{ width: '8px', height: '8px' }} />
+          <span className="playback-banner-active d-flex align-items-center">
+            <span
+              className="mr-1 rounded-circle d-inline-block flex-shrink-0"
+              style={{
+                width: '10px',
+                height: '10px',
+                backgroundColor: activeUserCount > 0 ? '#28a745' : '#6c757d',
+              }}
+            />
             {activeUserCount} active
           </span>
           {isAdmin && onAdminClick && (
-            <Button color="link" size="sm" onClick={onAdminClick} className="text-muted" title="Admin Panel">
-              <FontAwesomeIcon icon={faCog} />
+            <Button color="link" size="md" onClick={onAdminClick} className="playback-banner-admin-btn text-muted px-2" title="Admin Panel">
+              <FontAwesomeIcon icon={faCog} style={{ fontSize: '1.35rem' }} />
             </Button>
           )}
         </div>

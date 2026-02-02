@@ -46,11 +46,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onSearchStateChange }) 
     };
     
     return (
-        <div className="search-container">
-            <div className="btn-group mb-2" role="group">
+        <div className="search-container d-flex flex-wrap align-items-center gap-3 w-100">
+            <div className="btn-group flex-shrink-0 me-1" role="group">
                 <button
                     type="button"
-                    className={`btn ${searchSource === 'spotify' ? 'btn-success' : 'btn-outline-secondary'}`}
+                    className={`btn ${searchSource === 'spotify' ? 'btn-success' : 'btn-outline-success'}`}
                     onClick={() => setSearchSource('spotify')}
                     title="Search on Spotify"
                 >
@@ -58,22 +58,22 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onSearchStateChange }) 
                 </button>
                 <button
                     type="button"
-                    className={`btn ${searchSource === 'youtube' ? 'btn-danger' : 'btn-outline-secondary'}`}
+                    className={`btn ${searchSource === 'youtube' ? 'btn-danger' : 'btn-outline-danger'}`}
                     onClick={() => setSearchSource('youtube')}
                     title="Search on YouTube"
                 >
                     <FontAwesomeIcon icon={faYoutube} />
                 </button>
             </div>
-            <form onSubmit={handleSearch} className="d-flex">
+            <form onSubmit={handleSearch} className="d-flex flex-grow-1 min-width-0">
                 <input
                     type="text"
-                    className="form-control mr-2"
+                    className="form-control mr-2 flex-grow-1"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     placeholder={`Search for a song or enter a ${searchSource} link...`}
                 />
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary flex-shrink-0">
                     <FontAwesomeIcon icon={faSearch} />
                 </button>
             </form>
