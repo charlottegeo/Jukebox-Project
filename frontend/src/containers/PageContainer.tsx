@@ -11,7 +11,7 @@ export default function PageContainer({ children }: Props) {
   const isDisplayPage = location.pathname === "/display";
 
   return (
-    <div className="page-and-navbar">
+    <div className={`page-and-navbar${isDisplayPage ? ' is-display-page' : ''}`}>
       {!isDisplayPage && (
           <div style={{ width: '100%' }}>
             <NavBar />

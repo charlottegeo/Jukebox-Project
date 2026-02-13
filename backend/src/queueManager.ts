@@ -103,14 +103,17 @@ export const playNextSong = async () => {
   if (stateManager.getIsPlaying()) return;
 
   const currentSong = stateManager.getCurrentSong();
-  if (currentSong?.audioPath) {
-    deleteAudioFile(currentSong.audioPath);
+  if (currentSong) {
+    stateManager.rotateUserOrder();
+    if (currentSong.audioPath) {
+      deleteAudioFile(currentSong.audioPath);
+    }
     stateManager.setCurrentSong(null);
   }
-
   if (!stateManager.hasAnyQueueLeft()) {
-    stateManager.emitQueueEmpty();
+    console.log('All queues are empty. Going to idle state.');
     stateManager.setPlaying(false);
+    stateManager.emitQueueEmpty();
     return;
   }
 

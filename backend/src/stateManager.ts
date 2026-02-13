@@ -63,6 +63,7 @@ export const setCurrentSong = (song: Song | null, uid?: string) => {
   if (isNewSong) {
     skipVotes.clear();
     broadcastSkipVoteStatus();
+    playbackStartTime = null;
   }
   
   currentPlayingSong = song;
@@ -183,15 +184,23 @@ export const addUser = (uid: string, userInfo: any, socket: Socket) => {
   updateActiveUsers();
 };
 
+export const rotateUserOrder = () => {
+  if (userOrder.length > 1) {
+    const previousUser = userOrder.shift();
+    if (previousUser) {
+      userOrder.push(previousUser);
+    }
+  }
+};
+
 export const getNextUser = (): string | null => {
   while (userOrder.length > 0) {
-    const nextUser = userOrder.shift();
-    if (nextUser && userQueues[nextUser]?.length > 0) {
-      userOrder.push(nextUser);
-      return nextUser;
-    } else if (nextUser) {
-      delete userQueues[nextUser];
+    const uid = userOrder[0];
+    if (userQueues[uid] && userQueues[uid].length > 0) {
+      return uid;
     }
+    userOrder.shift();
+    delete userQueues[uid];
   }
   return null;
 };
@@ -215,6 +224,9 @@ export const addSongsToQueue = (uid: string, songs: Song[]) => {
   if (!userQueues[uid]) {
     userQueues[uid] = [];
   }
+  songs.forEach((song) => {
+    song.submittedBy = uid;
+  });
   userQueues[uid].push(...songs);
   
   if (!userOrder.includes(uid)) {
@@ -315,23 +327,30 @@ export const removeSkipVote = (uid: string) => {
   broadcastSkipVoteStatus();
 };
 
+/** Count of skip votes from users who currently have a non-empty queue (active contributors). */
+const getEligibleSkipVoteCount = (): number => {
+  return [...skipVotes].filter((voterUid) => userQueues[voterUid] && userQueues[voterUid].length > 0).length;
+};
+
 export const getSkipVoteStatus = (uid?: string) => {
   const activeUserCount = Object.keys(userQueues).filter(
-    (uid) => userQueues[uid] && userQueues[uid].length > 0
+    (id) => userQueues[id] && userQueues[id].length > 0
   ).length;
-  
-  const requiredVotes = activeUserCount === 1 
-    ? 1 
+
+  const requiredVotes = activeUserCount === 1
+    ? 1
     : Math.floor(activeUserCount / 2) + 1;
-  
-  const currentVotes = skipVotes.size;
+
+  const currentVotes = getEligibleSkipVoteCount();
   const hasVoted = uid ? skipVotes.has(uid) : false;
-  
+  const canVote = uid ? !!(userQueues[uid] && userQueues[uid].length > 0) : false;
+
   return {
     currentVotes,
     requiredVotes,
     hasVoted,
     activeUserCount,
+    canVote,
   };
 };
 
@@ -343,31 +362,26 @@ export const shouldTriggerSkip = (): boolean => {
 
 const broadcastSkipVoteStatus = () => {
   const activeUserCount = Object.keys(userQueues).filter(
-    (uid) => userQueues[uid] && userQueues[uid].length > 0
+    (id) => userQueues[id] && userQueues[id].length > 0
   ).length;
-  
-  const requiredVotes = activeUserCount === 1 
-    ? 1 
+
+  const requiredVotes = activeUserCount === 1
+    ? 1
     : Math.floor(activeUserCount / 2) + 1;
-  
-  const currentVotes = skipVotes.size;
-  
+
+  const currentVotes = getEligibleSkipVoteCount();
+
   const allUsers = Object.keys(userStates);
-  allUsers.forEach((uid) => {
-    const hasVoted = skipVotes.has(uid);
-    io.to(uid).emit('updateSkipVotes', {
+  allUsers.forEach((id) => {
+    const hasVoted = skipVotes.has(id);
+    const canVote = !!(userQueues[id] && userQueues[id].length > 0);
+    io.to(id).emit('updateSkipVotes', {
       currentVotes,
       requiredVotes,
       activeUserCount,
       hasVoted,
+      canVote,
     });
-  });
-  
-  io.emit('updateSkipVotes', {
-    currentVotes,
-    requiredVotes,
-    activeUserCount,
-    hasVoted: false,
   });
 };
 

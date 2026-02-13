@@ -19,22 +19,35 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onSearchStateChange }) 
         } catch (error) {
             return false;
         }
-    };    
+    };
+
+    const getLinkSource = (input: string): 'spotify' | 'youtube' | null => {
+        try {
+            const url = new URL(input);
+            if (url.hostname.includes('youtube.com')) return 'youtube';
+            if (url.hostname.includes('spotify.com')) return 'spotify';
+        } catch {
+            console.error("Invalid URL:", input);
+        }
+        return null;
+    };
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-    
+
         const trimmedInput = searchInput.trim();
         console.log("Search input:", trimmedInput);
         console.log("Search source:", searchSource);
-    
+
         if (!trimmedInput) {
             console.error("Search input is empty. Please enter a valid search term or link.");
             return;
         }
-    
+
         if (isLink(trimmedInput)) {
-            onSearch(trimmedInput, searchSource + 'Link');
+            const linkSource = getLinkSource(trimmedInput);
+            if (linkSource) setSearchSource(linkSource);
+            onSearch(trimmedInput, (linkSource ?? searchSource) + 'Link');
         } else {
             onSearch(trimmedInput, searchSource);
         }

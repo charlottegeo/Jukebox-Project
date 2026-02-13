@@ -68,3 +68,8 @@
 ☐ I noticed that the light/dark mode switcher isn't always visible when the page loads
 3Note: When testing round robin with 1 or 2 other people, also get feedback about UI and navigating the page
 If one of the other people is an RTP or eboard member, ask them about the admin functions and if anything should be added or removed
+
+Make sure pause/play is factored into the sync time 
+fix song not starting from beginning once it is loaded, it seems that the sync time starts when the song starts downloading, not when it starts playing
+see if mounting storage on okd will help speed up downloads + bpm analysis
+see if audio quality issues are serverside or just me

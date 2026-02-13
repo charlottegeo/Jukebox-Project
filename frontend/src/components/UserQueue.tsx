@@ -34,6 +34,12 @@ const UserQueue: React.FC<UserQueueProps> = ({
     }));
 
     const handleReorder = (newList: SortableSong[]) => {
+        const newOrder = newList.map(({ _originalId }) => _originalId);
+        const currentOrder = queue.map((s) => s.id);
+        const orderChanged =
+            newOrder.length !== currentOrder.length ||
+            newOrder.some((id, i) => id !== currentOrder[i]);
+        if (!orderChanged) return;
         onReorderQueue(newList.map(({ id: _sortId, _originalId, ...song }) => ({ ...song, id: _originalId })));
     };
 

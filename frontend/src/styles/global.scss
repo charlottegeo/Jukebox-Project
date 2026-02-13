@@ -3,14 +3,19 @@
 
 :root {
   --primary-color: #B0197E;
-  --background-color: #f8f9fa;
-  --surface-color: #ffffff;
-  --text-color: #212529;
+  --layer-0: #F8F9FA;
+  --layer-1: #FFFFFF;
+  --layer-2: #F0F2F5;
+  --text-color: #1A1A1A;
   --text-muted: #6c757d;
-  --border-color: #dee2e6;
+  --text-color-lightened: #6c757d;
+  --border-layer: #E5E7EB;
+  --background-color: var(--layer-0);
+  --surface-color: var(--layer-1);
+  --border-color: var(--border-layer);
   --input-bg: #ffffff;
   --highlight-bg: rgba(176, 25, 126, 0.1);
-  --queue-card-bg: #ffffff;
+  --queue-card-bg: var(--layer-1);
 
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -20,17 +25,22 @@
 }
 
 body.dark-theme {
-  --background-color: #13131F;
-  --surface-color: #1E1E2F;
-  --text-color: #ffffff;
-  --text-muted: #e0e0e0;
-  --border-color: #2c2c35;
+  --layer-0: #121212;
+  --layer-1: #1E1E1E;
+  --layer-2: #2C2C2C;
+  --text-color: #EDEDED;
+  --text-muted: #B0B0B0;
+  --text-color-lightened: #B0B0B0;
+  --border-layer: #3C3C3C;
+  --background-color: var(--layer-0);
+  --surface-color: var(--layer-1);
+  --border-color: var(--border-layer);
   --input-bg: #2A2A3F;
   --highlight-bg: rgba(176, 25, 126, 0.2);
-  --jukebox-bg: #13131F;
-  --jukebox-surface: #1E1E2F;
-  --jukebox-text: #ffffff;
-  --queue-card-bg: #252535;
+  --jukebox-bg: var(--layer-0);
+  --jukebox-surface: var(--layer-1);
+  --jukebox-text: var(--text-color);
+  --queue-card-bg: var(--layer-1);
 }
 
 body {
@@ -52,36 +62,82 @@ code {
 }
 
 #root {
-  margin: 0 auto;
-  text-align: center;
-  height: 100%;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-html, .page-and-navbar {
+html,
+body {
   height: 100%;
 }
 
 .page-and-navbar {
+  width: 100%;
+  margin: 0;
+  padding: 0;
   display: flex;
-  flex-flow: column;
+  flex-direction: column;
+  flex: 1;
+  overflow-x: hidden;
+}
+
+.page-and-navbar .main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.page-and-navbar .main-child {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.page-and-navbar.is-display-page .main,
+.page-and-navbar.is-display-page .main-child {
+  min-height: 100vh;
+  height: 100vh;
+  flex: 1 1 auto;
 }
 
 .card {
-  background-color: var(--surface-color) !important;
+  background-color: var(--layer-1) !important;
   color: var(--text-color);
-  border: 1px solid var(--border-color);
-  transition: background-color 0.3s ease;
+  border: 1px solid var(--border-layer);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 .card-queue {
-  background-color: var(--queue-card-bg) !important;
-  border: 1px solid var(--border-color);
+  background-color: var(--layer-1) !important;
+  border: 1px solid var(--border-layer);
 }
 
 .list-group-item {
-  background-color: var(--surface-color);
+  background-color: var(--layer-2);
   color: var(--text-color);
-  border-color: var(--border-color);
+  border: 1px solid var(--border-layer);
+}
+
+.song-card,
+.user-queue-item {
+  background-color: var(--layer-2) !important;
+  color: var(--text-color) !important;
+  border-top: 1px solid var(--border-layer);
+  border-right: 1px solid var(--border-layer);
+  border-bottom: 1px solid var(--border-layer);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .form-control {
@@ -183,31 +239,6 @@ html, .page-and-navbar {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(176, 25, 126, 0.2);
-}
-
-.marquee-container {
-  overflow: hidden;
-  white-space: nowrap;
-  position: relative;
-  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-}
-
-.marquee-content {
-  display: inline-block;
-  padding-left: 0;
-  animation: marquee 28s ease-in-out infinite;
-}
-
-.animate-marquee .marquee-content {
-  padding-left: 100%;
-}
-
-@keyframes marquee {
-  0% { transform: translate(0, 0); }
-  12% { transform: translate(0, 0); }
-  62% { transform: translate(-100%, 0); }
-  88% { transform: translate(-100%, 0); }
-  100% { transform: translate(0, 0); }
 }
 
 .flex-center {

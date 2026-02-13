@@ -15,13 +15,13 @@ $search-page-padding: var(--spacing-md, #{$spacing-md});
 .app-container {
   display: grid;
   grid-template-areas: "queue search";
-  grid-template-columns: 350px 1fr;
+  grid-template-columns: minmax(380px, 1.2fr) minmax(320px, 1fr);
   grid-template-rows: 1fr;
   min-height: 0;
   flex: 1;
   gap: var(--spacing-md);
   padding: 0 var(--spacing-md) var(--spacing-md) var(--spacing-md);
-  width: 98%;
+  width: 100%;
   max-width: 2400px;
   margin: 0 auto;
   box-sizing: border-box;
@@ -80,36 +80,37 @@ $search-page-padding: var(--spacing-md, #{$spacing-md});
 }
 
 body.dark-theme .search-page-tabs .nav-link {
-  color: #ffffff;
-  background-color: #1E1E2F;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  background-color: var(--layer-2);
+  border: 1px solid var(--border-layer);
 
   &:hover {
-    background-color: #2A2A3F;
-    color: #ffffff;
+    background-color: var(--layer-1);
+    color: var(--text-color);
   }
 
   &.active {
-    background-color: #13131F;
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--layer-1);
+    color: var(--text-color);
+    border-color: var(--border-layer);
+    font-weight: 600;
   }
 }
 
 body:not(.dark-theme) .search-page-tabs .nav-link {
-  color: #212529;
-  background-color: #e9ecef;
-  border: 1px solid #dee2e6;
+  color: var(--text-color);
+  background-color: var(--layer-2);
+  border: 1px solid var(--border-layer);
 
   &:hover {
-    background-color: #dee2e6;
-    color: #212529;
+    background-color: var(--layer-1);
+    color: var(--text-color);
   }
 
   &.active {
-    background-color: #fff;
-    color: #212529;
-    border-color: #dee2e6;
+    background-color: var(--layer-1);
+    color: var(--text-color);
+    border-color: var(--border-layer);
     font-weight: 600;
   }
 }

@@ -1,7 +1,16 @@
 .playback-banner-body {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  width: 100%;
+  flex-wrap: nowrap !important;
   gap: 0.5rem 1rem;
-}
 
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+}
 .playback-banner-song {
   margin-right: 1rem;
 }
@@ -50,4 +59,27 @@
 
 .playback-banner-admin-btn {
   padding: 0.25rem !important;
+}
+
+.marquee-container {
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.animate-marquee {
+  animation: seamless-loop 8s linear infinite;
+  display: flex;
+}
+
+@keyframes seamless-loop {
+  0%, 20% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.card.playback-banner-card {
+  width: 100%;
+  max-width: 100vw;
 }

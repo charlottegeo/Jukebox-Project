@@ -3,8 +3,10 @@
   padding: 20px;
   background-color: #13131F !important;
   color: white !important;
-  height: 100vh;
-  width: 100vw; 
+  min-height: 100vh;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;

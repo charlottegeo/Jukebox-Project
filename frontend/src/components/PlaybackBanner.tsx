@@ -95,8 +95,9 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
 
   const handleVoteSkip = () => {
     if (!socket || !currentSong) return;
-    
-    if (skipVoteStatus?.hasVoted) {
+    if (!skipVoteStatus?.canVote) return;
+
+    if (skipVoteStatus.hasVoted) {
       socket.emit('unvote_skip');
     } else {
       socket.emit('vote_skip');
@@ -107,12 +108,22 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
     if (!skipVoteStatus || activeUserCount === 1) {
       return 'Skip';
     }
-    
+
     if (skipVoteStatus.hasVoted) {
       return `Unvote (${skipVoteStatus.currentVotes}/${skipVoteStatus.requiredVotes})`;
     }
-    
+
     return `Vote to Skip (${skipVoteStatus.currentVotes}/${skipVoteStatus.requiredVotes})`;
+  };
+
+  const getSkipButtonTitle = (): string => {
+    if (!skipVoteStatus?.canVote) {
+      return 'Add a song to the queue to vote to skip';
+    }
+    if (activeUserCount > 1) {
+      return skipVoteStatus?.hasVoted ? 'Click to unvote' : 'Vote to skip (requires majority)';
+    }
+    return 'Skip';
   };
   
   const formatTime = (seconds: number): string => {
@@ -130,7 +141,7 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
   };
 
   return (
-    <Card className={`mb-0 rounded-0 border-0 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
+    <Card className={`mb-0 rounded-0 border-0 playback-banner-card ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
       <CardBody className="d-flex flex-wrap align-items-center justify-content-between py-2 px-3 playback-banner-body">
         <div className="d-flex align-items-center flex-grow-1 min-width-0 playback-banner-song" style={{ gap: '1rem' }}>
           {currentSong ? (
@@ -204,7 +215,7 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
                 className="playback-banner-btn"
               >
                 <FontAwesomeIcon icon={faRadio} className="mr-1" />
-                {isTunedIn ? 'Tuned In' : 'Tune In'}
+                {isTunedIn ? 'Listening' : 'Tune In'}
               </Button>
               {isTunedIn && onRadioVolumeChange && (
                 <div className="d-flex align-items-center playback-banner-volume mx-2">
@@ -220,19 +231,24 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
               )}
             </>
           )}
-          <Button
-            color={skipVoteStatus?.hasVoted ? 'secondary' : 'primary'}
-            outline={!!skipVoteStatus?.hasVoted}
-            size="sm"
-            onClick={handleVoteSkip}
-            disabled={!currentSong}
-            title={activeUserCount > 1 ? (skipVoteStatus?.hasVoted ? 'Click to unvote' : 'Vote to skip (requires majority)') : 'Skip'}
-            className="playback-banner-btn playback-banner-skip ml-2"
+          {currentSong != null && (
+            <Button
+              color={skipVoteStatus?.hasVoted ? 'secondary' : 'primary'}
+              outline={!!skipVoteStatus?.hasVoted}
+              size="sm"
+              onClick={handleVoteSkip}
+              disabled={!skipVoteStatus?.canVote}
+              title={getSkipButtonTitle()}
+              className="playback-banner-btn playback-banner-skip ml-2"
+            >
+              <FontAwesomeIcon icon={skipVoteStatus?.hasVoted ? faUndo : faForward} className="mr-1" />
+              {getSkipButtonText()}
+            </Button>
+          )}
+          <span
+            className="playback-banner-active d-flex align-items-center ml-3"
+            title="Active Queues: people contributing music to the jukebox"
           >
-            <FontAwesomeIcon icon={skipVoteStatus?.hasVoted ? faUndo : faForward} className="mr-1" />
-            {getSkipButtonText()}
-          </Button>
-          <span className="playback-banner-active d-flex align-items-center ml-3">
             <span
               className="mr-1 rounded-circle d-inline-block flex-shrink-0"
               style={{
@@ -241,6 +257,7 @@ const PlaybackBanner: React.FC<PlaybackBannerProps> = ({
                 backgroundColor: activeUserCount > 0 ? '#28a745' : '#6c757d',
               }}
             />
+            <span className="mr-1">Active queues:</span>
             {activeUserCount}
           </span>
           {isAdmin && onAdminClick && (

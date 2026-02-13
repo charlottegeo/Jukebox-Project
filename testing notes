@@ -1,0 +1,5 @@
+Test on 02/02/2026 with robert:
+  - round robin worked but there was one time where we voted to skip one of roberts songs and it went to the next song in his queue instead of going to my queue like round robin should have done.
+  - often songs would start playing before loading, it might be due to the skip/vote to skip button, not sure
+
+   also the banner items look bad on smaller screens, the song length limit, tune in + skip buttons, online indicator, and admin button are on the bottom below the song info on the left, and there is a lot of space on the right

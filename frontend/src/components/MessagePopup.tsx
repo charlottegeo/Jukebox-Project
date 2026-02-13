@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert } from 'reactstrap';
 
 export type MessageType = 'success' | 'error' | 'warning' | 'info';
@@ -17,17 +17,19 @@ const MessagePopup: React.FC<MessagePopupProps> = ({
   duration = 5000,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
         setIsVisible(false);
-        setTimeout(onClose, 300);
+        setTimeout(() => onCloseRef.current(), 300);
       }, duration);
 
       return () => clearTimeout(timer);
     }
-  }, [duration, onClose]);
+  }, [duration]);
 
   const handleClose = () => {
     setIsVisible(false);

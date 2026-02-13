@@ -24,16 +24,6 @@ export function registerSocketHandlers(io: Server) {
 
     socket.on('getActiveUsers', () => {
       stateManager.updateActiveUsers();
-      if (stateManager.shouldTriggerSkip()) {
-        const currentSong = stateManager.getCurrentSong();
-        if (currentSong?.audioPath) {
-          queueManager.deleteAudioFile(currentSong.audioPath);
-        }
-        if (stateManager.getIsPlaying()) {
-          stateManager.setPlaying(false);
-        }
-        queueManager.playNextSong();
-      }
     });
 
     socket.on('user_info', (data) => {
@@ -50,13 +40,17 @@ export function registerSocketHandlers(io: Server) {
 
     socket.on('register_display', () => {
       const currentDisplaySocketId = stateManager.getDisplaySocketId();
-      
-      if (!currentDisplaySocketId) {
+      const isOldSocketConnected = currentDisplaySocketId ? io.sockets.sockets.has(currentDisplaySocketId) : false;
+
+      if (!currentDisplaySocketId || !isOldSocketConnected) {
         console.log(`Registering socket ${socket.id} as display`);
         stateManager.setDisplaySocketId(socket.id);
+      } else if (currentDisplaySocketId === socket.id) {
+        return;
       } else {
         console.log(`Display already registered (${currentDisplaySocketId}), redirecting socket ${socket.id} to home`);
         socket.emit('redirect_to_home');
+        return;
       }
     });
 
@@ -110,16 +104,14 @@ export function registerSocketHandlers(io: Server) {
 
     socket.on('song_finished', () => {
       const currentSong = stateManager.getCurrentSong();
-      const playbackStartTime = stateManager.getPlaybackStartTime();
-      if (!currentSong?.audioPath) {
-        console.log('Ignoring song_finished: song still loading (no audioPath)');
+      
+      if (!currentSong) {
+        console.log('Ignoring song_finished: no song is currently set');
         return;
       }
-      if (playbackStartTime === null) {
-        console.log('Ignoring song_finished: playback never started (no playback_started yet)');
-        return;
-      }
-      console.log('Song finished, cleaning up and playing next song');
+
+      console.log(`Song finished: ${currentSong.track_name}. Cleaning up.`);
+      
       stateManager.setPlaying(false);
       queueManager.playNextSong();
     });
@@ -249,7 +241,7 @@ export function registerSocketHandlers(io: Server) {
             ? 'addPlaylistToQueue'
             : 'addAlbumToQueue';
           socket.emit(eventName, {
-            userId: uid,
+            uid,
             successCount,
             failureCount,
             failureReasons: invalidSongs,
@@ -260,7 +252,7 @@ export function registerSocketHandlers(io: Server) {
           }
         } else {
           socket.emit('addSongToQueueError', {
-            userId: uid,
+            uid,
             error: `No songs were added - all ${failureCount} song${
               failureCount !== 1 ? 's' : ''
             } exceeded the ${songLengthLimit} minute limit`,
@@ -290,10 +282,13 @@ export function registerSocketHandlers(io: Server) {
     socket.on('vote_skip', () => {
       const uid = getUserIdFromSocket(socket);
       if (!uid || !stateManager.getCurrentSong()) return;
-      
+
+      const queue = stateManager.getUserQueue(uid);
+      if (!queue || queue.length === 0) return;
+
       stateManager.addSkipVote(uid);
       const status = stateManager.getSkipVoteStatus(uid);
-      
+
       if (status.currentVotes >= status.requiredVotes) {
         console.log(`Skip threshold met (${status.currentVotes}/${status.requiredVotes}), skipping song`);
         const currentSong = stateManager.getCurrentSong();
@@ -318,13 +313,14 @@ export function registerSocketHandlers(io: Server) {
     socket.on('get_skip_vote_status', () => {
       const uid = getUserIdFromSocket(socket);
       if (!uid) return;
-      
+
       const status = stateManager.getSkipVoteStatus(uid);
       socket.emit('updateSkipVotes', {
         currentVotes: status.currentVotes,
         requiredVotes: status.requiredVotes,
         activeUserCount: status.activeUserCount,
         hasVoted: status.hasVoted,
+        canVote: status.canVote,
       });
     });
 
@@ -392,7 +388,7 @@ export function registerSocketHandlers(io: Server) {
         console.log(`Display socket ${socket.id} disconnected, clearing display registration`);
         stateManager.setDisplaySocketId(null);
       }
-      
+
       const uid = getUserIdFromSocket(socket);
       if (uid) {
         stateManager.scheduleUserRemoval(uid);

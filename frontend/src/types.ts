@@ -40,4 +40,5 @@ export interface SkipVoteStatus {
     requiredVotes: number;
     hasVoted: boolean;
     activeUserCount: number;
+    canVote?: boolean;
 }

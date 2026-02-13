@@ -2,7 +2,6 @@ import { Song } from "./interfaces";
 import { SpotifyApi, Market } from "@spotify/web-api-ts-sdk";
 import { exec } from "child_process";
 import * as youtubeSearchApi from "youtube-search-api";
-import * as ytdl from "ytdl-core";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
 import fs from "fs";
@@ -235,9 +234,8 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
 
     if (videoId) {
       const videoDetails = await youtubeSearchApi.GetVideoDetails(videoId);
-      const videoInfo = await ytdl.getInfo(videoId);
-      const duration = videoInfo.videoDetails.lengthSeconds;
-      const formattedDuration = formatYouTubeDuration(duration);
+      const durationStr = await getYouTubeVideoDuration(videoId);
+      const formattedDuration = durationStr;
       return [
         {
           id: uuidv4(),
@@ -247,7 +245,7 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
             videoDetails.shortBylineText ||
             "Unknown Artist",
           track_length: formattedDuration,
-          cover_url: videoDetails.thumbnail.url,
+          cover_url: videoDetails.thumbnail?.url ?? (videoDetails.thumbnail as any)?.thumbnails?.[0]?.url ?? "",
           track_id: videoDetails.id,
           uri: `https://www.youtube.com/watch?v=${videoDetails.id}`,
           source: "youtube",
@@ -262,18 +260,18 @@ export const handleYouTubeLink = async (link: string): Promise<Song[]> => {
 
       const songs: Song[] = await Promise.all(
         videos.map(async (item: any) => {
-          const videoDetails = await youtubeSearchApi.GetVideoDetails(item.id);
-          const videoInfo = await ytdl.getInfo(item.id);
-          const duration = videoInfo.videoDetails.lengthSeconds;
-          const formattedDuration = formatYouTubeDuration(duration);
+          const durationStr = getDurationStringFromSearchItem(item);
+          const formattedDuration = durationStr;
 
           return {
             id: uuidv4(),
-            track_name: item.title || "Unknown Title",
+            track_name: normalizeYouTubeText(item.title) || "Unknown Title",
             artist_name:
-              videoDetails.channel || item.shortBylineText || "Unknown Artist",
+              normalizeYouTubeText(item.channelTitle) ||
+              normalizeYouTubeText(item.shortBylineText) ||
+              "Unknown Artist",
             track_length: formattedDuration,
-            cover_url: item.thumbnail.url || "",
+            cover_url: item.thumbnail?.url ?? item.thumbnail?.thumbnails?.[0]?.url ?? "",
             track_id: item.id,
             uri: `https://www.youtube.com/watch?v=${item.id}`,
             source: "youtube",
@@ -414,4 +412,43 @@ const parseYouTubeDurationToSeconds = (durationStr: string): number => {
   if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
   if (parts.length === 2) return parts[0] * 60 + parts[1];
   return parts[0] || 0;
+};
+
+const getYouTubeVideoDuration = async (videoId: string): Promise<string> => {
+  try {
+    const result = await youtubeSearchApi.GetListByKeyword(
+      videoId,
+      false,
+      5,
+      [{ type: "video" }],
+    );
+    const match = result.items?.find((item: any) => item.id === videoId);
+    const raw = match?.length;
+    const durationStr =
+      typeof raw === "string"
+        ? raw
+        : raw?.simpleText ?? (raw as any)?.runs?.[0]?.text ?? "0:00";
+    const seconds = parseYouTubeDurationToSeconds(durationStr);
+    return formatYouTubeDuration(String(seconds));
+  } catch {
+    return "0:00";
+  }
+};
+
+const getDurationStringFromSearchItem = (item: any): string => {
+  const raw = item?.length;
+  const durationStr =
+    typeof raw === "string"
+      ? raw
+      : raw?.simpleText ?? (raw as any)?.runs?.[0]?.text ?? "0:00";
+  const seconds = parseYouTubeDurationToSeconds(durationStr);
+  return formatYouTubeDuration(String(seconds));
+};
+
+const normalizeYouTubeText = (value: any): string => {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  const runs = (value as any)?.runs;
+  if (Array.isArray(runs) && runs[0]?.text) return String(runs[0].text);
+  return "";
 };

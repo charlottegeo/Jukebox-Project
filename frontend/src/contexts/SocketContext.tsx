@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Song, ActiveUser, SkipVoteStatus } from '../types';
 import { useAuth } from './AuthContext';
@@ -67,6 +67,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const { user } = useAuth();
   const { showMessage } = useMessage();
+  const showMessageRef = useRef(showMessage);
+  showMessageRef.current = showMessage;
   const { accessTokenPayload } = useOidcAccessToken();
   const userInfo = accessTokenPayload as UserInfo;
   const uid = userInfo?.preferred_username;
@@ -116,15 +118,19 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handleUpdateCurrentSong = (data: { currentSong: Song | null; isLoading?: boolean; playbackStartTime?: number | null }) => {
       const wasSongChange = currentSong?.id !== data.currentSong?.id && currentSong?.track_id !== data.currentSong?.track_id;
       setCurrentSong(data.currentSong);
-      if (data.isLoading !== undefined) setIsLoading(data.isLoading);
-      if (data.playbackStartTime !== undefined) setPlaybackStartTime(data.playbackStartTime);
       if (!data.currentSong) {
+        setIsLoading(false);
         setCurrentCatColor('White');
         setPlaybackStartTime(null);
         setIsPaused(false);
         setSkipVoteStatus(null);
-      } else if (wasSongChange && socket) {
-        socket.emit('get_skip_vote_status');
+      } else {
+        if (data.isLoading !== undefined) setIsLoading(data.isLoading);
+        if (data.playbackStartTime !== undefined) setPlaybackStartTime(data.playbackStartTime);
+        
+        if (wasSongChange && socket) {
+          socket.emit('get_skip_vote_status');
+        }
       }
     };
 
@@ -144,12 +150,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handleSongDownloaded = () => setIsLoading(false);
     const handleRefresh = () => window.location.reload();
     
-    const handleUpdateSkipVotes = (data: { currentVotes: number; requiredVotes: number; activeUserCount: number; hasVoted?: boolean }) => {
+    const handleUpdateSkipVotes = (data: { currentVotes: number; requiredVotes: number; activeUserCount: number; hasVoted?: boolean; canVote?: boolean }) => {
       setSkipVoteStatus({
         currentVotes: data.currentVotes,
         requiredVotes: data.requiredVotes,
         hasVoted: data.hasVoted ?? false,
         activeUserCount: data.activeUserCount,
+        canVote: data.canVote ?? false,
       });
     };
 
@@ -159,17 +166,20 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setCurrentCatColor(data.color);
         return;
       }
-      setUserColors(prev => ({ ...prev, [data.uid!]: data.color }));
+      setUserColors(prev => {
+        if (prev[data.uid!] === data.color) return prev;
+        return { ...prev, [data.uid!]: data.color };
+      });
       if (data.uid === uid) {
-        setMyColor(data.color);
+        setMyColor(c => (c === data.color ? c : data.color));
         sessionStorage.setItem('userColor', data.color);
       }
     };
 
-    const handleMessageBox = (data: { type: 'success' | 'error' | 'warning'; message: string }) => showMessage(data.message, data.type);
-    const handleAddSong = (data: { song: Song, uid: string }) => { if (data.uid === uid) showMessage(`Added "${data.song.track_name}"`, 'success'); };
-    const handleAddPlaylist = (data: { uid: string; successCount: number; failureCount: number }) => { if (data.uid === uid) showMessage(`Added ${data.successCount} songs from playlist`, 'success'); };
-    const handleAddAlbum = (data: { uid: string; successCount: number; failureCount: number }) => { if (data.uid === uid) showMessage(`Added ${data.successCount} songs from album`, 'success'); };
+    const handleMessageBox = (data: { type: 'success' | 'error' | 'warning'; message: string }) => showMessageRef.current(data.message, data.type);
+    const handleAddSong = (data: { song: Song, uid: string }) => { if (data.uid === uid) showMessageRef.current(`Added "${data.song.track_name}"`, 'success'); };
+    const handleAddPlaylist = (data: { uid: string; successCount: number; failureCount: number }) => { if (data.uid === uid) showMessageRef.current(`Added ${data.successCount} songs from playlist`, 'success'); };
+    const handleAddAlbum = (data: { uid: string; successCount: number; failureCount: number }) => { if (data.uid === uid) showMessageRef.current(`Added ${data.successCount} songs from album`, 'success'); };
 
     socket.on('server_startup', handleServerStartup);
     socket.on('updateUserQueue', handleUpdateQueue);
@@ -208,14 +218,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       socket.off('addAlbumToQueue');
       socket.off('updateSkipVotes');
     };
-  }, [socket, isConnected, uid, userInfo, showMessage]);
+  }, [socket, isConnected, uid]);
 
   useEffect(() => {
-    if (currentSong && userColors[currentSong.submittedBy]) {
-      setCurrentCatColor(userColors[currentSong.submittedBy]);
-    } else if (!currentSong) {
-      setCurrentCatColor('White');
-    }
+    const nextColor = currentSong && userColors[currentSong.submittedBy]
+      ? userColors[currentSong.submittedBy]
+      : 'White';
+    setCurrentCatColor(c => (c === nextColor ? c : nextColor));
   }, [currentSong, userColors]);
 
   const handleSetMyColor = (color: string) => {
