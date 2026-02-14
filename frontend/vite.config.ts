@@ -14,6 +14,9 @@ export default defineConfig({
   server: {
     port: 8080,
     host: true,
+    watch: {
+      usePolling: !!process.env.CHOKIDAR_USEPOLLING,
+    },
     allowedHosts: process.env.VITE_ALLOWED_HOSTS?.split(',') || ['http://localhost:8080'],
     proxy: {
       '/api': {

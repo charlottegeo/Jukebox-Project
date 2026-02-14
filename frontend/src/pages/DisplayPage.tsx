@@ -26,6 +26,15 @@ const DisplayPage: React.FC = () => {
   const animationColorRef = useRef<string>(currentCatColor);
   const playbackStartedEmittedForTrackRef = useRef<string | null>(null);
 
+  const parseTrackLengthToSeconds = (trackLength: string | undefined): number => {
+    if (!trackLength || typeof trackLength !== 'string') return 0;
+    const parts = trackLength.trim().split(':').map(Number);
+    if (parts.some(isNaN)) return 0;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return parts[0] || 0;
+  };
+
   const getBpmForTime = (time: number): number => {
     if (!currentSong) return 120;
     
@@ -167,6 +176,8 @@ const DisplayPage: React.FC = () => {
     return Math.max(0, (Date.now() - playbackStartTime) / 1000);
   };
 
+  const SEEK_THRESHOLD_SEC = 2.5;
+
   useEffect(() => {
     if (!audioRef.current) return;
     audioRef.current.volume = volume / 100;
@@ -251,7 +262,7 @@ const DisplayPage: React.FC = () => {
         if (audioRef.current.duration) {
           const currentPos = audioRef.current.currentTime;
           const expectedPos = Math.min(seekTo, audioRef.current.duration);
-          if (Math.abs(currentPos - expectedPos) > 1.0) {
+          if (Math.abs(currentPos - expectedPos) > SEEK_THRESHOLD_SEC) {
             audioRef.current.currentTime = expectedPos;
           }
         }
@@ -370,12 +381,17 @@ const DisplayPage: React.FC = () => {
             ref={audioRef}
             onEnded={handleAudioEnded}
             onTimeUpdate={() => {
-              if (audioRef.current) {
-                const duration = audioRef.current.duration || 0;
-                const currentTime = audioRef.current.currentTime || 0;
-                if (duration > 0) {
-                  setProgress((currentTime / duration) * 100);
-                }
+              if (!audioRef.current || !currentSong) return;
+              const currentTime = audioRef.current.currentTime || 0;
+              const durationFromAudio = audioRef.current.duration;
+              const duration =
+                (Number.isFinite(durationFromAudio) && durationFromAudio > 0)
+                  ? durationFromAudio
+                  : (currentSong.duration && currentSong.duration > 0)
+                    ? currentSong.duration
+                    : parseTrackLengthToSeconds(currentSong.track_length);
+              if (duration > 0) {
+                setProgress(Math.min(100, (currentTime / duration) * 100));
               }
             }}
             crossOrigin="anonymous"

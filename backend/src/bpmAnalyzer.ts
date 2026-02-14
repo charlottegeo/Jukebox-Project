@@ -54,7 +54,7 @@ export const analyzeBPM = async (audioPathOrLocalPath: string): Promise<{ bpm: n
   } else {
     localPath = audioPathOrLocalPath;
   }
-  
+
   const tempFile = `/tmp/full_analysis_${Date.now()}.raw`;
   await execAsync(`ffmpeg -i "${localPath}" -ac 1 -ar 22050 -f s16le "${tempFile}" -y 2>/dev/null`);
 

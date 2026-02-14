@@ -30,6 +30,7 @@ let songLengthLimits: SongLengthLimits = {
 let songLengthLimit = 10;
 let displaySocketId: string | null = null;
 let skipVotes: Set<string> = new Set();
+let pauseStartTime: number | null = null;
 
 export const initIo = (serverIo: Server) => {
   io = serverIo;
@@ -101,7 +102,14 @@ export const setPlaying = (status: boolean) => {
 
 export const togglePause = () => {
   isPaused = !isPaused;
-  io.emit('toggle_pause_play', { isPaused });
+  if (isPaused) {
+    pauseStartTime = Date.now();
+  } else if (pauseStartTime && playbackStartTime) {
+    const pauseDuration = Date.now() - pauseStartTime;
+    playbackStartTime += pauseDuration;
+    pauseStartTime = null;
+  }
+  io.emit('toggle_pause_play', { isPaused, playbackStartTime });
 };
 
 export const setSongLengthLimit = (limit: number, uid: string) => {
@@ -327,7 +335,6 @@ export const removeSkipVote = (uid: string) => {
   broadcastSkipVoteStatus();
 };
 
-/** Count of skip votes from users who currently have a non-empty queue (active contributors). */
 const getEligibleSkipVoteCount = (): number => {
   return [...skipVotes].filter((voterUid) => userQueues[voterUid] && userQueues[voterUid].length > 0).length;
 };

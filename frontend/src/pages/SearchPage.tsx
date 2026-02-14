@@ -84,6 +84,8 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
     return Math.max(0, (Date.now() - playbackStartTime) / 1000);
   };
 
+  const SEEK_THRESHOLD_SEC = 2.5;
+
   useEffect(() => {
     const audio = radioAudioRef.current;
     
@@ -130,11 +132,11 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
       const currentTime = audio.currentTime;
       const diff = Math.abs(currentTime - expectedTime);
 
-      if (diff > 0.5) {
+      if (diff > SEEK_THRESHOLD_SEC) {
         if (audio.duration && expectedTime < audio.duration) {
-           if (expectedTime > 0.1) {
-             audio.currentTime = expectedTime;
-           }
+          if (expectedTime > 0.1) {
+            audio.currentTime = expectedTime;
+          }
         }
       }
     };
@@ -144,11 +146,13 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
   }, [isTunedIn, isPaused, playbackStartTime]);
   
   const handleLoadedMetadata = () => {
-    if (radioAudioRef.current && playbackStartTime && isTunedIn) {
-       const expectedTime = calculateSeekTime();
-       if (expectedTime > 0 && Number.isFinite(expectedTime)) {
-          radioAudioRef.current.currentTime = expectedTime;
-       }
+    if (!radioAudioRef.current || !playbackStartTime || !isTunedIn) return;
+    const audio = radioAudioRef.current;
+    const expectedTime = calculateSeekTime();
+    if (!(expectedTime > 0 && Number.isFinite(expectedTime))) return;
+    const currentTime = audio.currentTime ?? 0;
+    if (Math.abs(currentTime - expectedTime) > SEEK_THRESHOLD_SEC && audio.duration && expectedTime < audio.duration) {
+      audio.currentTime = expectedTime;
     }
   };
 
