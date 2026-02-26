@@ -1,20 +1,20 @@
+import path from 'path';
 import { Server, Socket } from 'socket.io';
-import * as stateManager from './stateManager.js';
+import { Song } from './interfaces';
 import * as queueManager from './queueManager.js';
+import * as stateManager from './stateManager.js';
+import { generateShortLivedToken } from './streamToken.js';
 import {
-  searchSpotifyTracks,
-  searchYouTube,
+  findYouTubeUriForSpotifyTrack,
   handleSpotifyLink,
   handleYouTubeLink,
-  findYouTubeUriForSpotifyTrack,
+  searchSpotifyTracks,
+  searchYouTube,
 } from './trackService.js';
 import { getSongLengthInSeconds } from './utils.js';
-import { Song } from './interfaces';
-import { generateShortLivedToken } from './streamToken.js';
-import path from 'path';
 
-const getUserIdFromSocket = (socket: any): string | null => {
-  return socket.data?.uid || null;
+const getUserIdFromSocket = (socket: Socket): string | null => {
+  return socket.data.uid || null;
 };
 
 export function registerSocketHandlers(io: Server) {
@@ -40,7 +40,9 @@ export function registerSocketHandlers(io: Server) {
 
     socket.on('register_display', () => {
       const currentDisplaySocketId = stateManager.getDisplaySocketId();
-      const isOldSocketConnected = currentDisplaySocketId ? io.sockets.sockets.has(currentDisplaySocketId) : false;
+      const isOldSocketConnected = currentDisplaySocketId
+        ? io.sockets.sockets.has(currentDisplaySocketId)
+        : false;
 
       if (!currentDisplaySocketId || !isOldSocketConnected) {
         console.log(`Registering socket ${socket.id} as display`);
@@ -48,7 +50,9 @@ export function registerSocketHandlers(io: Server) {
       } else if (currentDisplaySocketId === socket.id) {
         return;
       } else {
-        console.log(`Display already registered (${currentDisplaySocketId}), redirecting socket ${socket.id} to home`);
+        console.log(
+          `Display already registered (${currentDisplaySocketId}), redirecting socket ${socket.id} to home`
+        );
         socket.emit('redirect_to_home');
         return;
       }
@@ -79,7 +83,9 @@ export function registerSocketHandlers(io: Server) {
           const youtubeUri = await findYouTubeUriForSpotifyTrack(song.track_id);
           if (youtubeUri) {
             song.youtubeUri = youtubeUri;
-            console.log(`Pre-fetched YouTube URI for ${song.track_name}: ${youtubeUri}`);
+            console.log(
+              `Pre-fetched YouTube URI for ${song.track_name}: ${youtubeUri}`
+            );
           }
         } catch (error) {
           console.error('Error pre-fetching YouTube URI:', error);
@@ -90,14 +96,18 @@ export function registerSocketHandlers(io: Server) {
       stateManager.addSongToQueue(uid, song);
 
       if (wasQueueEmpty && !stateManager.getIsPlaying()) {
-        console.log('Queue was empty and nothing playing, starting playback immediately');
+        console.log(
+          'Queue was empty and nothing playing, starting playback immediately'
+        );
         queueManager.playNextSong();
       } else if (
         stateManager.getIsPlaying() &&
         stateManager.getCurrentSong()?.submittedBy === uid &&
         stateManager.getUserQueue(uid)?.length === 1
       ) {
-        console.log('Current song is from this user and this is their only song, preloading next');
+        console.log(
+          'Current song is from this user and this is their only song, preloading next'
+        );
         queueManager.preloadNextSong();
       }
     });
@@ -131,7 +141,10 @@ export function registerSocketHandlers(io: Server) {
       const allQueues = stateManager.getUserOrder().reduce((acc, uid) => {
         const queue = stateManager.getUserQueue(uid);
         if (queue) {
-          return [...acc, ...queue.map((song) => ({ ...song, submittedBy: uid }))];
+          return [
+            ...acc,
+            ...queue.map((song) => ({ ...song, submittedBy: uid })),
+          ];
         }
         return acc;
       }, [] as Song[]);
@@ -165,10 +178,24 @@ export function registerSocketHandlers(io: Server) {
 
     socket.on('get_current_song', () => {
       const currentSong = stateManager.getCurrentSong();
-      socket.emit('updateCurrentSong', {
+      const isPaused = stateManager.getIsPaused();
+      const playbackStartTime = stateManager.getPlaybackStartTime();
+      const payload: {
+        currentSong: Song | null;
+        isLoading: boolean;
+        playbackStartTime: number | null;
+        isPaused: boolean;
+        elapsedAtPause?: number;
+      } = {
         currentSong: currentSong,
-        isLoading: currentSong && !currentSong.audioPath,
-      });
+        isLoading: !!(currentSong && !currentSong.audioPath),
+        playbackStartTime,
+        isPaused,
+      };
+      if (isPaused && playbackStartTime) {
+        payload.elapsedAtPause = stateManager.getElapsedAtPause();
+      }
+      socket.emit('updateCurrentSong', payload);
     });
 
     socket.on('get_next_song', () => {
@@ -179,7 +206,8 @@ export function registerSocketHandlers(io: Server) {
     socket.on('searchTracks', async (data) => {
       const { track_name, source, uid } = data;
       if (source === 'spotify') {
-        const results = (await searchSpotifyTracks(track_name, 5, ['track'], uid)) ?? [];
+        const results =
+          (await searchSpotifyTracks(track_name, 5, ['track'], uid)) ?? [];
         socket.emit('searchResults', { results });
       } else if (source === 'youtube') {
         const results = await searchYouTube(track_name, 5);
@@ -199,13 +227,20 @@ export function registerSocketHandlers(io: Server) {
             songs.map(async (song) => {
               if (song.source === 'spotify' && !song.youtubeUri) {
                 try {
-                  const youtubeUri = await findYouTubeUriForSpotifyTrack(song.track_id);
+                  const youtubeUri = await findYouTubeUriForSpotifyTrack(
+                    song.track_id
+                  );
                   if (youtubeUri) {
                     song.youtubeUri = youtubeUri;
-                    console.log(`Pre-fetched YouTube URI for ${song.track_name}: ${youtubeUri}`);
+                    console.log(
+                      `Pre-fetched YouTube URI for ${song.track_name}: ${youtubeUri}`
+                    );
                   }
                 } catch (error) {
-                  console.error(`Error pre-fetching YouTube URI for ${song.track_name}:`, error);
+                  console.error(
+                    `Error pre-fetching YouTube URI for ${song.track_name}:`,
+                    error
+                  );
                 }
               }
             })
@@ -268,6 +303,11 @@ export function registerSocketHandlers(io: Server) {
     });
 
     socket.on('force_skip', () => {
+      const uid = getUserIdFromSocket(socket);
+      if (!uid || !stateManager.getUserState(uid)?.isAdmin) {
+        console.log('Rejected force_skip: admin only');
+        return;
+      }
       const currentSong = stateManager.getCurrentSong();
       if (currentSong?.audioPath) {
         queueManager.deleteAudioFile(currentSong.audioPath);
@@ -279,9 +319,12 @@ export function registerSocketHandlers(io: Server) {
       queueManager.playNextSong();
     });
 
-    socket.on('vote_skip', () => {
+    socket.on('vote_skip', (data?: { songId?: string }) => {
       const uid = getUserIdFromSocket(socket);
-      if (!uid || !stateManager.getCurrentSong()) return;
+      const currentSong = stateManager.getCurrentSong();
+      if (!uid || !currentSong) return;
+
+      if (data?.songId && data.songId !== currentSong.id) return;
 
       const queue = stateManager.getUserQueue(uid);
       if (!queue || queue.length === 0) return;
@@ -290,7 +333,9 @@ export function registerSocketHandlers(io: Server) {
       const status = stateManager.getSkipVoteStatus(uid);
 
       if (status.currentVotes >= status.requiredVotes) {
-        console.log(`Skip threshold met (${status.currentVotes}/${status.requiredVotes}), skipping song`);
+        console.log(
+          `Skip threshold met (${status.currentVotes}/${status.requiredVotes}), skipping song`
+        );
         const currentSong = stateManager.getCurrentSong();
         if (currentSong?.audioPath) {
           queueManager.deleteAudioFile(currentSong.audioPath);
@@ -324,15 +369,30 @@ export function registerSocketHandlers(io: Server) {
       });
     });
 
-    socket.on('pause_play', (data?: { isPaused?: boolean }) => {
-      stateManager.togglePause();
+    socket.on('pause_play', (data: { isPaused?: boolean }) => {
+      const uid = getUserIdFromSocket(socket);
+      if (!uid || !stateManager.getUserState(uid)?.isAdmin) {
+        console.log('Rejected pause_play: admin only');
+        return;
+      }
+      stateManager.setPaused(data?.isPaused ?? !stateManager.getIsPaused());
     });
 
     socket.on('refresh_display', () => {
+      const uid = getUserIdFromSocket(socket);
+      if (!uid || !stateManager.getUserState(uid)?.isAdmin) {
+        console.log('Rejected refresh_display: admin only');
+        return;
+      }
       io.emit('refresh_display');
     });
 
     socket.on('set_volume', (data: { volume: number }) => {
+      const uid = getUserIdFromSocket(socket);
+      if (!uid || !stateManager.getUserState(uid)?.isAdmin) {
+        console.log('Rejected set_volume: admin only');
+        return;
+      }
       io.emit('volume_change', { volume: data.volume });
     });
 
@@ -340,11 +400,14 @@ export function registerSocketHandlers(io: Server) {
       socket.emit('updateSongLengthLimits', stateManager.getSongLengthLimits());
     });
 
-    socket.on('updateSongLengthLimits', (data: stateManager.SongLengthLimits) => {
+    socket.on(
+      'updateSongLengthLimits',
+      (data: stateManager.SongLengthLimits) => {
       const uid = getUserIdFromSocket(socket);
       if (!uid) return;
       stateManager.setSongLengthLimits(data, uid);
-    });
+      }
+    );
 
     socket.on('getSongLengthLimit', () => {
       socket.emit('updateSongLengthLimit', {
@@ -385,7 +448,9 @@ export function registerSocketHandlers(io: Server) {
     socket.on('disconnect', () => {
       const displaySocketId = stateManager.getDisplaySocketId();
       if (displaySocketId === socket.id) {
-        console.log(`Display socket ${socket.id} disconnected, clearing display registration`);
+        console.log(
+          `Display socket ${socket.id} disconnected, clearing display registration`
+        );
         stateManager.setDisplaySocketId(null);
       }
 
@@ -394,6 +459,5 @@ export function registerSocketHandlers(io: Server) {
         stateManager.scheduleUserRemoval(uid);
       }
     });
-
   });
 }

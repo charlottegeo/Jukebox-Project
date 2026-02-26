@@ -68,16 +68,6 @@ $search-page-padding: var(--spacing-md, #{$spacing-md});
 }
 
 .search-page-tabs {
-  margin-bottom: $spacing-md;
-  padding: 0;
-  gap: 0.25rem;
-
-  .nav-link {
-    padding: 0.5rem 1rem;
-    border-radius: $border-radius-md;
-    cursor: pointer;
-  }
-}
 
 body.dark-theme .search-page-tabs .nav-link {
   color: var(--text-color);
@@ -113,6 +103,15 @@ body:not(.dark-theme) .search-page-tabs .nav-link {
     border-color: var(--border-layer);
     font-weight: 600;
   }
+}
+
+  .nav-link {
+    padding: 0.5rem 1rem;
+    border-radius: $border-radius-md;
+    cursor: pointer;
+  }
+  margin-bottom: $spacing-md;
+  gap: 0.25rem;
 }
 
 .search-page-tab-content {

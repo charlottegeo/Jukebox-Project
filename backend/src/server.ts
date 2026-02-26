@@ -1,12 +1,12 @@
-import express, { Request, Response } from 'express';
-import session from 'express-session';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import express, { Request, Response } from 'express';
+import session from 'express-session';
 import fs from 'fs';
+import { createServer } from 'http';
+import path from 'path';
+import { Server } from 'socket.io';
+import { fileURLToPath } from 'url';
 import { registerSocketHandlers } from './socketHandlers.js';
 import { initIo, resetServerState } from './stateManager.js';
 import { validateStreamToken } from './streamToken.js';
@@ -19,10 +19,12 @@ dotenv.config();
 const app = express();
 const apiRouter = express.Router();
 const PORT = process.env.BACKEND_PORT || 3001;
-const corsOrigins =
-  process.env.CORS_ORIGINS?.split(',') || [
-    process.env.FRONTEND_URL || 'localhost:8080',
-  ];
+const corsOriginsRaw = process.env.CORS_ORIGINS?.split(',').map((o) =>
+  o.trim()
+) || [process.env.FRONTEND_URL || 'http://localhost:8080'];
+const corsOrigins = corsOriginsRaw.flatMap((o) =>
+  o.match(/^https?:\/\//) ? [o] : [o, `http://${o}`, `https://${o}`]
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -51,7 +53,10 @@ app.use(
   (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Range');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+    res.setHeader(
+      'Access-Control-Expose-Headers',
+      'Content-Length, Content-Range'
+    );
     next();
   },
   express.static(path.join(__dirname, '../downloads'))
@@ -81,21 +86,49 @@ apiRouter.options('/stream/:filename', (req: Request, res: Response) => {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Range');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+  res.setHeader(
+    'Access-Control-Expose-Headers',
+    'Content-Length, Content-Range'
+  );
   res.setHeader('Access-Control-Max-Age', '86400');
   res.status(204).send();
 });
 
+const setStreamCors = (req: Request, res: Response) => {
+  const origin = req.headers.origin;
+  if (origin && corsOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range');
+  res.setHeader(
+    'Access-Control-Expose-Headers',
+    'Content-Length, Content-Range'
+  );
+};
+
 apiRouter.get('/stream/:filename', (req: Request, res: Response): void => {
+  setStreamCors(req, res);
+
   const { filename } = req.params;
   const { streamToken } = req.query;
 
-  if (!streamToken || typeof streamToken !== 'string' || !validateStreamToken(streamToken)) {
+  if (
+    !streamToken ||
+    typeof streamToken !== 'string' ||
+    !validateStreamToken(streamToken)
+  ) {
     res.status(403).json({ error: 'Invalid or expired stream token' });
     return;
   }
 
-  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+  if (
+    filename.includes('..') ||
+    filename.includes('/') ||
+    filename.includes('\\')
+  ) {
     res.status(400).json({ error: 'Invalid filename' });
     return;
   }
@@ -107,16 +140,6 @@ apiRouter.get('/stream/:filename', (req: Request, res: Response): void => {
     return;
   }
 
-  const origin = req.headers.origin;
-  if (origin && corsOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Range');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
-  
   const contentType = filename.endsWith('.m4a') ? 'audio/mp4' : 'audio/mpeg';
   res.setHeader('Content-Type', contentType);
 

@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 import styles from './DisplayPage.module.css';
-import { Song } from '../types';
 
 const DisplayPage: React.FC = () => {
   const {
@@ -25,8 +24,11 @@ const DisplayPage: React.FC = () => {
   const animationTrackIdRef = useRef<string | null>(null);
   const animationColorRef = useRef<string>(currentCatColor);
   const playbackStartedEmittedForTrackRef = useRef<string | null>(null);
+  const prevIsPausedRef = useRef<boolean>(isPaused);
 
-  const parseTrackLengthToSeconds = (trackLength: string | undefined): number => {
+  const parseTrackLengthToSeconds = (
+    trackLength: string | undefined
+  ): number => {
     if (!trackLength || typeof trackLength !== 'string') return 0;
     const parts = trackLength.trim().split(':').map(Number);
     if (parts.some(isNaN)) return 0;
@@ -37,13 +39,13 @@ const DisplayPage: React.FC = () => {
 
   const getBpmForTime = (time: number): number => {
     if (!currentSong) return 120;
-    
+
     if (!currentSong.tempoMap || currentSong.tempoMap.length === 0) {
       return currentSong.bpm || 120;
-      }
+    }
 
     let bpm = currentSong.bpm || 120;
-    
+
     for (let i = currentSong.tempoMap.length - 1; i >= 0; i--) {
       const tempoEntry = currentSong.tempoMap[i];
       if (tempoEntry.time <= time) {
@@ -51,33 +53,35 @@ const DisplayPage: React.FC = () => {
         break;
       }
     }
-    
+
     return bpm;
   };
 
   const animateFrames = (bpm: number, colorOverride?: string) => {
     if (!catImageRef.current) {
-      console.warn('[Animation] catImageRef.current is null, cannot start animation');
+      console.warn(
+        '[Animation] catImageRef.current is null, cannot start animation'
+      );
       return;
     }
 
     let currentFrameIndex = 0;
     let currentIncrement = true;
     const currentColor = colorOverride ?? currentCatColor;
-    
-    const currentSrc = catImageRef.current.src;
-      const currentFrame = currentSrc.split('/').pop()?.replace('.png', '');
 
-      if (currentFrame === 'PusayLeft') {
-        currentFrameIndex = 0;
-        currentIncrement = true;
-      } else if (currentFrame === 'PusayCenter') {
-        currentFrameIndex = 1;
-        const nextFrame = currentIncrement ? 'PusayRight' : 'PusayLeft';
-        currentIncrement = nextFrame === 'PusayRight';
-      } else if (currentFrame === 'PusayRight') {
-        currentFrameIndex = 2;
-        currentIncrement = false;
+    const currentSrc = catImageRef.current.src;
+    const currentFrame = currentSrc.split('/').pop()?.replace('.png', '');
+
+    if (currentFrame === 'PusayLeft') {
+      currentFrameIndex = 0;
+      currentIncrement = true;
+    } else if (currentFrame === 'PusayCenter') {
+      currentFrameIndex = 1;
+      const nextFrame = currentIncrement ? 'PusayRight' : 'PusayLeft';
+      currentIncrement = nextFrame === 'PusayRight';
+    } else if (currentFrame === 'PusayRight') {
+      currentFrameIndex = 2;
+      currentIncrement = false;
     }
 
     if (animationIntervalRef.current) {
@@ -110,7 +114,10 @@ const DisplayPage: React.FC = () => {
       }
 
       if (process.env.NODE_ENV === 'development') {
-        if (lastLoggedBpmRef.current === null || currentBpm !== lastLoggedBpmRef.current) {
+        if (
+          lastLoggedBpmRef.current === null ||
+          currentBpm !== lastLoggedBpmRef.current
+        ) {
           const currentTime = audioRef.current?.currentTime || 0;
           console.log(`[BPM] ${currentBpm} BPM at ${currentTime.toFixed(2)}s`);
           lastLoggedBpmRef.current = currentBpm;
@@ -125,8 +132,8 @@ const DisplayPage: React.FC = () => {
         beatPhase -= 1.0;
 
         if (catImageRef.current) {
-        const frame = frames[frameIndex];
-        const imgSrc = `/images/cats/${currentColor}/${frame}.png`;
+          const frame = frames[frameIndex];
+          const imgSrc = `/images/cats/${currentColor}/${frame}.png`;
           if (catImageRef.current.src !== imgSrc) {
             catImageRef.current.src = imgSrc;
           }
@@ -136,19 +143,19 @@ const DisplayPage: React.FC = () => {
             animationIntervalRef.current = null;
           }
           return;
-      }
+        }
 
-      if (increment) {
-        frameIndex++;
-      } else {
-        frameIndex--;
-      }
-      if (frameIndex === frames.length - 1) {
-        increment = false;
-      }
-      if (frameIndex === 0) {
-        increment = true;
-      }
+        if (increment) {
+          frameIndex++;
+        } else {
+          frameIndex--;
+        }
+        if (frameIndex === frames.length - 1) {
+          increment = false;
+        }
+        if (frameIndex === 0) {
+          increment = true;
+        }
       }
     };
 
@@ -161,7 +168,7 @@ const DisplayPage: React.FC = () => {
       const imgSrc = `/images/cats/${color}/${frame}.png`;
       catImageRef.current.src = imgSrc;
     }
-  };  
+  };
 
   const resetCatAnimation = () => {
     if (animationIntervalRef.current) {
@@ -187,9 +194,9 @@ const DisplayPage: React.FC = () => {
     } else if (currentSong?.audioPath && audioRef.current.readyState >= 2) {
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch(e => {
+        playPromise.catch((e) => {
           if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
-            console.error("Error playing audio:", e);
+            console.error('Error playing audio:', e);
           }
         });
       }
@@ -214,27 +221,23 @@ const DisplayPage: React.FC = () => {
 
     const trackId = currentSong.track_id || currentSong.id;
     const hasTrackChanged = currentTrackIdRef.current !== trackId;
-    
+
     if (hasTrackChanged) {
+      prevIsPausedRef.current = isPaused;
       console.log('New song detected:', currentSong.track_name);
       currentTrackIdRef.current = trackId;
       loadedTrackIdRef.current = trackId;
       currentlyPlayingSrcRef.current = currentSong.audioPath;
       lastLoggedBpmRef.current = null;
-      
+
       audioRef.current.src = currentSong.audioPath;
-      
+
       const handleCanPlay = () => {
         if (!audioRef.current) return;
-        
-        if (playbackStartTime) {
-          const seekTo = calculateSeekTime();
-          if (audioRef.current.duration) {
-            audioRef.current.currentTime = Math.min(seekTo, audioRef.current.duration);
-          }
-        } else {
-          audioRef.current.currentTime = 0;
-        }
+
+        // New track: always start from beginning. playbackStartTime is only set
+        // after we emit playback_started, so we must not seek using stale value.
+        audioRef.current.currentTime = 0;
 
         const handlePlaying = () => {
           if (playbackStartedEmittedForTrackRef.current !== trackId && socket) {
@@ -242,37 +245,55 @@ const DisplayPage: React.FC = () => {
             socket.emit('playback_started');
           }
         };
-        audioRef.current.addEventListener('playing', handlePlaying, { once: true });
+        audioRef.current.addEventListener('playing', handlePlaying, {
+          once: true,
+        });
 
         if (!isPaused) {
-          audioRef.current.play().catch(e => {
+          audioRef.current.play().catch((e) => {
             if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
               console.error('Error playing audio:', e);
             }
           });
         }
       };
-      
-      audioRef.current.addEventListener('canplay', handleCanPlay, { once: true });
+
+      audioRef.current.addEventListener('canplay', handleCanPlay, {
+        once: true,
+      });
       audioRef.current.load();
       setProgress(0);
     } else {
+      const justResumed = prevIsPausedRef.current && !isPaused;
+      prevIsPausedRef.current = isPaused;
+
       if (playbackStartTime && !isPaused && audioRef.current.readyState >= 2) {
-        const seekTo = calculateSeekTime();
-        if (audioRef.current.duration) {
-          const currentPos = audioRef.current.currentTime;
-          const expectedPos = Math.min(seekTo, audioRef.current.duration);
-          if (Math.abs(currentPos - expectedPos) > SEEK_THRESHOLD_SEC) {
-            audioRef.current.currentTime = expectedPos;
+        if (justResumed) {
+          // Audio stayed at correct position during pause; don't seek
+        } else {
+          const seekTo = calculateSeekTime();
+          if (audioRef.current.duration) {
+            const currentPos = audioRef.current.currentTime;
+            const expectedPos = Math.min(seekTo, audioRef.current.duration);
+            if (Math.abs(currentPos - expectedPos) > SEEK_THRESHOLD_SEC) {
+              audioRef.current.currentTime = expectedPos;
+            }
           }
         }
       }
     }
-  }, [currentSong?.track_id, currentSong?.id, currentSong?.audioPath, playbackStartTime, isPaused]);
+  }, [
+    currentSong?.track_id,
+    currentSong?.id,
+    currentSong?.audioPath,
+    playbackStartTime,
+    isPaused,
+  ]);
 
   useEffect(() => {
     const trackId = currentSong?.track_id || currentSong?.id;
-    const shouldAnimate = !isPaused && currentSong?.bpm && currentSong?.audioPath;
+    const shouldAnimate =
+      !isPaused && currentSong?.bpm && currentSong?.audioPath;
     const trackChanged = animationTrackIdRef.current !== trackId;
     const colorChanged = animationColorRef.current !== currentCatColor;
     const animationRunning = animationIntervalRef.current !== null;
@@ -280,22 +301,32 @@ const DisplayPage: React.FC = () => {
     if (shouldAnimate && (trackChanged || !animationRunning || colorChanged)) {
       animationTrackIdRef.current = trackId || null;
       animationColorRef.current = currentCatColor;
-      
+
       if (animationIntervalRef.current) {
         clearInterval(animationIntervalRef.current as unknown as number);
         animationIntervalRef.current = null;
       }
-      
+
       const initialBpm = currentSong.bpm!;
-      console.log('[Animation] Starting animation for track:', trackId, 'BPM:', initialBpm, 'Color:', currentCatColor);
-      
+      console.log(
+        '[Animation] Starting animation for track:',
+        trackId,
+        'BPM:',
+        initialBpm,
+        'Color:',
+        currentCatColor
+      );
+
       setTimeout(() => {
         if (catImageRef.current) {
           animateFrames(initialBpm, currentCatColor);
         } else {
           console.warn('[Animation] catImageRef not set, retrying...');
           setTimeout(() => {
-            if (catImageRef.current && animationTrackIdRef.current === trackId) {
+            if (
+              catImageRef.current &&
+              animationTrackIdRef.current === trackId
+            ) {
               animateFrames(initialBpm, currentCatColor);
             }
           }, 100);
@@ -312,22 +343,30 @@ const DisplayPage: React.FC = () => {
       }
     }
 
-    return () => {
-    };
-  }, [isPaused, currentSong?.track_id, currentSong?.id, currentSong?.bpm, currentSong?.audioPath, currentCatColor]);
+    return () => {};
+  }, [
+    isPaused,
+    currentSong?.track_id,
+    currentSong?.id,
+    currentSong?.bpm,
+    currentSong?.audioPath,
+    currentCatColor,
+  ]);
 
   useEffect(() => {
     if (!animationIntervalRef.current) {
       setCatImage('PusayCenter', currentCatColor);
-          }
+    }
   }, [currentCatColor]);
-  
+
   useEffect(() => {
     if (!socket) return;
     socket.emit('register_display');
-    const handleRedirect = () => window.location.href = '/';
+    const handleRedirect = () => (window.location.href = '/');
     socket.on('redirect_to_home', handleRedirect);
-    return () => { socket.off('redirect_to_home', handleRedirect); };
+    return () => {
+      socket.off('redirect_to_home', handleRedirect);
+    };
   }, [socket]);
 
   useEffect(() => {
@@ -358,16 +397,20 @@ const DisplayPage: React.FC = () => {
         <div className={styles.songInfoContainer}>
           <div className={styles.songInfo}>
             <div className={styles.placeholder}>
-              <img src="/images/placeholder.png" alt="No song playing" className={styles.placeholderImage} />
+              <img
+                src="/images/placeholder.png"
+                alt="No song playing"
+                className={styles.placeholderImage}
+              />
               <p>No song playing</p>
             </div>
           </div>
           <div className={styles.catContainer}>
-            <img 
-              id="pusay" 
-              ref={catImageRef} 
-              src={`/images/cats/${currentCatColor}/PusayCenter.png`} 
-              alt="Pusay" 
+            <img
+              id="pusay"
+              ref={catImageRef}
+              src={`/images/cats/${currentCatColor}/PusayCenter.png`}
+              alt="Pusay"
             />
           </div>
         </div>
@@ -385,9 +428,9 @@ const DisplayPage: React.FC = () => {
               const currentTime = audioRef.current.currentTime || 0;
               const durationFromAudio = audioRef.current.duration;
               const duration =
-                (Number.isFinite(durationFromAudio) && durationFromAudio > 0)
+                Number.isFinite(durationFromAudio) && durationFromAudio > 0
                   ? durationFromAudio
-                  : (currentSong.duration && currentSong.duration > 0)
+                  : currentSong.duration && currentSong.duration > 0
                     ? currentSong.duration
                     : parseTrackLengthToSeconds(currentSong.track_length);
               if (duration > 0) {
@@ -397,9 +440,13 @@ const DisplayPage: React.FC = () => {
             crossOrigin="anonymous"
             style={{ display: 'none' }}
           >
-            <source 
-              src={currentSong.audioPath} 
-              type={currentSong.audioPath.endsWith('.m4a') ? "audio/mp4" : "audio/mpeg"} 
+            <source
+              src={currentSong.audioPath}
+              type={
+                currentSong.audioPath.endsWith('.m4a')
+                  ? 'audio/mp4'
+                  : 'audio/mpeg'
+              }
             />
           </audio>
         )}
@@ -421,25 +468,29 @@ const DisplayPage: React.FC = () => {
               <div className={styles.trackName}>Loading song...</div>
             ) : (
               <>
-            <div className={styles.trackName}>{currentSong.track_name}</div>
-            <div className={styles.artistName}>{currentSong.artist_name}</div>
-            <div className={styles.submittedBy}>Added by {currentSong.submittedBy}</div>
-            <div className={styles.progressContainer}>
-              <progress 
+                <div className={styles.trackName}>{currentSong.track_name}</div>
+                <div className={styles.artistName}>
+                  {currentSong.artist_name}
+                </div>
+                <div className={styles.submittedBy}>
+                  Added by {currentSong.submittedBy}
+                </div>
+                <div className={styles.progressContainer}>
+                  <progress
                     className={styles.progressBar}
-                value={progress} 
-                max="100"
-              />
-            </div>
+                    value={progress}
+                    max="100"
+                  />
+                </div>
               </>
             )}
           </div>
           <div className={styles.catContainer}>
-            <img 
-              id="pusay" 
+            <img
+              id="pusay"
               ref={catImageRef}
               src={`/images/cats/${currentCatColor}/PusayCenter.png`}
-              alt="Dancing Cat" 
+              alt="Dancing Cat"
             />
           </div>
         </div>
@@ -447,11 +498,7 @@ const DisplayPage: React.FC = () => {
     );
   };
 
-  return (
-    <div className={styles.container}>
-      {renderPlayer()}
-    </div>
-  );
+  return <div className={styles.container}>{renderPlayer()}</div>;
 };
 
 export default DisplayPage;

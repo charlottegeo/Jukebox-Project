@@ -28,6 +28,7 @@ export interface ActiveUser {
     profilePicture: string;
     color: string;
     isAdmin: boolean;
+    nextSong?: { track_name: string; artist_name: string; cover_url: string };
 }
 
 export interface SongLengthLimits {

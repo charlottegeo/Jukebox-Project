@@ -20,8 +20,6 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "allowImportingTsExtensions": true,
-    "typeRoots": ["node_modules/@types", "@types"],
-
   },
   "include": [
     "src", 

@@ -9,4 +9,39 @@
     flex: 1;
     min-width: 0;
   }
+
+  /* No transition on theme switch - source/search icons update instantly */
+  .btn,
+  .btn * {
+    transition: none !important;
+  }
+}
+
+[data-bs-theme='dark'] .search-container {
+  .form-control {
+    background-color: var(--input-bg);
+    border-color: var(--border-layer);
+    color: var(--text-color);
+
+    &::placeholder {
+      color: var(--text-muted);
+    }
+  }
+
+  .btn-outline-success,
+  .btn-outline-danger {
+    border-color: var(--border-layer);
+    color: var(--text-color);
+
+    &:hover {
+      background-color: var(--tertiary-color);
+      border-color: var(--border-layer);
+      color: var(--text-color);
+    }
+  }
+
+  .btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
 }

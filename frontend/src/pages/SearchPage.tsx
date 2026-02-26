@@ -1,21 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardBody, Nav, NavItem, NavLink } from 'reactstrap';
-import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { Song } from '../types';
 import { useOidcAccessToken } from '@axa-fr/react-oidc';
+import React, { useEffect, useRef, useState } from 'react';
+import { Nav, NavItem, NavLink } from 'reactstrap';
+import { AdminPanelProps } from '../App';
 import UserInfo from '../UserInfo';
+import AdminPanel from '../components/AdminPanel';
+import PlaybackBanner from '../components/PlaybackBanner';
 import SearchBar from '../components/SearchBar';
 import SongList from '../components/SongList';
 import UserQueue from '../components/UserQueue';
-import AdminPanel from '../components/AdminPanel';
-import PlaybackBanner from '../components/PlaybackBanner';
+import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../contexts/SocketContext';
+import { Song } from '../types';
 import './SearchPage.scss';
-import { AdminPanelProps } from '../App';
 
-const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOpen }) => {
-
+const SearchPage: React.FC<AdminPanelProps> = ({
+  adminPanelOpen,
+  setAdminPanelOpen,
+}) => {
   const {
     socket,
     isConnected,
@@ -24,12 +25,14 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
     isLoading,
     isPaused,
     activeUserCount,
+    activeUsers,
     isAdmin,
     songLengthLimit,
     volume,
     setMyColor,
     setVolume,
     playbackStartTime,
+    elapsedAtPause,
     skipVoteStatus,
   } = useSocket();
 
@@ -37,7 +40,7 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
   const [radioVolume, setRadioVolume] = useState(50);
   const radioAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastSongIdRef = useRef<string | null>(null);
-  
+
   const [songs, setSongs] = useState<Song[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [activeTab, setActiveTab] = useState<'queue' | 'search'>('queue');
@@ -51,17 +54,27 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
     return () => mql.removeEventListener('change', handler);
   }, []);
 
-  const { darkMode } = useTheme();
   const { user } = useAuth();
   const { accessTokenPayload } = useOidcAccessToken();
   const userInfo = accessTokenPayload as UserInfo;
   const uid = userInfo?.preferred_username || user?.username;
-  
+  const iAmNext =
+    activeUsers && activeUsers.length > 0 && activeUsers[0].username === uid;
+  const nextSong =
+    activeUsers && activeUsers.length > 0
+      ? (activeUsers[0].nextSong ?? null)
+      : null;
+  const nextSongOwner =
+    activeUsers && activeUsers.length > 0 ? activeUsers[0].username : null;
+
   useEffect(() => {
     if (!socket || !isConnected) return;
-    const handleSearchResults = (data: { results: Song[] }) => setSongs(data.results);
+    const handleSearchResults = (data: { results: Song[] }) =>
+      setSongs(data.results);
     socket.on('searchResults', handleSearchResults);
-    return () => { socket.off('searchResults', handleSearchResults); };
+    return () => {
+      socket.off('searchResults', handleSearchResults);
+    };
   }, [socket, isConnected]);
 
   const handleSearch = (input: string, source: string) => {
@@ -76,8 +89,19 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
 
   const handleColorSelect = (color: string) => setMyColor(color);
   const handleVolumeChange = (newVolume: number) => setVolume(newVolume);
-  const handleVoteSkip = () => { if (socket && isConnected) socket.emit('force_skip'); };
-  const handleAddToQueue = (song: Song) => { if (socket && isConnected && uid) socket.emit('addSongToQueue', { song, uid }); };
+  const handleVoteSkip = () => {
+    if (!socket || !isConnected || !currentSong) return;
+    if (!skipVoteStatus?.canVote) return;
+    if (skipVoteStatus.hasVoted) {
+      socket.emit('unvote_skip');
+    } else {
+      socket.emit('vote_skip', { songId: currentSong.id });
+    }
+  };
+  const handleAddToQueue = (song: Song) => {
+    if (socket && isConnected && uid)
+      socket.emit('addSongToQueue', { song, uid });
+  };
 
   const calculateSeekTime = (): number => {
     if (!playbackStartTime) return 0;
@@ -88,7 +112,7 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
 
   useEffect(() => {
     const audio = radioAudioRef.current;
-    
+
     if (!isTunedIn || !currentSong?.audioPath || !audio) {
       if (audio) audio.pause();
       return;
@@ -108,18 +132,24 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
     if (isPaused) {
       audio.pause();
     } else {
-       const playAudio = async () => {
-         try {
-           if (audio.paused) {
-             await audio.play();
-           }
-         } catch (e) {
-           console.warn('Playback failed (autoplay blocked?):', e);
-         }
-       };
-       playAudio();
+      const playAudio = async () => {
+        try {
+          if (audio.paused) {
+            await audio.play();
+          }
+        } catch (e) {
+          console.warn('Playback failed (autoplay blocked?):', e);
+        }
+      };
+      playAudio();
     }
-  }, [isTunedIn, currentSong?.audioPath, currentSong?.id, isPaused, radioVolume]);
+  }, [
+    isTunedIn,
+    currentSong?.audioPath,
+    currentSong?.id,
+    isPaused,
+    radioVolume,
+  ]);
 
   useEffect(() => {
     const audio = radioAudioRef.current;
@@ -127,7 +157,7 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
 
     const checkSync = () => {
       if (audio.paused || audio.readyState < 1) return;
-      
+
       const expectedTime = calculateSeekTime();
       const currentTime = audio.currentTime;
       const diff = Math.abs(currentTime - expectedTime);
@@ -144,14 +174,18 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
     const interval = setInterval(checkSync, 1000);
     return () => clearInterval(interval);
   }, [isTunedIn, isPaused, playbackStartTime]);
-  
+
   const handleLoadedMetadata = () => {
     if (!radioAudioRef.current || !playbackStartTime || !isTunedIn) return;
     const audio = radioAudioRef.current;
     const expectedTime = calculateSeekTime();
     if (!(expectedTime > 0 && Number.isFinite(expectedTime))) return;
     const currentTime = audio.currentTime ?? 0;
-    if (Math.abs(currentTime - expectedTime) > SEEK_THRESHOLD_SEC && audio.duration && expectedTime < audio.duration) {
+    if (
+      Math.abs(currentTime - expectedTime) > SEEK_THRESHOLD_SEC &&
+      audio.duration &&
+      expectedTime < audio.duration
+    ) {
       audio.currentTime = expectedTime;
     }
   };
@@ -159,29 +193,36 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
   return (
     <div className="search-page">
       <div className="banner-full-width">
-          <PlaybackBanner
-            currentSong={currentSong}
-            isPaused={isPaused}
-            activeUserCount={activeUserCount}
-            onVoteSkip={handleVoteSkip}
-            songLengthLimit={songLengthLimit}
-            isLoading={isLoading}
-            skipVoteStatus={skipVoteStatus}
-            socket={socket}
-            isTunedIn={isTunedIn}
-            onTuneInToggle={() => setIsTunedIn(!isTunedIn)}
-            radioVolume={radioVolume}
-            onRadioVolumeChange={setRadioVolume}
-            isAdmin={isAdmin}
-            onAdminClick={() => setAdminPanelOpen(true)}
-            playbackStartTime={playbackStartTime}
-          />
-          <audio
-            ref={radioAudioRef}
-            onLoadedMetadata={handleLoadedMetadata}
-            crossOrigin="anonymous"
-            style={{ display: 'none' }}
-          />
+        <PlaybackBanner
+          currentSong={currentSong}
+          isPaused={isPaused}
+          activeUserCount={activeUserCount}
+          onVoteSkip={handleVoteSkip}
+          songLengthLimit={songLengthLimit}
+          isLoading={isLoading}
+          skipVoteStatus={skipVoteStatus}
+          socket={socket}
+          isTunedIn={isTunedIn}
+          onTuneInToggle={() => setIsTunedIn(!isTunedIn)}
+          radioVolume={radioVolume}
+          onRadioVolumeChange={setRadioVolume}
+          isAdmin={isAdmin}
+          onAdminClick={() => setAdminPanelOpen(true)}
+          playbackStartTime={playbackStartTime}
+          elapsedAtPause={elapsedAtPause}
+          isNext={nextSong !== null}
+          nextSong={
+            nextSong && nextSongOwner
+              ? { ...nextSong, submittedBy: nextSongOwner }
+              : nextSong
+          }
+        />
+        <audio
+          ref={radioAudioRef}
+          onLoadedMetadata={handleLoadedMetadata}
+          crossOrigin="anonymous"
+          style={{ display: 'none' }}
+        />
       </div>
       {isMobile ? (
         <div className="search-page-mobile">
@@ -211,23 +252,31 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
                 <UserQueue
                   queue={myQueue}
                   onClearQueue={() => socket?.emit('clearUserQueue', uid)}
-                  onRemoveSong={(index) => socket?.emit('removeSongFromQueue', { uid, index })}
-                  onReorderQueue={(newQueue) => socket?.emit('reorderQueue', { queue: newQueue, uid })}
+                  onRemoveSong={(index) =>
+                    socket?.emit('removeSongFromQueue', { uid, index })
+                  }
+                  onReorderQueue={(newQueue) =>
+                    socket?.emit('reorderQueue', { queue: newQueue, uid })
+                  }
+                  isNext={iAmNext}
                 />
               </div>
             )}
             {activeTab === 'search' && (
               <div className="search">
-                <Card className={`h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
-                  <CardBody>
-                    <SearchBar onSearch={handleSearch} onSearchStateChange={setHasSearched} />
+                <div className="card h-100">
+                  <div className="card-body">
+                    <SearchBar
+                      onSearch={handleSearch}
+                      onSearchStateChange={setHasSearched}
+                    />
                     <SongList
                       songs={songs}
                       onSelect={handleAddToQueue}
                       hasSearched={hasSearched}
                     />
-                  </CardBody>
-                </Card>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -235,25 +284,33 @@ const SearchPage: React.FC<AdminPanelProps> = ({ adminPanelOpen, setAdminPanelOp
       ) : (
         <div className="app-container">
           <div className="queue">
-                <UserQueue
-                  queue={myQueue}
-                  onClearQueue={() => socket?.emit('clearUserQueue', uid)}
-                  onRemoveSong={(index) => socket?.emit('removeSongFromQueue', { uid, index })}
-                  onReorderQueue={(newQueue) => socket?.emit('reorderQueue', { queue: newQueue, uid })}
-                  wrapInCard={true}
-                />
+            <UserQueue
+              queue={myQueue}
+              onClearQueue={() => socket?.emit('clearUserQueue', uid)}
+              onRemoveSong={(index) =>
+                socket?.emit('removeSongFromQueue', { uid, index })
+              }
+              onReorderQueue={(newQueue) =>
+                socket?.emit('reorderQueue', { queue: newQueue, uid })
+              }
+              wrapInCard={true}
+              isNext={iAmNext}
+            />
           </div>
           <div className="search">
-            <Card className={`h-100 ${darkMode ? 'bg-dark text-white' : 'bg-light border-light'}`}>
-              <CardBody>
-                <SearchBar onSearch={handleSearch} onSearchStateChange={setHasSearched} />
+            <div className="card h-100">
+              <div className="card-body">
+                <SearchBar
+                  onSearch={handleSearch}
+                  onSearchStateChange={setHasSearched}
+                />
                 <SongList
                   songs={songs}
                   onSelect={handleAddToQueue}
                   hasSearched={hasSearched}
                 />
-              </CardBody>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       )}

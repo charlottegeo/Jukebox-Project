@@ -29,7 +29,7 @@ let songLengthLimits: SongLengthLimits = {
 };
 let songLengthLimit = 10;
 let displaySocketId: string | null = null;
-let skipVotes: Set<string> = new Set();
+const skipVotes: Set<string> = new Set();
 let pauseStartTime: number | null = null;
 
 export const initIo = (serverIo: Server) => {
@@ -52,14 +52,18 @@ export const setDisplaySocketId = (socketId: string | null) => {
   displaySocketId = socketId;
 };
 export const getPlaybackStartTime = () => playbackStartTime;
+
+export const getElapsedAtPause = (): number => {
+  if (!isPaused || !pauseStartTime || !playbackStartTime) return 0;
+  return Math.max(0, (pauseStartTime - playbackStartTime) / 1000);
+};
 export const hasAnyQueueLeft = (): boolean => {
   return Object.values(userQueues).some((queue) => queue.length > 0);
 };
 
 export const setCurrentSong = (song: Song | null, uid?: string) => {
   const previousSong = currentPlayingSong;
-  const isNewSong = !previousSong || !song || 
-    (previousSong.id !== song.id && previousSong.track_id !== song.track_id);
+  const isNewSong = !previousSong || !song || previousSong.id !== song.id;
   
   if (isNewSong) {
     skipVotes.clear();
@@ -79,19 +83,34 @@ export const setCurrentSong = (song: Song | null, uid?: string) => {
     broadcastSkipVoteStatus();
   }
   const isLoading = song ? !song.audioPath : false;
-  io.emit('updateCurrentSong', { currentSong: song, isLoading, playbackStartTime });
+  io.emit('updateCurrentSong', {
+    currentSong: song,
+    isLoading,
+    playbackStartTime,
+    isPaused,
+  });
 };
 
 export const startPlaybackTimer = () => {
   playbackStartTime = Date.now();
   if (currentPlayingSong) {
-    io.emit('updateCurrentSong', { currentSong: currentPlayingSong, isLoading: false, playbackStartTime });
+    io.emit('updateCurrentSong', {
+      currentSong: currentPlayingSong,
+      isLoading: false,
+      playbackStartTime,
+      isPaused,
+    });
   }
 };
 
 export const setSongDownloaded = () => {
   if (currentPlayingSong) {
-    io.emit('updateCurrentSong', { currentSong: currentPlayingSong, isLoading: false, playbackStartTime });
+    io.emit('updateCurrentSong', {
+      currentSong: currentPlayingSong,
+      isLoading: false,
+      playbackStartTime,
+      isPaused,
+    });
     io.emit('song_download_complete');
   }
 };
@@ -100,8 +119,9 @@ export const setPlaying = (status: boolean) => {
   isPlaying = status;
 };
 
-export const togglePause = () => {
-  isPaused = !isPaused;
+const applyPauseState = (newPaused: boolean) => {
+  const wasPaused = isPaused;
+  isPaused = newPaused;
   if (isPaused) {
     pauseStartTime = Date.now();
   } else if (pauseStartTime && playbackStartTime) {
@@ -109,8 +129,25 @@ export const togglePause = () => {
     playbackStartTime += pauseDuration;
     pauseStartTime = null;
   }
-  io.emit('toggle_pause_play', { isPaused, playbackStartTime });
+  if (wasPaused !== isPaused) {
+    const payload: {
+      isPaused: boolean;
+      playbackStartTime: number | null;
+      elapsedAtPause?: number;
+    } = {
+      isPaused,
+      playbackStartTime,
+    };
+    if (isPaused && playbackStartTime) {
+      payload.elapsedAtPause = (Date.now() - playbackStartTime) / 1000;
+    }
+    io.emit('toggle_pause_play', payload);
+  }
 };
+
+export const togglePause = () => applyPauseState(!isPaused);
+
+export const setPaused = (paused: boolean) => applyPauseState(paused);
 
 export const setSongLengthLimit = (limit: number, uid: string) => {
   if (!userStates[uid]?.isAdmin) {
@@ -140,10 +177,15 @@ export const clearDisconnectTimer = (uid: string) => {
 };
 
 export const scheduleUserRemoval = (uid: string) => {
-  disconnectTimers[uid] = setTimeout(() => {
-    delete userStates[uid];
+  disconnectTimers[uid] = setTimeout(
+    () => {
+      userOrder = userOrder.filter((user) => user !== uid);
+      skipVotes.delete(uid);
+      broadcastSkipVoteStatus();
     updateActiveUsers();
-  }, 5 * 60 * 1000);
+    },
+    5 * 60 * 1000
+  );
 };
 
 export const isUserAdmin = (userInfo: any): boolean => {
@@ -192,25 +234,29 @@ export const addUser = (uid: string, userInfo: any, socket: Socket) => {
   updateActiveUsers();
 };
 
-export const rotateUserOrder = () => {
-  if (userOrder.length > 1) {
-    const previousUser = userOrder.shift();
-    if (previousUser) {
-      userOrder.push(previousUser);
+export const rotateUserOrder = (uid?: string) => {
+  if (userOrder.length <= 1) return;
+
+  if (uid) {
+    const index = userOrder.indexOf(uid);
+    if (index !== -1) {
+      userOrder.splice(index, 1);
+      userOrder.push(uid);
+    }
+  } else {
+    const prevUser = userOrder.shift();
+    if (prevUser) {
+      userOrder.push(prevUser);
     }
   }
+  updateActiveUsers();
 };
 
 export const getNextUser = (): string | null => {
-  while (userOrder.length > 0) {
-    const uid = userOrder[0];
-    if (userQueues[uid] && userQueues[uid].length > 0) {
-      return uid;
-    }
-    userOrder.shift();
-    delete userQueues[uid];
-  }
-  return null;
+  return (
+    userOrder.find((uid) => userQueues[uid] && userQueues[uid].length > 0) ||
+    null
+  );
 };
 
 export const addSongToQueue = (uid: string, song: Song) => {
@@ -245,14 +291,13 @@ export const addSongsToQueue = (uid: string, songs: Song[]) => {
   io.emit('updateUserQueue', { queue: userQueues[uid], uid });
 };
 
-export const removeSongFromQueue = (uid: string, index: number, socket: Socket | null) => {
+export const removeSongFromQueue = (
+  uid: string,
+  index: number,
+  socket: Socket | null
+) => {
   if (!userQueues[uid]) return;
-
   userQueues[uid].splice(index, 1);
-  if (userQueues[uid].length === 0) {
-    delete userQueues[uid];
-    userOrder = userOrder.filter((user) => user !== uid);
-  }
   io.emit('updateUserQueue', { queue: userQueues[uid] || [], uid });
   updateActiveUsers();
 };
@@ -262,12 +307,14 @@ export const reorderQueue = (uid: string, queue: Song[], socket: Socket) => {
 
   userQueues[uid] = queue;
   io.emit('updateUserQueue', { queue, uid });
+  updateActiveUsers();
 };
 
 export const updateSongInQueue = (uid: string, index: number, song: Song) => {
   if (userQueues[uid] && userQueues[uid][index]) {
     userQueues[uid][index] = song;
     io.emit('updateUserQueue', { queue: userQueues[uid], uid });
+    updateActiveUsers();
   }
 };
 
@@ -309,15 +356,26 @@ export const updateUserColor = (uid: string, color: string, socket: Socket) => {
 };
 
 export const updateActiveUsers = () => {
-  const activeUsers = Object.entries(userStates)
-    .filter(([uid, _]) => userQueues[uid] && userQueues[uid].length > 0)
-    .map(([username, state]) => ({
+  const activeUsers = userOrder
+    .filter((uid) => userQueues[uid] && userQueues[uid].length > 0)
+    .map((username) => {
+      const state = userStates[username];
+      const nextSong = userQueues[username][0];
+      return {
       username,
       queueCount: userQueues[username].length,
       profilePicture: `https://profiles.csh.rit.edu/image/${username}`,
       color: state.color || 'White',
       isAdmin: state.isAdmin || false,
-    }));
+        nextSong: nextSong
+          ? {
+              track_name: nextSong.track_name,
+              artist_name: nextSong.artist_name,
+              cover_url: nextSong.cover_url,
+            }
+          : null,
+      };
+    });
 
   console.log('Active users from queues:', activeUsers);
   io.emit('updateActiveUsers', activeUsers);
@@ -336,28 +394,31 @@ export const removeSkipVote = (uid: string) => {
 };
 
 const getEligibleSkipVoteCount = (): number => {
-  return [...skipVotes].filter((voterUid) => userQueues[voterUid] && userQueues[voterUid].length > 0).length;
+  const currentOwner = currentPlayingSong?.submittedBy;
+  return [...skipVotes].filter(
+    (voterUid) =>
+      (userQueues[voterUid] && userQueues[voterUid].length > 0) ||
+      voterUid === currentOwner
+  ).length;
 };
 
 export const getSkipVoteStatus = (uid?: string) => {
-  const activeUserCount = Object.keys(userQueues).filter(
-    (id) => userQueues[id] && userQueues[id].length > 0
-  ).length;
+  const currentOwner = currentPlayingSong?.submittedBy;
+  const activeParticipants = Object.keys(userQueues).filter(
+    (id) => (userQueues[id] && userQueues[id].length > 0) || id === currentOwner
+  );
 
-  const requiredVotes = activeUserCount === 1
-    ? 1
-    : Math.floor(activeUserCount / 2) + 1;
-
+  const activeUserCount = activeParticipants.length;
+  const requiredVotes =
+    activeUserCount <= 1 ? 1 : Math.floor(activeUserCount / 2) + 1;
   const currentVotes = getEligibleSkipVoteCount();
-  const hasVoted = uid ? skipVotes.has(uid) : false;
-  const canVote = uid ? !!(userQueues[uid] && userQueues[uid].length > 0) : false;
 
   return {
     currentVotes,
     requiredVotes,
-    hasVoted,
+    hasVoted: uid ? skipVotes.has(uid) : false,
     activeUserCount,
-    canVote,
+    canVote: uid ? activeParticipants.includes(uid) : false,
   };
 };
 
@@ -368,20 +429,22 @@ export const shouldTriggerSkip = (): boolean => {
 };
 
 const broadcastSkipVoteStatus = () => {
-  const activeUserCount = Object.keys(userQueues).filter(
-    (id) => userQueues[id] && userQueues[id].length > 0
-  ).length;
+  const currentOwner = currentPlayingSong?.submittedBy;
 
-  const requiredVotes = activeUserCount === 1
-    ? 1
-    : Math.floor(activeUserCount / 2) + 1;
+  const activeParticipants = Object.keys(userQueues).filter(
+    (id) => (userQueues[id] && userQueues[id].length > 0) || id === currentOwner
+  );
 
+  const activeUserCount = activeParticipants.length;
+  const requiredVotes =
+    activeUserCount <= 1 ? 1 : Math.floor(activeUserCount / 2) + 1;
   const currentVotes = getEligibleSkipVoteCount();
 
   const allUsers = Object.keys(userStates);
   allUsers.forEach((id) => {
     const hasVoted = skipVotes.has(id);
-    const canVote = !!(userQueues[id] && userQueues[id].length > 0);
+    const canVote = activeParticipants.includes(id);
+
     io.to(id).emit('updateSkipVotes', {
       currentVotes,
       requiredVotes,
@@ -405,7 +468,10 @@ export const resetServerState = () => {
   if (io) {
     io.emit('server_startup', { timestamp: Date.now() });
     io.emit('updateUserCatColor', { uid: null, color: 'White' });
-    io.emit('updateCurrentSong', { currentSong: null, playbackStartTime: null });
+    io.emit('updateCurrentSong', {
+      currentSong: null,
+      playbackStartTime: null,
+    });
   }
 };
 

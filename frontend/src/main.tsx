@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import 'csh-material-bootstrap/dist/csh-material-bootstrap.css'
 import './styles/global.scss'
 import App from './App'
 import { OidcProvider } from '@axa-fr/react-oidc'

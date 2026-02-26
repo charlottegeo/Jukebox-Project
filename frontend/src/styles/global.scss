@@ -1,21 +1,28 @@
 @use './mixins';
 @import './variables';
 
-:root {
-  --primary-color: #B0197E;
-  --layer-0: #F8F9FA;
-  --layer-1: #FFFFFF;
-  --layer-2: #F0F2F5;
-  --text-color: #1A1A1A;
-  --text-muted: #6c757d;
-  --text-color-lightened: #6c757d;
-  --border-layer: #E5E7EB;
-  --background-color: var(--layer-0);
-  --surface-color: var(--layer-1);
-  --border-color: var(--border-layer);
-  --input-bg: #ffffff;
+/* Compatibility aliases: map our var names to Bootstrap/CSH theme vars.
+   CSH Bootstrap controls colors via data-bs-theme on html - we do not override. */
+:root,
+[data-bs-theme='light'] {
+  --primary-color: #b0197e;
+  --layer-0: var(--bs-body-bg, #f8f9fa);
+  --layer-1: var(--bs-card-bg, #ffffff);
+  --layer-2: var(--bs-tertiary-bg, #f0f2f5);
+  --text-color: var(--bs-body-color, #1a1a1a);
+  --text-muted: var(--bs-secondary-color, #6c757d);
+  --text-color-lightened: var(--bs-secondary-color, #6c757d);
+  --border-layer: var(--bs-border-color, #e5e7eb);
+  --background-color: var(--bs-body-bg, #f8f9fa);
+  --surface-color: var(--bs-card-bg, #ffffff);
+  --border-color: var(--bs-border-color, #e5e7eb);
+  --input-bg: var(--bs-body-bg, #ffffff);
   --highlight-bg: rgba(176, 25, 126, 0.1);
-  --queue-card-bg: var(--layer-1);
+  --queue-card-bg: var(--bs-card-bg, #ffffff);
+  --secondary-color: var(--bs-dropdown-bg, #ffffff);
+  --tertiary-color: var(--bs-dropdown-link-hover-bg, #f0f2f5);
+  --secondary-color-darkened: #e9ecef;
+  --tertiary-color-darkened: #dee2e6;
 
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -24,41 +31,70 @@
   --spacing-xl: 2rem;
 }
 
-body.dark-theme {
-  --layer-0: #121212;
-  --layer-1: #1E1E1E;
-  --layer-2: #2C2C2C;
-  --text-color: #EDEDED;
-  --text-muted: #B0B0B0;
-  --text-color-lightened: #B0B0B0;
-  --border-layer: #3C3C3C;
-  --background-color: var(--layer-0);
-  --surface-color: var(--layer-1);
-  --border-color: var(--border-layer);
-  --input-bg: #2A2A3F;
-  --highlight-bg: rgba(176, 25, 126, 0.2);
-  --jukebox-bg: var(--layer-0);
-  --jukebox-surface: var(--layer-1);
-  --jukebox-text: var(--text-color);
-  --queue-card-bg: var(--layer-1);
+[data-bs-theme='dark'] {
+  --primary-color: #b0197e;
+  --layer-0: var(--bs-body-bg, #121212);
+  --layer-1: var(--bs-card-bg, #1e1e1e);
+  --layer-2: var(--bs-tertiary-bg, #2c2c2c);
+  --item-card-bg: #2c2c2c;
+  --text-color: var(--bs-body-color, #ededed);
+  --text-muted: var(--bs-secondary-color, #b0b0b0);
+  --text-color-lightened: var(--bs-secondary-color, #b0b0b0);
+  --border-layer: var(--bs-border-color, #3c3c3c);
+  --background-color: var(--bs-body-bg, #121212);
+  --surface-color: var(--bs-card-bg, #1e1e1e);
+  --border-color: var(--bs-border-color, #3c3c3c);
+  --input-bg: var(--bs-body-bg, #2a2a2a);
+  --highlight-bg: rgba(176, 25, 126, 0.35);
+  --queue-card-bg: var(--bs-card-bg, #1e1e1e);
+  --secondary-color: var(--bs-dropdown-bg, #1e1e2f);
+  --tertiary-color: var(--bs-dropdown-link-hover-bg, #2a2a3f);
+  --secondary-color-darkened: #171725;
+  --tertiary-color-darkened: #232334;
 }
 
+/* Dark mode: apply theme to Bootstrap components (CSH Material Bootstrap is B4-based, no native dark) */
+[data-bs-theme='dark'] {
+  .card {
+    background-color: var(--layer-1);
+    border-color: var(--border-layer);
+    color: var(--text-color);
+  }
+
+  /* Item cards (search results, queue items) - lighter than section cards */
+  .song-card,
+  .user-queue-item {
+    background-color: var(--item-card-bg) !important;
+    border-color: var(--border-layer);
+    color: var(--text-color);
+  }
+
+  .list-group-item {
+    background-color: var(--layer-2);
+    border-color: var(--border-layer);
+    color: var(--text-color);
+  }
+  .form-control {
+    background-color: var(--input-bg);
+    border-color: var(--border-layer);
+    color: var(--text-color);
+  }
+}
+
+/* Minimal body styles - use theme vars (Bootstrap 5.3 defines --bs-* when available;
+   CSH Material Bootstrap is B4-based so we provide fallbacks via our [data-bs-theme] blocks) */
 body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  background-color: var(--layer-0);
+  color: var(--text-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
-  background-color: var(--background-color);
-  color: var(--text-color);
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 #root {
@@ -112,54 +148,7 @@ body {
   flex: 1 1 auto;
 }
 
-.card {
-  background-color: var(--layer-1) !important;
-  color: var(--text-color);
-  border: 1px solid var(--border-layer);
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-.card-queue {
-  background-color: var(--layer-1) !important;
-  border: 1px solid var(--border-layer);
-}
-
-.list-group-item {
-  background-color: var(--layer-2);
-  color: var(--text-color);
-  border: 1px solid var(--border-layer);
-}
-
-.song-card,
-.user-queue-item {
-  background-color: var(--layer-2) !important;
-  color: var(--text-color) !important;
-  border-top: 1px solid var(--border-layer);
-  border-right: 1px solid var(--border-layer);
-  border-bottom: 1px solid var(--border-layer);
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.form-control {
-  background-color: var(--input-bg);
-  color: var(--text-color);
-  border-color: var(--border-color);
-
-  &:focus {
-    background-color: var(--input-bg);
-    color: var(--text-color);
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(176, 25, 126, 0.25);
-  }
-  
-  &::placeholder {
-    color: var(--text-muted);
-  }
-}
-
-.text-muted {
-  color: var(--text-muted) !important;
-}
+/* Form/list overrides removed - CSH Bootstrap handles these */
 
 .logo {
   height: 6em;
@@ -177,8 +166,12 @@ body {
 }
 
 @keyframes logo-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -217,8 +210,26 @@ body {
   padding: 0.5rem 0.5rem 0 0.5rem;
 }
 
+.up-next-badge {
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  background-color: var(--primary-color);
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.queue-trash-btn {
+  color: var(--text-color) !important;
+}
+
 .user-queue-item {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .user-queue-item-animate {
@@ -226,9 +237,16 @@ body {
 }
 
 @keyframes user-queue-reorder {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.03); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .song-list-cards {
@@ -236,9 +254,14 @@ body {
 }
 
 .song-card-selected {
-  outline: 2px solid var(--primary-color);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(176, 25, 126, 0.2);
+  background-color: var(--highlight-bg) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+[data-bs-theme='dark'] .song-card-selected {
+  background-color: var(--highlight-bg) !important;
+  box-shadow: 0 0 0 2px var(--primary-color);
 }
 
 .flex-center {
@@ -249,20 +272,44 @@ body {
   text-align: center;
 }
 
-.mt-1 { margin-top: var(--spacing-sm); }
-.mt-2 { margin-top: var(--spacing-md); }
-.mt-3 { margin-top: var(--spacing-lg); }
-.mt-4 { margin-top: var(--spacing-xl); }
+.mt-1 {
+  margin-top: var(--spacing-sm);
+}
+.mt-2 {
+  margin-top: var(--spacing-md);
+}
+.mt-3 {
+  margin-top: var(--spacing-lg);
+}
+.mt-4 {
+  margin-top: var(--spacing-xl);
+}
 
-.mb-1 { margin-bottom: var(--spacing-sm); }
-.mb-2 { margin-bottom: var(--spacing-md); }
-.mb-3 { margin-bottom: var(--spacing-lg); }
-.mb-4 { margin-bottom: var(--spacing-xl); }
+.mb-1 {
+  margin-bottom: var(--spacing-sm);
+}
+.mb-2 {
+  margin-bottom: var(--spacing-md);
+}
+.mb-3 {
+  margin-bottom: var(--spacing-lg);
+}
+.mb-4 {
+  margin-bottom: var(--spacing-xl);
+}
 
-.p-1 { padding: var(--spacing-sm); }
-.p-2 { padding: var(--spacing-md); }
-.p-3 { padding: var(--spacing-lg); }
-.p-4 { padding: var(--spacing-xl); }
+.p-1 {
+  padding: var(--spacing-sm);
+}
+.p-2 {
+  padding: var(--spacing-md);
+}
+.p-3 {
+  padding: var(--spacing-lg);
+}
+.p-4 {
+  padding: var(--spacing-xl);
+}
 
 .icon-button {
   background: none;
@@ -270,29 +317,6 @@ body {
   border: none;
   color: unset;
   padding: unset;
-}
-
-body.dark-theme {
-  .card,
-  .card-header,
-  .card-body,
-  .card-title,
-  .card .h5,
-  .card .font-weight-bold {
-    color: var(--text-color) !important;
-  }
-
-  .text-muted {
-    color: var(--text-muted) !important;
-  }
-
-  .form-control {
-    color: var(--text-color) !important;
-  }
-
-  .form-control::placeholder {
-    color: var(--text-muted) !important;
-  }
 }
 
 @import './components/Profile';

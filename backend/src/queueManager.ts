@@ -101,17 +101,19 @@ export const preloadNextSong = async () => {
 
 export const playNextSong = async () => {
   if (stateManager.getIsPlaying()) return;
+  stateManager.setPlaying(true);
 
   const currentSong = stateManager.getCurrentSong();
   if (currentSong) {
-    stateManager.rotateUserOrder();
+    stateManager.rotateUserOrder(currentSong.submittedBy);
     if (currentSong.audioPath) {
       deleteAudioFile(currentSong.audioPath);
     }
     stateManager.setCurrentSong(null);
   }
+
   if (!stateManager.hasAnyQueueLeft()) {
-    console.log('All queues are empty. Going to idle state.');
+    console.log('All queues are empty. Standing by.');
     stateManager.setPlaying(false);
     stateManager.emitQueueEmpty();
     return;
@@ -119,28 +121,27 @@ export const playNextSong = async () => {
 
   const nextUser = stateManager.getNextUser();
   if (!nextUser) {
-    stateManager.emitQueueEmpty();
     stateManager.setPlaying(false);
+    stateManager.emitQueueEmpty();
     return;
   }
 
   const userQueue = stateManager.getUserQueue(nextUser);
   if (!userQueue || userQueue.length === 0) {
+    stateManager.setPlaying(false);
     playNextSong();
     return;
   }
 
   const nextSong = userQueue[0];
   if (!nextSong) {
+    stateManager.setPlaying(false);
     playNextSong();
     return;
   }
 
   stateManager.removeSongFromQueue(nextUser, 0, null); 
-
   stateManager.setCurrentSong(nextSong, nextUser);
-  stateManager.setPlaying(true);
-
   preloadNextSong();
 
   try {

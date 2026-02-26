@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert } from 'reactstrap';
 
 export type MessageType = 'success' | 'error' | 'warning' | 'info';
 
@@ -9,6 +8,13 @@ interface MessagePopupProps {
   onClose: () => void;
   duration?: number;
 }
+
+const alertClassMap: Record<MessageType, string> = {
+  success: 'alert-success',
+  error: 'alert-danger',
+  warning: 'alert-warning',
+  info: 'alert-info',
+};
 
 const MessagePopup: React.FC<MessagePopupProps> = ({
   message,
@@ -36,17 +42,33 @@ const MessagePopup: React.FC<MessagePopupProps> = ({
     setTimeout(onClose, 300);
   };
 
-  const alertColor = type === 'error' ? 'danger' : type;
-
   if (!isVisible) {
     return null;
   }
 
+  const alertClass = alertClassMap[type];
+
   return (
-    <Alert color={alertColor} isOpen={isVisible} toggle={handleClose} className="shadow mb-0">
+    <div
+      className={`alert alert-dismissible ${alertClass} shadow mb-0`}
+      role="alert"
+    >
+      <button
+        type="button"
+        className="close"
+        data-dismiss="alert"
+        aria-label="Close"
+        onClick={handleClose}
+      >
+        <span aria-hidden="true">&times;</span>
+      </button>
+      <strong>
+        {type === 'error' && 'Oh snap! '}
+        {type === 'success' && 'Well done! '}
+      </strong>
       {message}
-    </Alert>
+    </div>
   );
 };
 
-export default MessagePopup; 
+export default MessagePopup;

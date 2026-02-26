@@ -1,39 +1,20 @@
 @use '../_mixins.scss' as *;
 
+/* Minimal layout for navbar profile - let CSH Bootstrap control colors/styling */
 .navbar-user {
-  @include flex-center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--border-radius-sm);
   transition: var(--transition-normal);
   background: transparent !important;
-
   &:hover {
     background: transparent !important;
   }
-
-  &:focus {
-    background: transparent !important;
-    box-shadow: none !important;
-  }
-
-  img {
-    border: 2px solid var(--text-color-lightened);
-    transition: var(--transition-normal);
-  }
-
   &:hover img {
     border-color: var(--text-color);
   }
 
-  .caret {
-    margin-left: var(--spacing-sm);
-    transition: var(--transition-normal);
-  }
 
-  &:hover .caret {
-    transform: rotate(180deg);
-  }
+  &:focus {
+    background: transparent !important;
 }
 
 .dropdown-menu {
@@ -42,10 +23,12 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   padding: var(--spacing-sm) 0;
   min-width: 200px;
+  color: var(--text-color, inherit);
 
   .dropdown-item {
     padding: var(--spacing-sm) var(--spacing-md);
     transition: var(--transition-normal);
+    color: var(--text-color, inherit);
 
     &:hover {
       background-color: var(--tertiary-color) !important;
@@ -69,5 +52,24 @@
   &:hover {
     background-color: var(--secondary-color-darkened);
     color: var(--text-color-lightened);
+  }
+    box-shadow: none !important;
+  }
+
+  @include flex-center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+
+  img {
+    border-radius: 50%;
+  }
+
+  .caret {
+    margin-left: var(--spacing-sm);
+    transition: var(--transition-normal);
+  }
+
+  &:hover .caret {
+    transform: rotate(180deg);
   }
 } 

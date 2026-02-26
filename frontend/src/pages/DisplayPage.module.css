@@ -78,8 +78,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .trackName {
@@ -120,13 +124,13 @@
 }
 
 .progressBar::-webkit-progress-value {
-  background-color: #B0197E;
+  background-color: #b0197e;
   border-radius: 10px;
   transition: width 0.2s ease;
 }
 
 .progressBar::-moz-progress-bar {
-  background-color: #B0197E;
+  background-color: #b0197e;
   border-radius: 10px;
   transition: width 0.2s ease;
 }
@@ -166,7 +170,6 @@
     background-position: -200% 0;
   }
 }
-
 
 .progressText {
   font-size: 1rem;

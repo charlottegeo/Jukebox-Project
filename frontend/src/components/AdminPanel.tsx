@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faForward, faPlay, faPause, faSync,
-  faVolumeUp, faVolumeDown, faVolumeMute, faClock
+  faClock,
+  faForward,
+  faMinus,
+  faPause,
+  faPlay,
+  faPlus,
+  faVolumeDown,
+  faVolumeMute,
+  faVolumeUp,
 } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import React, { useEffect, useState } from 'react';
 import {
-  Modal, ModalHeader, ModalBody,
-  Button, Input, FormGroup, Label, Card, CardBody
+  Button,
+  FormGroup,
+  Input,
+  Label,
+  Modal,
+  ModalBody,
+  ModalHeader,
 } from 'reactstrap';
 import { ActiveUser } from '../types';
-import { useTheme } from '../contexts/ThemeContext';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -20,18 +31,18 @@ interface AdminPanelProps {
   isPaused?: boolean;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolumeChange, currentUser, isPaused: serverIsPaused }) => {
-  const { darkMode } = useTheme();
-  const [isPlaying, setIsPlaying] = useState(!(serverIsPaused ?? false));
+const AdminPanel: React.FC<AdminPanelProps> = ({
+  onClose,
+  socket,
+  volume,
+  onVolumeChange,
+  currentUser,
+  isPaused: serverIsPaused,
+}) => {
+  const isPlaying = !(serverIsPaused ?? false);
   const [previousVolume, setPreviousVolume] = useState<number>(volume);
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
   const [songLengthLimit, setSongLengthLimit] = useState<number>(10);
-
-  useEffect(() => {
-    if (serverIsPaused !== undefined) {
-      setIsPlaying(!serverIsPaused);
-    }
-  }, [serverIsPaused]);
 
   useEffect(() => {
     if (!socket) return;
@@ -46,13 +57,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
       setSongLengthLimit(data.limit);
     };
 
-    const handlePausePlay = (data: { isPaused: boolean }) => {
-      setIsPlaying(!data.isPaused);
-    };
-
     socket.on('updateActiveUsers', handleActiveUsers);
     socket.on('updateSongLengthLimit', handleSongLengthLimit);
-    socket.on('toggle_pause_play', handlePausePlay);
 
     socket.emit('getActiveUsers');
     socket.emit('getSongLengthLimit');
@@ -60,7 +66,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
     return () => {
       socket.off('updateActiveUsers', handleActiveUsers);
       socket.off('updateSongLengthLimit', handleSongLengthLimit);
-      socket.off('toggle_pause_play', handlePausePlay);
     };
   }, [socket]);
 
@@ -69,13 +74,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
   };
 
   const handlePausePlay = () => {
-    const newState = !isPlaying;
-    setIsPlaying(newState);
-    socket?.emit('pause_play', { isPaused: newState });
-  };
-
-  const handleRefreshDisplay = () => {
-    socket?.emit('refresh_display');
+    socket?.emit('pause_play', { isPaused: isPlaying });
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,11 +96,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
     return faVolumeUp;
   };
 
-  const handleMaxLengthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newLimit = parseFloat(e.target.value);
-    console.log('Setting new song length limit:', newLimit);
-    setSongLengthLimit(newLimit);
-    socket?.emit('setSongLengthLimit', { limit: newLimit });
+  const STEP_MINUTES = 0.5; // 30 seconds
+  const MIN_MINUTES = 1;
+  const MAX_MINUTES = 10;
+
+  const handleMaxLengthStep = (delta: number) => {
+    const newLimit = Math.min(
+      MAX_MINUTES,
+      Math.max(MIN_MINUTES, songLengthLimit + delta)
+    );
+    const rounded = Math.round(newLimit / STEP_MINUTES) * STEP_MINUTES;
+    const clamped = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, rounded));
+    setSongLengthLimit(clamped);
+    socket?.emit('setSongLengthLimit', { limit: clamped });
   };
 
   const formatTime = (minutes: number): string => {
@@ -112,76 +119,127 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, socket, volume, onVolu
   };
 
   return (
-    <Modal isOpen toggle={onClose} size="lg">
-      <ModalHeader toggle={onClose}>Admin Controls</ModalHeader>
+    <Modal isOpen toggle={onClose} size="lg" className="admin-panel-modal">
+      <ModalHeader
+        tag="div"
+        className="d-flex align-items-center justify-content-between w-100"
+      >
+        <span>Admin Controls</span>
+        <button
+          type="button"
+          className="close admin-panel-close"
+          data-dismiss="modal"
+          aria-label="Close"
+          onClick={onClose}
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </ModalHeader>
       <ModalBody>
         <div className="mb-3 d-flex gap-3 flex-wrap admin-panel-actions">
           <Button color="primary" onClick={handlePausePlay}>
-            <FontAwesomeIcon icon={!isPlaying ? faPause : faPlay} className="mr-1" />
+            <FontAwesomeIcon
+              icon={isPlaying ? faPause : faPlay}
+              className="mr-1"
+            />
             {isPlaying ? 'Pause' : 'Play'}
           </Button>
-          <Button color="danger" onClick={handleForceSkip} className="font-weight-bold">
+          <Button
+            color="danger"
+            onClick={handleForceSkip}
+          >
             <FontAwesomeIcon icon={faForward} className="mr-1" />
             Force Skip
           </Button>
         </div>
 
-        <FormGroup className="admin-volume-group">
-          <Label className="d-flex align-items-center mb-2">
-            <FontAwesomeIcon icon={getVolumeIcon()} className="mr-2" onClick={handleVolumeIconClick} style={{ cursor: 'pointer' }} />
-            Volume: {volume}%
-          </Label>
-          <div className="admin-volume-slider-wrap">
+        <div className="admin-controls-row">
+          <FormGroup className="admin-volume-group">
+            <Label className="d-flex align-items-center mb-2">
+              <FontAwesomeIcon
+                icon={getVolumeIcon()}
+                className="mr-2"
+                onClick={handleVolumeIconClick}
+                style={{ cursor: 'pointer' }}
+              />
+              Volume: {volume}%
+            </Label>
             <Input
               type="range"
               min="0"
               max="100"
               value={volume}
               onChange={handleVolumeChange}
-              className="form-control-range admin-volume-slider"
+              className="form-range admin-volume-slider"
+              style={{ '--slider-fill': `${volume}%` } as React.CSSProperties}
             />
-          </div>
-        </FormGroup>
+          </FormGroup>
 
-        <FormGroup>
-          <Label>
-            <FontAwesomeIcon icon={faClock} className="mr-2" />
-            Max song length: {formatTime(songLengthLimit)}
-          </Label>
-          <Input
-            type="range"
-            min="1"
-            max="10"
-            step="0.5"
-            value={songLengthLimit}
-            onChange={handleMaxLengthChange}
-            className="form-control-range"
-          />
-        </FormGroup>
-
-        <Button color="secondary" outline block onClick={handleRefreshDisplay} className="mb-3">
-          <FontAwesomeIcon icon={faSync} className="mr-2" /> Refresh Display
-        </Button>
-
-        <h5 className="mb-2">Active Users</h5>
-        <div className="d-flex flex-wrap gap-2">
-          {activeUsers.map((user) => (
-            <Card key={user.username} className={`mb-0 ${darkMode ? 'bg-dark text-white border-secondary' : 'bg-light border-light'}`} style={{ minWidth: '200px' }}>
-              <CardBody className="d-flex align-items-center py-2 px-3">
-                <img
-                  src={user.profilePicture}
-                  alt={user.username}
-                  className="rounded mr-2 flex-shrink-0"
-                  style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                />
-                <div className="min-width-0">
-                  <div className="font-weight-bold text-truncate">{user.username}</div>
-                  <div className="small text-muted">{user.queueCount} {user.queueCount === 1 ? 'song' : 'songs'}</div>
-                </div>
-              </CardBody>
-            </Card>
-          ))}
+          <FormGroup className="admin-max-length-group">
+            <Label>
+              <FontAwesomeIcon icon={faClock} className="mr-2" />
+              Max song length
+            </Label>
+            <div className="admin-max-length-controls">
+              <Button
+                size="sm"
+                onClick={() => handleMaxLengthStep(-STEP_MINUTES)}
+                disabled={songLengthLimit <= MIN_MINUTES}
+                className="btn btn-primary"
+              >
+                <FontAwesomeIcon icon={faMinus} />
+              </Button>
+              <span className="admin-max-length-display">
+                {formatTime(songLengthLimit)}
+              </span>
+              <Button
+                size="sm"
+                onClick={() => handleMaxLengthStep(STEP_MINUTES)}
+                disabled={songLengthLimit >= MAX_MINUTES}
+                className="btn btn-primary"
+              >
+                <FontAwesomeIcon icon={faPlus} />
+              </Button>
+            </div>
+          </FormGroup>
         </div>
+
+        {activeUsers.length > 0 && (
+          <>
+            <h5 className="mb-2 mt-3">Active Users</h5>
+            <div className="d-flex flex-wrap gap-2">
+              {activeUsers.map((user) => (
+                <div
+                  key={user.username}
+                  className="card mb-0"
+                  style={{ minWidth: '200px' }}
+                >
+                  <div className="card-body d-flex align-items-center py-2 px-3">
+                    <img
+                      src={user.profilePicture}
+                      alt={user.username}
+                      className="rounded mr-2 flex-shrink-0"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        objectFit: 'cover',
+                      }}
+                    />
+                    <div className="min-width-0 flex-grow-1">
+                      <div className="font-weight-bold text-truncate">
+                        {user.username}
+                      </div>
+                      <div className="small text-muted">
+                        {user.queueCount}{' '}
+                        {user.queueCount === 1 ? 'song' : 'songs'} in queue
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </ModalBody>
     </Modal>
   );

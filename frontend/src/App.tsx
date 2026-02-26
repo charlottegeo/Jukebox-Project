@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import 'csh-material-bootstrap/dist/csh-material-bootstrap.css'
 import DisplayPage from './pages/DisplayPage';
 import SearchPage from './pages/SearchPage';
 import PageContainer from './containers/PageContainer'
-import 'csh-material-bootstrap/dist/csh-material-bootstrap.css'
 import NotFound from './pages/NotFound'
 import { OidcSecure } from '@axa-fr/react-oidc';
 import { SSOEnabled } from './configuration';
