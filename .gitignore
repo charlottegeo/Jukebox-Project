@@ -33,3 +33,5 @@ downloads
 .env
 /secrets
 docker-compose.yml
+__pycache__
+venv
